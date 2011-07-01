@@ -47,8 +47,15 @@ static void fd_wait_write(int fd)
 
 #define mb() asm volatile("" ::: "memory")
 
+typedef struct VirtioDevice2 VirtioDevice2;
+
+typedef size_t (virtio_io_handler_t)(VirtioDevice2 *, struct iovec *, int);
+typedef void (virtio_io_waiter_t)(VirtioDevice2 *);
+
 typedef struct VirtioQueue2
 {
+    VirtioDevice2 *vdev;
+
     uint32_t pfn;
     uint16_t num;
     void *base;
@@ -59,10 +66,11 @@ typedef struct VirtioQueue2
 
     uint16_t last_avail_idx;
 
-    void *(*threadfn)(void *);
+    virtio_io_handler_t *handler;
+    virtio_io_waiter_t *waiter;
 } VirtioQueue2;
 
-typedef struct VirtioDevice2
+struct VirtioDevice2
 {
     PCIDevice pci_dev;
     uint32_t host_features;
@@ -78,10 +86,7 @@ typedef struct VirtioDevice2
 
     int max_vq;
     VirtioQueue2 vq[3];
-} VirtioDevice2;
-
-typedef size_t (virtio_io_handler_t)(VirtioDevice2 *, struct iovec *, int);
-typedef void (virtio_io_wait_t)(VirtioDevice2 *);
+};
 
 static VirtioDevice2 *to_vdev(PCIDevice *pci_dev)
 {
@@ -173,10 +178,11 @@ static void virtio_add_used(VirtioQueue2 *vq, unsigned head, uint32_t len)
     mb();
 }
 
-static void virtio_thread(VirtioDevice2 *vdev, VirtioQueue2 *vq,
-                          virtio_io_handler_t *handler,
-                          virtio_io_wait_t *waiter)
+static void *virtio_thread(void *opaque)
 {
+    VirtioQueue2 *vq = opaque;
+    VirtioDevice2 *vdev = vq->vdev;
+
     vq->used->flags |= VRING_USED_F_NO_NOTIFY;
 
     while (1) {
@@ -192,14 +198,14 @@ static void virtio_thread(VirtioDevice2 *vdev, VirtioQueue2 *vq,
         } while (head == vq->num);
 
         while (head != vq->num) {
-            len = handler(vdev, &sg[in_num], out_num - 1);
+            len = vq->handler(vdev, &sg[in_num], out_num - 1);
             if (len == -1 && errno == EAGAIN) {
                 if (sent) {
                     virtio_kick(vdev, vq);
                 }
 
-                waiter(vdev);
-                len = handler(vdev, &sg[in_num], out_num);
+                vq->waiter(vdev);
+                len = vq->handler(vdev, &sg[in_num], out_num);
             }
 
             assert(len != -1);
@@ -314,7 +320,7 @@ static void virtio_config_write(void *opaque, uint32_t addr, int size, uint32_t 
 
             for (i = 0; i < vdev->max_vq; i++) {
                 pthread_t tid;
-                pthread_create(&tid, NULL, vdev->vq[i].threadfn, vdev);
+                pthread_create(&tid, NULL, virtio_thread, &vdev->vq[i]);
             }
         }
         break;
@@ -373,11 +379,12 @@ static void virtio_map(PCIDevice *pci_dev, int region_num,
     register_ioport_read(addr, config_len, 4, virtio_config_readl, vdev);
 }
 
-static void virtio_add_queue_thread(VirtioDevice2 *vdev, unsigned index,
-                                    unsigned num, void *(*threadfn)(void *))
+static void virtio_add_queue_sync(VirtioDevice2 *vdev, unsigned index, unsigned num,
+                                  virtio_io_handler_t *handler, virtio_io_waiter_t *waiter)
 {
     vdev->vq[index].num = num;
-    vdev->vq[index].threadfn = threadfn;
+    vdev->vq[index].handler = handler;
+    vdev->vq[index].waiter = waiter;
     vdev->max_vq = MAX(vdev->max_vq, index);
 }
 
@@ -434,15 +441,6 @@ static void virtio_net_tx_waiter(VirtioDevice2 *vdev)
     fd_wait_write(n->fd);
 }
 
-static void *virtio_net_tx_thread(void *opaque)
-{
-    VirtioNet2 *n = opaque;
-
-    virtio_thread(&n->vdev, &n->vdev.vq[1], virtio_net_tx_handler, virtio_net_tx_waiter);
-
-    return NULL;
-}
-
 static size_t virtio_net_rx_handler(VirtioDevice2 *vdev, struct iovec *sg, int iovcnt)
 {
     VirtioNet2 *n = to_vnet(vdev);
@@ -460,23 +458,14 @@ static void virtio_net_rx_waiter(VirtioDevice2 *vdev)
     fd_wait_read(n->fd);
 }
 
-static void *virtio_net_rx_thread(void *opaque)
-{
-    VirtioNet2 *n = opaque;
-
-    virtio_thread(&n->vdev, &n->vdev.vq[0], virtio_net_rx_handler, virtio_net_rx_waiter);
-
-    return NULL;
-}
-
 static int virtio_net_init(VirtioDevice2 *vdev)
 {
     VirtioNet2 *n = to_vnet(vdev);
     struct ifreq ifr;
     int ret;
 
-    virtio_add_queue_thread(vdev, 0, 256, virtio_net_rx_thread);
-    virtio_add_queue_thread(vdev, 1, 256, virtio_net_tx_thread);
+    virtio_add_queue_sync(vdev, 0, 256, virtio_net_rx_handler, virtio_net_rx_waiter);
+    virtio_add_queue_sync(vdev, 1, 256, virtio_net_tx_handler, virtio_net_tx_waiter);
 
     n->fd = open("/dev/net/tun", O_RDWR);
     assert(n->fd != -1);
