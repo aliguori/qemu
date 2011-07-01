@@ -8,6 +8,30 @@
 #include <pthread.h>
 #include "pci.h"
 
+static void fd_wait_read(int fd)
+{
+    fd_set readfds;
+
+    FD_ZERO(&readfds);
+    FD_SET(fd, &readfds);
+
+    select(fd + 1, &readfds, NULL, NULL, NULL);
+    assert(FD_ISSET(fd, &readfds));
+}
+
+static void fd_wait_write(int fd)
+{
+    fd_set fds;
+
+    FD_ZERO(&fds);
+    FD_SET(fd, &fds);
+
+    select(fd + 1, NULL, &fds, NULL, NULL);
+    assert(FD_ISSET(fd, &fds));
+}
+
+/* core virtio */
+
 //#define DEBUG_VIRTIO_2 1
 
 #ifdef DEBUG_VIRTIO_2
@@ -56,38 +80,8 @@ typedef struct VirtioDevice2
     VirtioQueue2 vq[3];
 } VirtioDevice2;
 
-typedef struct VirtioNet2
-{
-    VirtioDevice2 vdev;
-
-    char *ifname;
-    int fd;
-} VirtioNet2;
-
 typedef size_t (virtio_io_handler_t)(VirtioDevice2 *, struct iovec *, int);
 typedef void (virtio_io_wait_t)(VirtioDevice2 *);
-
-static void fd_wait_read(int fd)
-{
-    fd_set readfds;
-
-    FD_ZERO(&readfds);
-    FD_SET(fd, &readfds);
-
-    select(fd + 1, &readfds, NULL, NULL, NULL);
-    assert(FD_ISSET(fd, &readfds));
-}
-
-static void fd_wait_write(int fd)
-{
-    fd_set fds;
-
-    FD_ZERO(&fds);
-    FD_SET(fd, &fds);
-
-    select(fd + 1, NULL, &fds, NULL, NULL);
-    assert(FD_ISSET(fd, &fds));
-}
 
 static VirtioDevice2 *to_vdev(PCIDevice *pci_dev)
 {
@@ -379,6 +373,14 @@ static void virtio_map(PCIDevice *pci_dev, int region_num,
     register_ioport_read(addr, config_len, 4, virtio_config_readl, vdev);
 }
 
+static void virtio_add_queue_thread(VirtioDevice2 *vdev, unsigned index,
+                                    unsigned num, void *(*threadfn)(void *))
+{
+    vdev->vq[index].num = num;
+    vdev->vq[index].threadfn = threadfn;
+    vdev->max_vq = MAX(vdev->max_vq, index);
+}
+
 static int virtio_init(PCIDevice *pci_dev)
 {
     VirtioDevice2 *vdev = to_vdev(pci_dev);
@@ -404,6 +406,16 @@ static int virtio_init(PCIDevice *pci_dev)
 
     return 0;
 }
+
+/* virtio-net */
+
+typedef struct VirtioNet2
+{
+    VirtioDevice2 vdev;
+
+    char *ifname;
+    int fd;
+} VirtioNet2;
 
 static VirtioNet2 *to_vnet(VirtioDevice2 *vdev)
 {
@@ -463,13 +475,8 @@ static int virtio_net_init(VirtioDevice2 *vdev)
     struct ifreq ifr;
     int ret;
 
-    vdev->vq[0].num = 256;
-    vdev->vq[0].threadfn = virtio_net_tx_thread;
-    vdev->max_vq++;
-
-    vdev->vq[1].num = 256;
-    vdev->vq[1].threadfn = virtio_net_rx_thread;
-    vdev->max_vq++;
+    virtio_add_queue_thread(vdev, 0, 256, virtio_net_rx_thread);
+    virtio_add_queue_thread(vdev, 1, 256, virtio_net_tx_thread);
 
     n->fd = open("/dev/net/tun", O_RDWR);
     assert(n->fd != -1);
