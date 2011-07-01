@@ -100,11 +100,16 @@ static void virtio_net_kick(VirtioNet2 *n, VirtioQueue2 *vq)
 {
     mb();
     if (!(vq->avail->flags & VRING_AVAIL_F_NO_INTERRUPT)) {
+#if 0
         uint64_t count = 1;
         ssize_t len;
 
         len = write(n->event_fd, &count, sizeof(count));
         assert(len != -1);
+#else
+        kvm_set_irq(11, 1, NULL);
+        kvm_set_irq(11, 0, NULL);
+#endif
     }
 }
 
@@ -146,7 +151,6 @@ static unsigned virtio_net_next_avail(VirtioNet2 *n, VirtioQueue2 *vq,
     *pout_num = out_num;
 
     vq->last_avail_idx++;
-    mb();
 
     return head;
 }
@@ -162,6 +166,28 @@ static void virtio_net_add_used(VirtioQueue2 *vq, unsigned head, uint32_t len)
     mb();
 }
 
+static void fd_wait_read(int fd)
+{
+    fd_set readfds;
+
+    FD_ZERO(&readfds);
+    FD_SET(fd, &readfds);
+
+    select(fd + 1, &readfds, NULL, NULL, NULL);
+    assert(FD_ISSET(fd, &readfds));
+}
+
+static void fd_wait_write(int fd)
+{
+    fd_set fds;
+
+    FD_ZERO(&fds);
+    FD_SET(fd, &fds);
+
+    select(fd + 1, NULL, &fds, NULL, NULL);
+    assert(FD_ISSET(fd, &fds));
+}
+
 static void *virtio_net_tx_thread(void *opaque)
 {
     VirtioNet2 *n = opaque;
@@ -175,20 +201,28 @@ static void *virtio_net_tx_thread(void *opaque)
         unsigned head;
         ssize_t len;
 
-        in_num = out_num = 0;
-
         do {
+            in_num = out_num = 0;
             head = virtio_net_next_avail(n, vq, sg, vq->num, &in_num, &out_num);
-            if (head == vq->num) {
-            }
         } while (head == vq->num);
 
-        dprintf("got tx packet %d %d %d", head, in_num, out_num);
-        len = writev(n->fd, &sg[1], in_num - 1);
-        assert(len != -1);
-        dprintf("wrote %ld", len);
+        while (head != vq->num) {
+            dprintf("got tx packet %d %d %d", head, in_num, out_num);
+            len = writev(n->fd, &sg[1], in_num - 1);
+            if (len == -1 && errno == EAGAIN) {
+                fd_wait_write(n->fd);
+                len = writev(n->fd, &sg[1], in_num - 1);
+            }
 
-        virtio_net_add_used(vq, head, 0);
+            assert(len != -1);
+            dprintf("wrote %ld", len);
+
+            virtio_net_add_used(vq, head, 0);
+
+            in_num = out_num = 0;
+            head = virtio_net_next_avail(n, vq, sg, vq->num, &in_num, &out_num);
+        }
+
         virtio_net_kick(n, vq);
     }
 
@@ -208,24 +242,36 @@ static void *virtio_net_rx_thread(void *opaque)
         unsigned in_num, out_num;
         unsigned head;
         ssize_t len;
-
-        in_num = out_num = 0;
+        bool sent = false;
 
         do {
+            in_num = out_num = 0;
             head = virtio_net_next_avail(n, vq, sg, vq->num, &in_num, &out_num);
-            if (head == vq->num) {
-            }
         } while (head == vq->num);
 
-        dprintf("got rx packet %d %d %d", head, in_num, out_num);
-        hdr = sg[in_num].iov_base;
-        hdr->flags = 0;
-        len = readv(n->fd, &sg[in_num + 1], out_num - 1);
-        assert(len != -1);
-        dprintf("read %ld", len);
+        while (head != vq->num) {
+            dprintf("got rx packet %d %d %d", head, in_num, out_num);
+            hdr = sg[in_num].iov_base;
+            hdr->flags = 0;
+            len = readv(n->fd, &sg[in_num + 1], out_num - 1);
+            if (len == -1 && errno == EAGAIN) {
+                if (sent) {
+                    virtio_net_kick(n, vq);
+                }
 
-        virtio_net_add_used(vq, head, len + 10);
-        virtio_net_kick(n, vq);
+                fd_wait_read(n->fd);
+                len = readv(n->fd, &sg[in_num + 1], out_num - 1);
+            }
+
+            assert(len != -1);
+            dprintf("read %ld", len);
+
+            virtio_net_add_used(vq, head, len + 10);
+
+            in_num = out_num = 0;
+            head = virtio_net_next_avail(n, vq, sg, vq->num, &in_num, &out_num);
+            sent = true;
+        }
     }
 
     return NULL;
@@ -261,11 +307,7 @@ static uint32_t virtio_net_config_read(void *opaque, uint32_t addr, int size)
         value = n->status;
         break;
     case VIRTIO_PCI_ISR:
-        value = n->isr;
-        n->isr = 0;
-        if (value) {
-            virtio_net_update_irq(n);
-        }
+        value = 1;
         break;
     default:
         break;
@@ -381,6 +423,11 @@ static int virtio_net_init(PCIDevice *pci_dev)
     struct ifreq ifr;
     int ret;
 
+    pci_config_set_vendor_id(pci_dev->config, PCI_VENDOR_ID_REDHAT_QUMRANET);
+    pci_config_set_device_id(pci_dev->config, PCI_DEVICE_ID_VIRTIO_NET);
+    pci_config_set_revision(pci_dev->config, VIRTIO_PCI_ABI_VERSION);
+    pci_config_set_class(pci_dev->config, PCI_CLASS_NETWORK_ETHERNET);
+
     pci_set_word(pci_dev->config + 0x2c, pci_get_word(pci_dev->config + PCI_VENDOR_ID));
     pci_set_word(pci_dev->config + 0x2e, 1);
     pci_dev->config[0x3d] = 1;
@@ -408,6 +455,8 @@ static int virtio_net_init(PCIDevice *pci_dev)
     ret = ioctl(n->fd, TUNSETIFF, &ifr);
     assert(ret != -1);
 
+    fcntl(n->fd, F_SETFL, O_NONBLOCK);
+
     return 0;
 }
 
@@ -429,10 +478,6 @@ static PCIDeviceInfo virtio_info = {
     .qdev.size = sizeof(VirtioNet2),
     .init = virtio_net_init,
     .exit = virtio_net_exit,
-    .vendor_id = PCI_VENDOR_ID_REDHAT_QUMRANET,
-    .device_id = PCI_DEVICE_ID_VIRTIO_NET,
-    .revision  = VIRTIO_PCI_ABI_VERSION,
-    .class_id   = PCI_CLASS_NETWORK_ETHERNET,
     .qdev.props = (Property[]) {
         DEFINE_PROP_STRING("ifname", VirtioNet2, ifname),
         DEFINE_PROP_END_OF_LIST(),
