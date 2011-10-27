@@ -152,6 +152,7 @@ int main(int argc, char **argv)
 #ifdef CONFIG_VIRTFS
 #include "fsdev/qemu-fsdev.h"
 #endif
+#include "qtest.h"
 
 #include "disas.h"
 
@@ -1988,6 +1989,7 @@ static struct {
     { "tcg", "tcg", tcg_available, tcg_init, &tcg_allowed },
     { "xen", "Xen", xen_available, xen_init, &xen_allowed },
     { "kvm", "KVM", kvm_available, kvm_init, &kvm_allowed },
+    { "qtest", "QTest", qtest_available, qtest_init, &qtest_allowed },
 };
 
 static int configure_accelerator(void)
@@ -3053,6 +3055,12 @@ int main(int argc, char **argv, char **envp)
                     fclose(fp);
                     break;
                 }
+            case QEMU_OPTION_qtest:
+                qtest_chrdev = optarg;
+                break;
+            case QEMU_OPTION_qtest_log:
+                qtest_log = optarg;
+                break;
             default:
                 os_parse_cmd_args(popt->index, optarg);
             }
