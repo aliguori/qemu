@@ -46,6 +46,7 @@
 #ifdef CONFIG_XEN
 #  include <xen/hvm/hvm_info_table.h>
 #endif
+#include "qtest.h"
 
 #define MAX_IDE_BUS 2
 
@@ -154,11 +155,13 @@ static void pc_init1(MemoryRegion *system_memory,
     }
     isa_bus_irqs(isa_bus, gsi);
 
-    if (!xen_enabled()) {
+    if (xen_enabled()) {
+        i8259 = xen_interrupt_controller_init();
+    } else if (qtest_enabled()) {
+        i8259 = qtest_interrupt_controller_init();
+    } else {
         cpu_irq = pc_allocate_cpu_irq();
         i8259 = i8259_init(isa_bus, cpu_irq[0]);
-    } else {
-        i8259 = xen_interrupt_controller_init();
     }
 
     for (i = 0; i < ISA_NUM_IRQS; i++) {

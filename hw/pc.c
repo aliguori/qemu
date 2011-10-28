@@ -43,6 +43,7 @@
 #include "ui/qemu-spice.h"
 #include "memory.h"
 #include "exec-memory.h"
+#include "qtest.h"
 
 /* output Bochs bios info messages */
 //#define DEBUG_BIOS
@@ -926,7 +927,11 @@ static void pc_cpu_reset(void *opaque)
     CPUState *env = opaque;
 
     cpu_reset(env);
-    env->halted = !cpu_is_bsp(env);
+    if (qtest_enabled()) {
+        env->halted = 1;
+    } else {
+        env->halted = !cpu_is_bsp(env);
+    }
 }
 
 static CPUState *pc_new_cpu(const char *cpu_model)
