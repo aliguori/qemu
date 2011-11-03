@@ -390,11 +390,32 @@ void qdev_init_nofail(DeviceState *dev)
     }
 }
 
+static void qdev_property_del_all(DeviceState *dev)
+{
+    while (dev->properties) {
+        GSList *i = dev->properties;
+        DeviceProperty *prop = i->data;
+
+        dev->properties = i->next;
+
+        if (prop->release) {
+            prop->release(dev, prop->name, prop->opaque);
+        }
+
+        g_free(prop->name);
+        g_free(prop->type);
+        g_free(prop);
+        g_free(i);
+    }
+}
+
 /* Unlink device from bus and free the structure.  */
 void qdev_free(DeviceState *dev)
 {
     BusState *bus;
     Property *prop;
+
+    qdev_property_del_all(dev);
 
     if (dev->state == DEV_STATE_INITIALIZED) {
         while (dev->num_child_bus) {
@@ -961,4 +982,82 @@ char* qdev_get_fw_dev_path(DeviceState *dev)
     path[l-1] = '\0';
 
     return strdup(path);
+}
+
+void qdev_property_add(DeviceState *dev, const char *name, const char *type,
+                       DevicePropertyEtter *get, DevicePropertyEtter *set,
+                       DevicePropertyRelease *release, void *opaque,
+                       Error **errp)
+{
+    DeviceProperty *prop = g_malloc0(sizeof(*prop));
+
+    prop->name = g_strdup(name);
+    prop->type = g_strdup(type);
+    prop->get = get;
+    prop->set = set;
+    prop->release = release;
+    prop->opaque = opaque;
+
+    dev->properties = g_slist_append(dev->properties, prop);
+}
+
+static DeviceProperty *qdev_property_find(DeviceState *dev, const char *name)
+{
+    GSList *i;
+
+    for (i = dev->properties; i; i = i->next) {
+        DeviceProperty *prop = i->data;
+
+        if (strcmp(prop->name, name) == 0) {
+            return prop;
+        }
+    }
+
+    return NULL;
+}
+
+void qdev_property_get(DeviceState *dev, Visitor *v, const char *name,
+                       Error **errp)
+{
+    DeviceProperty *prop = qdev_property_find(dev, name);
+
+    if (prop == NULL) {
+        error_set(errp, QERR_PROPERTY_NOT_FOUND, dev->id?:"", name);
+        return;
+    }
+
+    if (!prop->get) {
+        error_set(errp, QERR_PERMISSION_DENIED);
+    } else {
+        prop->get(dev, v, prop->opaque, name, errp);
+    }
+}
+
+void qdev_property_set(DeviceState *dev, Visitor *v, const char *name,
+                       Error **errp)
+{
+    DeviceProperty *prop = qdev_property_find(dev, name);
+
+    if (prop == NULL) {
+        error_set(errp, QERR_PROPERTY_NOT_FOUND, dev->id?:"", name);
+        return;
+    }
+
+    if (!prop->set) {
+        error_set(errp, QERR_PERMISSION_DENIED);
+    } else {
+        prop->set(dev, prop->opaque, v, name, errp);
+    }
+}
+
+const char *qdev_property_get_type(DeviceState *dev, const char *name, Error **errp)
+{
+    DeviceProperty *prop = qdev_property_find(dev, name);
+
+    if (prop == NULL) {
+        error_set(errp, QERR_PROPERTY_NOT_FOUND, dev->id?:"", name);
+        return NULL;
+    }
+
+    return prop->type;
 }
