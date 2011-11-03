@@ -1204,3 +1204,103 @@ gchar *qdev_get_canonical_path(DeviceState *dev)
 
     return newpath;
 }
+
+static DeviceState *qdev_resolve_abs_path(DeviceState *parent,
+                                          gchar **parts,
+                                          int index)
+{
+    DeviceProperty *prop;
+    DeviceState *child;
+
+    if (parts[index] == NULL) {
+        return parent;
+    }
+
+    if (strcmp(parts[index], "") == 0) {
+        return qdev_resolve_abs_path(parent, parts, index + 1);
+    }
+
+    prop = qdev_property_find(parent, parts[index]);
+    if (prop == NULL) {
+        return NULL;
+    }
+
+    child = NULL;
+    if (strstart(prop->type, "link<", NULL)) {
+        DeviceState **pchild = prop->opaque;
+        if (*pchild) {
+            child = *pchild;
+        }
+    } else if (strstart(prop->type, "child<", NULL)) {
+        child = prop->opaque;
+    }
+
+    if (!child) {
+        return NULL;
+    }
+
+    return qdev_resolve_abs_path(child, parts, index + 1);
+}
+
+static DeviceState *qdev_resolve_partial_path(DeviceState *parent,
+                                              gchar **parts,
+                                              bool *ambiguous)
+{
+    DeviceState *dev;
+    GSList *i;
+
+    dev = qdev_resolve_abs_path(parent, parts, 0);
+
+    for (i = parent->properties; i; i = i->next) {
+        DeviceProperty *prop = i->data;
+        DeviceState *found;
+
+        if (!strstart(prop->type, "child<", NULL)) {
+            continue;
+        }
+
+        found = qdev_resolve_partial_path(prop->opaque, parts, ambiguous);
+        if (found) {
+            if (dev) {
+                if (ambiguous) {
+                    *ambiguous = true;
+                }
+                return NULL;
+            }
+            dev = found;
+        }
+
+        if (ambiguous && *ambiguous) {
+            return NULL;
+        }
+    }
+
+    return dev;
+}
+
+DeviceState *qdev_resolve_path(const char *path, bool *ambiguous)
+{
+    bool partial_path = true;
+    DeviceState *dev;
+    gchar **parts;
+
+    parts = g_strsplit(path, "/", 0);
+    if (parts == NULL || parts[0] == NULL) {
+        return qdev_get_root();
+    }
+
+    if (strcmp(parts[0], "") == 0) {
+        partial_path = false;
+    }
+
+    if (partial_path) {
+        dev = qdev_resolve_partial_path(qdev_get_root(), parts, ambiguous);
+    } else {
+        dev = qdev_resolve_abs_path(qdev_get_root(), parts, 1);
+    }
+
+    g_strfreev(parts);
+
+    return dev;
+}
+
