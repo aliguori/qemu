@@ -16,6 +16,7 @@
 #include "qmp-commands.h"
 #include "kvm.h"
 #include "arch_init.h"
+#include "hw/qdev.h"
 
 NameInfo *qmp_query_name(Error **errp)
 {
@@ -117,3 +118,31 @@ SpiceInfo *qmp_query_spice(Error **errp)
     return NULL;
 };
 #endif
+
+DevicePropertyInfoList *qmp_qom_list(const char *path, Error **errp)
+{
+    DeviceState *dev;
+    bool ambiguous = false;
+    DevicePropertyInfoList *props = NULL;
+    GSList *i;
+
+    dev = qdev_resolve_path(path, &ambiguous);
+    if (dev == NULL) {
+        error_set(errp, QERR_DEVICE_NOT_FOUND, path);
+        return NULL;
+    }
+
+    for (i = dev->properties; i; i = i->next) {
+        DevicePropertyInfoList *entry = g_malloc0(sizeof(*entry));
+        DeviceProperty *prop = i->data;
+
+        entry->value = g_malloc0(sizeof(DevicePropertyInfo));
+        entry->next = props;
+        props = entry;
+
+        entry->value->name = g_strdup(prop->name);
+        entry->value->type = g_strdup(prop->type);
+    }
+
+    return props;
+}
