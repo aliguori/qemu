@@ -83,6 +83,10 @@ struct DeviceState {
     int instance_id_alias;
     int alias_required_for_version;
     GSList *properties;
+
+    /* Do not, under any circumstance, use this parent link below anywhere
+     * outside of qdev.c.  You have been warned. */
+    DeviceState *parent;
 };
 
 typedef void (*bus_dev_printfn)(Monitor *mon, DeviceState *dev, int indent);
