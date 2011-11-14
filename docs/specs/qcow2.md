@@ -1,4 +1,5 @@
-== General ==
+General
+=======
 
 A qcow2 image file is organized in units of constant size, which are called
 (host) clusters. A cluster is the unit in which all allocations are done,
@@ -9,8 +10,8 @@ clusters of the same size.
 
 All numbers in qcow2 are stored in Big Endian byte order.
 
-
-== Header ==
+Header
+======
 
 The first cluster of a qcow2 image contains the file header:
 
@@ -88,7 +89,8 @@ the first cluster can be used for other data. Usually, the backing file name is
 stored there.
 
 
-== Host cluster management ==
+Host cluster management
+=======================
 
 qcow2 manages the allocation of host clusters by maintaining a reference count
 for each host cluster. A refcount of 0 means that the cluster is free, 1 means
@@ -131,7 +133,8 @@ Refcount block entry:
     Bit  0 - 15:    Reference count of the cluster
 
 
-== Cluster mapping ==
+Cluster mapping
+===============
 
 Just as for refcounts, qcow2 uses a two-level structure for the mapping of
 guest clusters to host clusters. They are called L1 and L2 table.
@@ -203,8 +206,8 @@ If a cluster is unallocated, read requests shall read the data from the backing
 file. If there is no backing file or the backing file is smaller than the image,
 they shall read zeros for all parts that are not covered by the backing file.
 
-
-== Snapshots ==
+Snapshots
+=========
 
 qcow2 supports internal snapshots. Their basic principle of operation is to
 switch the active L1 table, so that a different set of host clusters are
