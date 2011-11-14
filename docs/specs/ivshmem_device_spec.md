@@ -1,6 +1,5 @@
-
 Device Specification for Inter-VM shared memory device
-------------------------------------------------------
+======================================================
 
 The Inter-VM shared memory device is designed to share a region of memory to
 userspace in multiple virtual guests.  The memory region does not belong to any
@@ -9,16 +8,18 @@ support sending interrupts to other guests sharing the same memory region.
 
 
 The Inter-VM PCI device
------------------------
+=======================
 
-*BARs*
+BARs
+----
 
 The device supports three BARs.  BAR0 is a 1 Kbyte MMIO region to support
 registers.  BAR1 is used for MSI-X when it is enabled in the device.  BAR2 is
 used to map the shared memory object from the host.  The size of BAR2 is
 specified when the guest is started and must be a power of 2 in size.
 
-*Registers*
+Registers
+---------
 
 The device currently supports 4 registers of 32-bits each.  Registers
 are used for synchronization between guests sharing the same memory object when
@@ -27,49 +28,49 @@ interrupts are supported (this requires using the shared memory server).
 The server assigns each VM an ID number and sends this ID number to the Qemu
 process when the guest starts.
 
-enum ivshmem_registers {
-    IntrMask = 0,
-    IntrStatus = 4,
-    IVPosition = 8,
-    Doorbell = 12
-};
+    enum ivshmem_registers {
+        IntrMask = 0,
+        IntrStatus = 4,
+        IVPosition = 8,
+        Doorbell = 12
+    };
 
 The first two registers are the interrupt mask and status registers.  Mask and
 status are only used with pin-based interrupts.  They are unused with MSI
 interrupts.
 
-Status Register: The status register is set to 1 when an interrupt occurs.
+**Status Register:** The status register is set to 1 when an interrupt occurs.
 
-Mask Register: The mask register is bitwise ANDed with the interrupt status
+**Mask Register:** The mask register is bitwise ANDed with the interrupt status
 and the result will raise an interrupt if it is non-zero.  However, since 1 is
 the only value the status will be set to, it is only the first bit of the mask
 that has any effect.  Therefore interrupts can be masked by setting the first
 bit to 0 and unmasked by setting the first bit to 1.
 
-IVPosition Register: The IVPosition register is read-only and reports the
+**IVPosition Register:** The IVPosition register is read-only and reports the
 guest's ID number.  The guest IDs are non-negative integers.  When using the
 server, since the server is a separate process, the VM ID will only be set when
-the device is ready (shared memory is received from the server and accessible via
-the device).  If the device is not ready, the IVPosition will return -1.
+the device is ready (shared memory is received from the server and accessible
+via the device).  If the device is not ready, the IVPosition will return -1.
 Applications should ensure that they have a valid VM ID before accessing the
 shared memory.
 
-Doorbell Register:  To interrupt another guest, a guest must write to the
+**Doorbell Register:**  To interrupt another guest, a guest must write to the
 Doorbell register.  The doorbell register is 32-bits, logically divided into
 two 16-bit fields.  The high 16-bits are the guest ID to interrupt and the low
 16-bits are the interrupt vector to trigger.  The semantics of the value
 written to the doorbell depends on whether the device is using MSI or a regular
-pin-based interrupt.  In short, MSI uses vectors while regular interrupts set the
-status register.
+pin-based interrupt.  In short, MSI uses vectors while regular interrupts set
+the status register.
 
-Regular Interrupts
+### Regular Interrupts
 
 If regular interrupts are used (due to either a guest not supporting MSI or the
 user specifying not to use them on startup) then the value written to the lower
 16-bits of the Doorbell register results is arbitrary and will trigger an
 interrupt in the destination guest.
 
-Message Signalled Interrupts
+### Message Signalled Interrupts
 
 A ivshmem device may support multiple MSI vectors.  If so, the lower 16-bits
 written to the Doorbell register must be between 0 and the maximum number of
@@ -86,7 +87,7 @@ user's discretion.
 
 
 Usage in the Guest
-------------------
+==================
 
 The shared memory device is intended to be used with the provided UIO driver.
 Very little configuration is needed.  The guest should map BAR0 to access the
