@@ -1228,7 +1228,7 @@ void qdev_property_add_child(DeviceState *dev, const char *name,
     qdev_property_add(dev, name, type, qdev_get_child_property,
                       NULL, NULL, child, errp);
 
-    qdev_ref(dev);
+    qdev_ref(child);
     g_assert(child->parent == NULL);
     child->parent = dev;
 
