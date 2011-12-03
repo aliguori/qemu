@@ -53,7 +53,7 @@ static const int ide_iobase[MAX_IDE_BUS] = { 0x1f0, 0x170 };
 static const int ide_iobase2[MAX_IDE_BUS] = { 0x3f6, 0x376 };
 static const int ide_irq[MAX_IDE_BUS] = { 14, 15 };
 
-static void ioapic_init(GSIState *gsi_state)
+static DeviceState *ioapic_init(GSIState *gsi_state)
 {
     DeviceState *dev;
     SysBusDevice *d;
@@ -67,6 +67,8 @@ static void ioapic_init(GSIState *gsi_state)
     for (i = 0; i < IOAPIC_NUM_PINS; i++) {
         gsi_state->ioapic_irq[i] = qdev_get_gpio_in(dev, i);
     }
+
+    return dev;
 }
 
 /* PC hardware initialisation */
@@ -99,12 +101,18 @@ static void pc_init1(MemoryRegion *system_memory,
     MemoryRegion *ram_memory;
     MemoryRegion *pci_memory;
     MemoryRegion *rom_memory;
+    DeviceState *superio = NULL;
+    DeviceState *board;
     DeviceState *dev;
+
+    board = qdev_create(NULL, "container");
+    qdev_property_add_child(qdev_get_root(), "pc", board, NULL);
 
     pc_cpus_init(cpu_model);
 
     if (kvmclock_enabled) {
-        kvmclock_create();
+        dev = kvmclock_create();
+        qdev_property_add_child(board, "kvmclock", dev, NULL);
     }
 
     if (ram_size >= 0xe0000000 ) {
@@ -136,7 +144,10 @@ static void pc_init1(MemoryRegion *system_memory,
     gsi = qemu_allocate_irqs(gsi_handler, gsi_state, GSI_NUM_PINS);
 
     if (pci_enabled) {
-        pci_bus = i440fx_init(&i440fx_state, &piix3_devfn, gsi,
+        DeviceState *i440fx, *piix3;
+
+        pci_bus = i440fx_init(&i440fx_state, &piix3_devfn,
+                              &i440fx, &piix3, gsi,
                               system_memory, system_io, ram_size,
                               below_4g_mem_size,
                               0x100000000ULL - below_4g_mem_size,
@@ -145,6 +156,9 @@ static void pc_init1(MemoryRegion *system_memory,
                                ? 0
                                : ((uint64_t)1 << 62)),
                               pci_memory, ram_memory);
+
+        qdev_property_add_child(board, "host-controller", i440fx, NULL);
+        superio = piix3;
     } else {
         pci_bus = NULL;
         i440fx_state = NULL;
@@ -164,30 +178,39 @@ static void pc_init1(MemoryRegion *system_memory,
         gsi_state->i8259_irq[i] = i8259[i];
     }
     if (pci_enabled) {
-        ioapic_init(gsi_state);
+        dev = ioapic_init(gsi_state);
+        qdev_property_add_child(board, "ioapic", dev, NULL);
     }
 
     pc_register_ferr_irq(gsi[13]);
 
     dev = pc_vga_init(pci_enabled? pci_bus: NULL);
     if (dev) {
-        qdev_property_add_child(qdev_get_root(), "vga", dev, NULL);
+        qdev_property_add_child(board, "vga", dev, NULL);
     }
 
     if (xen_enabled()) {
-        pci_create_simple(pci_bus, -1, "xen-platform");
+        dev = &pci_create_simple(pci_bus, -1, "xen-platform")->qdev;
+        qdev_property_add_child(board, "xen", dev, NULL);
     }
 
     /* init basic PC hardware */
-    pc_basic_device_init(gsi, &rtc_state, &floppy, xen_enabled());
+    pc_basic_device_init(board, superio, gsi, &rtc_state,
+                         &floppy, xen_enabled());
 
     for(i = 0; i < nb_nics; i++) {
         NICInfo *nd = &nd_table[i];
+        DeviceState *dev;
+        char buffer[32];
 
-        if (!pci_enabled || (nd->model && strcmp(nd->model, "ne2k_isa") == 0))
-            pc_init_ne2k_isa(nd);
-        else
-            pci_nic_init_nofail(nd, "e1000", NULL);
+        if (!pci_enabled || (nd->model && strcmp(nd->model, "ne2k_isa") == 0)) {
+            dev = pc_init_ne2k_isa(nd);
+        } else {
+            dev = &pci_nic_init_nofail(nd, "e1000", NULL)->qdev;
+        }
+
+        snprintf(buffer, sizeof(buffer), "nic[%d]", i);
+        qdev_property_add_child(board, buffer, dev, NULL);
     }
 
     ide_drive_get(hd, MAX_IDE_BUS);
@@ -200,25 +223,18 @@ static void pc_init1(MemoryRegion *system_memory,
         }
         idebus[0] = qdev_get_child_bus(&dev->qdev, "ide.0");
         idebus[1] = qdev_get_child_bus(&dev->qdev, "ide.1");
+        qdev_property_add_child(board, "ide", &dev->qdev, NULL);
     } else {
         for(i = 0; i < MAX_IDE_BUS; i++) {
             ISADevice *dev;
+            char buffer[32];
             dev = isa_ide_init(ide_iobase[i], ide_iobase2[i], ide_irq[i],
                                hd[MAX_IDE_DEVS * i], hd[MAX_IDE_DEVS * i + 1]);
             idebus[i] = qdev_get_child_bus(&dev->qdev, "ide.0");
+            snprintf(buffer, sizeof(buffer), "ide[%d]", i);
+            qdev_property_add_child(board, buffer, &dev->qdev, NULL);
         }
     }
-
-    /* FIXME there's some major spaghetti here.  Somehow we create the devices
-     * on the PIIX before we actually create it.  We create the PIIX3 deep in
-     * the recess of the i440fx creation too and then lose the DeviceState.
-     *
-     * For now, let's "fix" this by making judicious use of paths.  This is not
-     * generally the right way to do this.
-     */
-
-    qdev_property_add_child(qdev_resolve_path("/i440fx/piix3", NULL),
-                            "rtc", (DeviceState *)rtc_state, NULL);
 
     audio_init(gsi, pci_enabled ? pci_bus : NULL);
 
@@ -226,7 +242,8 @@ static void pc_init1(MemoryRegion *system_memory,
                  floppy, idebus[0], idebus[1], rtc_state);
 
     if (pci_enabled && usb_enabled) {
-        usb_uhci_piix3_init(pci_bus, piix3_devfn + 2);
+        dev = usb_uhci_piix3_init(pci_bus, piix3_devfn + 2);
+        qdev_property_add_child(board, "usb-host", dev, NULL);
     }
 
     if (pci_enabled && acpi_enabled) {
@@ -239,14 +256,15 @@ static void pc_init1(MemoryRegion *system_memory,
         }
         smi_irq = qemu_allocate_irqs(pc_acpi_smi_interrupt, first_cpu, 1);
         /* TODO: Populate SPD eeprom data.  */
-        smbus = piix4_pm_init(pci_bus, piix3_devfn + 3, 0xb100,
+        smbus = piix4_pm_init(pci_bus, &dev, piix3_devfn + 3, 0xb100,
                               gsi[9], *cmos_s3, *smi_irq,
                               kvm_enabled());
+        qdev_property_add_child(superio, "pm", dev, NULL);
         smbus_eeprom_init(smbus, 8, NULL, 0);
     }
 
     if (pci_enabled) {
-        pc_pci_device_init(pci_bus);
+        pc_pci_device_init(pci_bus, board);
     }
 }
 

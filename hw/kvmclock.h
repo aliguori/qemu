@@ -13,12 +13,13 @@
 
 #ifdef CONFIG_KVM
 
-void kvmclock_create(void);
+DeviceState *kvmclock_create(void);
 
 #else /* CONFIG_KVM */
 
-static inline void kvmclock_create(void)
+static inline DeviceState *kvmclock_create(void)
 {
+    return NULL;
 }
 
 #endif /* !CONFIG_KVM */

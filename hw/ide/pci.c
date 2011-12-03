@@ -498,9 +498,16 @@ void pci_ide_create_devs(PCIDevice *dev, DriveInfo **hd_table)
     int i;
 
     for (i = 0; i < 4; i++) {
-        if (hd_table[i] == NULL)
+        char name[32];
+        IDEDevice *c;
+
+        if (hd_table[i] == NULL) {
             continue;
-        ide_create_drive(d->bus+bus[i], unit[i], hd_table[i]);
+        }
+
+        c = ide_create_drive(d->bus+bus[i], unit[i], hd_table[i]);
+        snprintf(name, sizeof(name), "drive[%d]", i);
+        qdev_property_add_child(&dev->qdev, name, &c->qdev, NULL);
     }
 }
 

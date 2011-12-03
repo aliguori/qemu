@@ -849,15 +849,17 @@ static const int ne2000_irq[NE2000_NB_MAX] = { 9, 10, 11, 3, 4, 5 };
 static const int parallel_io[MAX_PARALLEL_PORTS] = { 0x378, 0x278, 0x3bc };
 static const int parallel_irq[MAX_PARALLEL_PORTS] = { 7, 7, 7 };
 
-void pc_init_ne2k_isa(NICInfo *nd)
+DeviceState *pc_init_ne2k_isa(NICInfo *nd)
 {
     static int nb_ne2k = 0;
+    DeviceState *dev;
 
     if (nb_ne2k == NE2000_NB_MAX)
-        return;
-    isa_ne2000_init(ne2000_io[nb_ne2k],
-                    ne2000_irq[nb_ne2k], nd);
+        return NULL;
+    dev = isa_ne2000_init(ne2000_io[nb_ne2k],
+                          ne2000_irq[nb_ne2k], nd);
     nb_ne2k++;
+    return dev;
 }
 
 int cpu_is_bsp(CPUState *env)
@@ -1118,7 +1120,9 @@ static void cpu_request_exit(void *opaque, int irq, int level)
     }
 }
 
-void pc_basic_device_init(qemu_irq *gsi,
+void pc_basic_device_init(DeviceState *board,
+                          DeviceState *superio,
+                          qemu_irq *gsi,
                           ISADevice **rtc_state,
                           ISADevice **floppy,
                           bool no_vmport)
@@ -1142,33 +1146,51 @@ void pc_basic_device_init(qemu_irq *gsi,
                 sysbus_connect_irq(sysbus_from_qdev(hpet), i, gsi[i]);
             }
             rtc_irq = qdev_get_gpio_in(hpet, 0);
+
+            qdev_property_add_child(board, "hpet", hpet, NULL);
         }
     }
     *rtc_state = rtc_init(2000, rtc_irq);
+    qdev_property_add_child(superio, "rtc", &(*rtc_state)->qdev, NULL);
 
     qemu_register_boot_set(pc_boot_set, *rtc_state);
 
     pit = pit_init(0x40, 0);
+    qdev_property_add_child(superio, "pit", &pit->qdev, NULL);
+
+    /* FIXME not qdev */
     pcspk_init(pit);
 
     for(i = 0; i < MAX_SERIAL_PORTS; i++) {
         if (serial_hds[i]) {
-            serial_isa_init(i, serial_hds[i]);
+            DeviceState *dev;
+            char name[1024];
+
+            dev = serial_isa_init(i, serial_hds[i]);
+            snprintf(name, sizeof(name), "serial[%d]", i);
+            qdev_property_add_child(board, name, dev, NULL);
         }
     }
 
     for(i = 0; i < MAX_PARALLEL_PORTS; i++) {
         if (parallel_hds[i]) {
-            parallel_init(i, parallel_hds[i]);
+            DeviceState *dev;
+            char name[1024];
+
+            dev = parallel_init(i, parallel_hds[i]);
+            snprintf(name, sizeof(name), "parallel[%d]", i);
+            qdev_property_add_child(board, name, dev, NULL);
         }
     }
 
     a20_line = qemu_allocate_irqs(handle_a20_line_change, first_cpu, 2);
     i8042 = isa_create_simple("i8042");
+    qdev_property_add_child(superio, "pckbd", &i8042->qdev, NULL);
     i8042_setup_a20_line(i8042, &a20_line[0]);
     if (!no_vmport) {
         vmport_init();
         vmmouse = isa_try_create("vmmouse");
+        qdev_property_add_child(superio, "vmmouse", &vmmouse->qdev, NULL);
     } else {
         vmmouse = NULL;
     }
@@ -1178,23 +1200,32 @@ void pc_basic_device_init(qemu_irq *gsi,
     }
     port92 = isa_create_simple("port92");
     port92_init(port92, &a20_line[1]);
+    qdev_property_add_child(superio, "port92", &port92->qdev, NULL);
 
     cpu_exit_irq = qemu_allocate_irqs(cpu_request_exit, NULL, 1);
+
+    /* FIXME not qdev */
     DMA_init(0, cpu_exit_irq);
 
     for(i = 0; i < MAX_FD; i++) {
         fd[i] = drive_get(IF_FLOPPY, 0, i);
     }
     *floppy = fdctrl_init_isa(fd);
+    qdev_property_add_child(superio, "floppy", &(*floppy)->qdev, NULL);
 }
 
-void pc_pci_device_init(PCIBus *pci_bus)
+void pc_pci_device_init(PCIBus *pci_bus, DeviceState *board)
 {
     int max_bus;
     int bus;
 
     max_bus = drive_get_max_bus(IF_SCSI);
     for (bus = 0; bus <= max_bus; bus++) {
-        pci_create_simple(pci_bus, -1, "lsi53c895a");
+        DeviceState *dev;
+        char name[32];
+
+        snprintf(name, sizeof(name), "scsi[%d]", bus);
+        dev = &pci_create_simple(pci_bus, -1, "lsi53c895a")->qdev;
+        qdev_property_add_child(board, name, dev, NULL);
     }
 }
