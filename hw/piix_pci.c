@@ -262,6 +262,7 @@ static int i440fx_initfn(PCIDevice *dev)
 
 static PCIBus *i440fx_common_init(const char *device_name,
                                   PCII440FXState **pi440fx_state,
+                                  DeviceState **i440fx,
                                   int *piix3_devfn,
                                   qemu_irq *pic,
                                   MemoryRegion *address_space_mem,
@@ -288,7 +289,7 @@ static PCIBus *i440fx_common_init(const char *device_name,
                     address_space_io, 0);
     s->bus = b;
     qdev_init_nofail(dev);
-    qdev_property_add_child(qdev_get_root(), "i440fx", dev, NULL);
+    *i440fx = dev;
 
     d = pci_create_simple(b, 0, device_name);
     *pi440fx_state = DO_UPCAST(PCII440FXState, dev, d);
@@ -296,6 +297,9 @@ static PCIBus *i440fx_common_init(const char *device_name,
     f->system_memory = address_space_mem;
     f->pci_address_space = pci_address_space;
     f->ram_memory = ram_memory;
+
+    qdev_property_add_child(dev, "i440fx", &d->qdev, NULL);
+
     memory_region_init_alias(&f->pci_hole, "pci-hole", f->pci_address_space,
                              pci_hole_start, pci_hole_size);
     memory_region_add_subregion(f->system_memory, pci_hole_start, &f->pci_hole);
@@ -325,7 +329,7 @@ static PCIBus *i440fx_common_init(const char *device_name,
         pci_bus_irqs(b, piix3_set_irq, pci_slot_get_pirq, piix3,
                 PIIX_NUM_PIRQS);
 
-        qdev_property_add_child(dev, "piix3", &piix3->dev.qdev, NULL);
+        qdev_property_add_child(&d->qdev, "piix3", &piix3->dev.qdev, NULL);
     }
     piix3->pic = pic;
 
@@ -344,6 +348,7 @@ static PCIBus *i440fx_common_init(const char *device_name,
 }
 
 PCIBus *i440fx_init(PCII440FXState **pi440fx_state, int *piix3_devfn,
+                    DeviceState **i440fx, DeviceState **piix3,
                     qemu_irq *pic,
                     MemoryRegion *address_space_mem,
                     MemoryRegion *address_space_io,
@@ -357,11 +362,12 @@ PCIBus *i440fx_init(PCII440FXState **pi440fx_state, int *piix3_devfn,
 {
     PCIBus *b;
 
-    b = i440fx_common_init("i440FX", pi440fx_state, piix3_devfn, pic,
+    b = i440fx_common_init("i440FX", pi440fx_state, i440fx, piix3_devfn, pic,
                            address_space_mem, address_space_io, ram_size,
                            pci_hole_start, pci_hole_size,
                            pci_hole64_size, pci_hole64_size,
                            pci_memory, ram_memory);
+    *piix3 = &(*pi440fx_state)->piix3->dev.qdev;
     return b;
 }
 

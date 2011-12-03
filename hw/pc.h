@@ -20,39 +20,39 @@ SerialState *serial_mm_init(MemoryRegion *address_space,
                             target_phys_addr_t base, int it_shift,
                             qemu_irq irq, int baudbase,
                             CharDriverState *chr, enum device_endian);
-static inline bool serial_isa_init(int index, CharDriverState *chr)
+static inline DeviceState *serial_isa_init(int index, CharDriverState *chr)
 {
     ISADevice *dev;
 
     dev = isa_try_create("isa-serial");
     if (!dev) {
-        return false;
+        return NULL;
     }
     qdev_prop_set_uint32(&dev->qdev, "index", index);
     qdev_prop_set_chr(&dev->qdev, "chardev", chr);
     if (qdev_init(&dev->qdev) < 0) {
-        return false;
+        return NULL;
     }
-    return true;
+    return &dev->qdev;
 }
 
 void serial_set_frequency(SerialState *s, uint32_t frequency);
 
 /* parallel.c */
-static inline bool parallel_init(int index, CharDriverState *chr)
+static inline DeviceState *parallel_init(int index, CharDriverState *chr)
 {
     ISADevice *dev;
 
     dev = isa_try_create("isa-parallel");
     if (!dev) {
-        return false;
+        return NULL;
     }
     qdev_prop_set_uint32(&dev->qdev, "index", index);
     qdev_prop_set_chr(&dev->qdev, "chardev", chr);
     if (qdev_init(&dev->qdev) < 0) {
-        return false;
+        return NULL;
     }
-    return true;
+    return &dev->qdev;
 }
 
 bool parallel_mm_init(MemoryRegion *address_space,
@@ -141,16 +141,18 @@ void pc_memory_init(MemoryRegion *system_memory,
                     MemoryRegion **ram_memory);
 qemu_irq *pc_allocate_cpu_irq(void);
 DeviceState *pc_vga_init(PCIBus *pci_bus);
-void pc_basic_device_init(qemu_irq *gsi,
+void pc_basic_device_init(DeviceState *board,
+                          DeviceState *superio,
+                          qemu_irq *gsi,
                           ISADevice **rtc_state,
                           ISADevice **floppy,
                           bool no_vmport);
-void pc_init_ne2k_isa(NICInfo *nd);
+DeviceState *pc_init_ne2k_isa(NICInfo *nd);
 void pc_cmos_init(ram_addr_t ram_size, ram_addr_t above_4g_mem_size,
                   const char *boot_device,
                   ISADevice *floppy, BusState *ide0, BusState *ide1,
                   ISADevice *s);
-void pc_pci_device_init(PCIBus *pci_bus);
+void pc_pci_device_init(PCIBus *pci_bus, DeviceState *board);
 
 typedef void (*cpu_set_smm_t)(int smm, void *arg);
 void cpu_smm_register(cpu_set_smm_t callback, void *arg);
@@ -165,9 +167,9 @@ int acpi_table_add(const char *table_desc);
 
 /* acpi_piix.c */
 
-i2c_bus *piix4_pm_init(PCIBus *bus, int devfn, uint32_t smb_io_base,
-                       qemu_irq sci_irq, qemu_irq cmos_s3, qemu_irq smi_irq,
-                       int kvm_enabled);
+i2c_bus *piix4_pm_init(PCIBus *bus, DeviceState **pdev, int devfn,
+                       uint32_t smb_io_base, qemu_irq sci_irq,
+                       qemu_irq cmos_s3, qemu_irq smi_irq, int kvm_enabled);
 void piix4_smbus_register_device(SMBusDevice *dev, uint8_t addr);
 
 /* hpet.c */
@@ -182,6 +184,7 @@ struct PCII440FXState;
 typedef struct PCII440FXState PCII440FXState;
 
 PCIBus *i440fx_init(PCII440FXState **pi440fx_state, int *piix_devfn,
+                    DeviceState **i440fx, DeviceState **piix3,
                     qemu_irq *pic,
                     MemoryRegion *address_space_mem,
                     MemoryRegion *address_space_io,
@@ -228,7 +231,7 @@ DeviceState *pci_cirrus_vga_init(PCIBus *bus);
 DeviceState *isa_cirrus_vga_init(MemoryRegion *address_space);
 
 /* ne2000.c */
-static inline bool isa_ne2000_init(int base, int irq, NICInfo *nd)
+static inline DeviceState *isa_ne2000_init(int base, int irq, NICInfo *nd)
 {
     ISADevice *dev;
 
@@ -236,13 +239,13 @@ static inline bool isa_ne2000_init(int base, int irq, NICInfo *nd)
 
     dev = isa_try_create("ne2k_isa");
     if (!dev) {
-        return false;
+        return NULL;
     }
     qdev_prop_set_uint32(&dev->qdev, "iobase", base);
     qdev_prop_set_uint32(&dev->qdev, "irq",    irq);
     qdev_set_nic_properties(&dev->qdev, nd);
     qdev_init_nofail(&dev->qdev);
-    return true;
+    return &dev->qdev;
 }
 
 /* e820 types */
