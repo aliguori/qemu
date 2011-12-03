@@ -1266,9 +1266,9 @@ static void uhci_register(void)
 }
 device_init(uhci_register);
 
-void usb_uhci_piix3_init(PCIBus *bus, int devfn)
+DeviceState *usb_uhci_piix3_init(PCIBus *bus, int devfn)
 {
-    pci_create_simple(bus, devfn, "piix3-usb-uhci");
+    return &pci_create_simple(bus, devfn, "piix3-usb-uhci")->qdev;
 }
 
 void usb_uhci_piix4_init(PCIBus *bus, int devfn)
