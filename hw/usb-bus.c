@@ -118,7 +118,7 @@ void usb_qdev_register(USBDeviceInfo *info)
     info->qdev.init     = usb_qdev_init;
     info->qdev.unplug   = qdev_simple_unplug_cb;
     info->qdev.exit     = usb_qdev_exit;
-    qdev_register(&info->qdev);
+    qdev_register_subclass(&info->qdev, TYPE_USB_DEVICE);
 }
 
 void usb_qdev_register_many(USBDeviceInfo *info)
@@ -480,3 +480,18 @@ USBDevice *usbdevice_create(const char *cmdline)
     }
     return usb->usbdevice_init(params);
 }
+
+static TypeInfo usb_device_type_info = {
+    .name = TYPE_USB_DEVICE,
+    .parent = TYPE_DEVICE,
+    .instance_size = sizeof(USBDevice),
+    .abstract = true,
+    .class_size = sizeof(USBDeviceClass),
+};
+
+static void usb_register_devices(void)
+{
+    type_register_static(&usb_device_type_info);
+}
+
+device_init(usb_register_devices);

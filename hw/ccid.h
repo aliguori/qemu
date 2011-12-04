@@ -15,6 +15,18 @@
 typedef struct CCIDCardState CCIDCardState;
 typedef struct CCIDCardInfo CCIDCardInfo;
 
+#define TYPE_CCID_CARD "ccid-card"
+#define CCID_CARD(obj) \
+     OBJECT_CHECK(CCIDCard, (obj), TYPE_CCID_CARD)
+#define CCID_CARD_CLASS(klass) \
+     OBJECT_CLASS_CHECK(CCIDCardClass, (klass), TYPE_CCID_CARD)
+#define CCID_CARD_GET_CLASS(obj) \
+     OBJECT_GET_CLASS(CCIDCardClass, (obj), TYPE_CCID_CARD)
+
+typedef struct CCIDCardClass {
+    DeviceClass parent_class;
+} CCIDCardClass;
+
 /*
  * state of the CCID Card device (i.e. hw/ccid-card-*.c)
  */
