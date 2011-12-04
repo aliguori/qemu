@@ -13,6 +13,19 @@ typedef struct ISABus ISABus;
 typedef struct ISADevice ISADevice;
 typedef struct ISADeviceInfo ISADeviceInfo;
 
+#define TYPE_ISA_DEVICE "isa-device"
+#define ISA_DEVICE(obj) \
+     OBJECT_CHECK(ISADevice, (obj), TYPE_ISA_DEVICE)
+#define ISA_DEVICE_CLASS(klass) \
+     OBJECT_CLASS_CHECK(ISADeviceClass, (klass), TYPE_ISA_DEVICE)
+#define ISA_DEVICE_GET_CLASS(obj) \
+     OBJECT_GET_CLASS(ISADeviceClass, (obj), TYPE_ISA_DEVICE)
+
+typedef struct ISADeviceClass {
+    DeviceClass parent_class;
+    int (*init)(ISADevice *dev);
+} ISADeviceClass;
+
 struct ISADevice {
     DeviceState qdev;
     uint32_t isairq[2];
@@ -20,10 +33,8 @@ struct ISADevice {
     int ioport_id;
 };
 
-typedef int (*isa_qdev_initfn)(ISADevice *dev);
 struct ISADeviceInfo {
     DeviceInfo qdev;
-    isa_qdev_initfn init;
 };
 
 ISABus *isa_bus_new(DeviceState *dev, MemoryRegion *address_space_io);
