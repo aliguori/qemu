@@ -1428,20 +1428,25 @@ static const VMStateDescription vmstate_usb_host = {
     .unmigratable = 1,
 };
 
+static void usb_host_class_initfn(ObjectClass *klass, void *data)
+{
+    USBDeviceClass *uc = USB_DEVICE_CLASS(klass);
+
+    uc->init           = usb_host_initfn;
+    uc->product_desc   = "USB Host Device";
+    uc->handle_packet  = usb_generic_handle_packet;
+    uc->cancel_packet  = usb_host_async_cancel;
+    uc->handle_data    = usb_host_handle_data;
+    uc->handle_control = usb_host_handle_control;
+    uc->handle_reset   = usb_host_handle_reset;
+    uc->handle_destroy = usb_host_handle_destroy;
+}
+
 static struct USBDeviceInfo usb_host_dev_info = {
-    .product_desc   = "USB Host Device",
     .qdev.name      = "usb-host",
     .qdev.size      = sizeof(USBHostDevice),
     .qdev.vmsd      = &vmstate_usb_host,
-    .init           = usb_host_initfn,
-    .handle_packet  = usb_generic_handle_packet,
-    .cancel_packet  = usb_host_async_cancel,
-    .handle_data    = usb_host_handle_data,
-    .handle_control = usb_host_handle_control,
-    .handle_reset   = usb_host_handle_reset,
-    .handle_destroy = usb_host_handle_destroy,
-    .usbdevice_name = "host",
-    .usbdevice_init = usb_host_device_open,
+    .qdev.class_init= usb_host_class_initfn,
     .qdev.props     = (Property[]) {
         DEFINE_PROP_UINT32("hostbus",  USBHostDevice, match.bus_num,    0),
         DEFINE_PROP_UINT32("hostaddr", USBHostDevice, match.addr,       0),
@@ -1451,6 +1456,8 @@ static struct USBDeviceInfo usb_host_dev_info = {
         DEFINE_PROP_UINT32("isobufs",  USBHostDevice, iso_urb_count,    4),
         DEFINE_PROP_END_OF_LIST(),
     },
+    .usbdevice_name = "host",
+    .usbdevice_init = usb_host_device_open,
 };
 
 static void usb_host_register_devices(void)
