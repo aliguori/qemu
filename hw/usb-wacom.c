@@ -376,11 +376,10 @@ static struct USBDeviceInfo wacom_info = {
     .qdev.size      = sizeof(USBWacomState),
     .qdev.vmsd      = &vmstate_usb_wacom,
     .qdev.class_init= usb_wacom_class_init,
-    .usbdevice_name = "wacom-tablet",
 };
 
 static void usb_wacom_register_devices(void)
 {
-    usb_qdev_register(&wacom_info);
+    usb_qdev_register(&wacom_info, "wacom-tablet", NULL);
 }
 device_init(usb_wacom_register_devices)

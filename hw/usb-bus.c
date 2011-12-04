@@ -189,20 +189,31 @@ static int usb_qdev_exit(DeviceState *qdev)
     return 0;
 }
 
-void usb_qdev_register(USBDeviceInfo *info)
+typedef struct LegacyUSBFactory
+{
+    const char *name;
+    const char *usbdevice_name;
+    USBDevice *(*usbdevice_init)(const char *params);
+} LegacyUSBFactory;
+
+static GSList *legacy_usb_factory;
+
+void usb_qdev_register(USBDeviceInfo *info,
+                       const char *usbdevice_name,
+                       USBDevice *(*usbdevice_init)(const char *params))
 {
     info->qdev.bus_info = &usb_bus_info;
     info->qdev.init     = usb_qdev_init;
     info->qdev.unplug   = qdev_simple_unplug_cb;
     info->qdev.exit     = usb_qdev_exit;
     qdev_register_subclass(&info->qdev, TYPE_USB_DEVICE);
-}
 
-void usb_qdev_register_many(USBDeviceInfo *info)
-{
-    while (info->qdev.name) {
-        usb_qdev_register(info);
-        info++;
+    if (usbdevice_name) {
+        LegacyUSBFactory *f = g_malloc0(sizeof(*f));
+        f->name = info->qdev.name;
+        f->usbdevice_name = usbdevice_name;
+        f->usbdevice_init = usbdevice_init;
+        legacy_usb_factory = g_slist_append(legacy_usb_factory, f);
     }
 }
 
@@ -512,8 +523,8 @@ void usb_info(Monitor *mon)
 USBDevice *usbdevice_create(const char *cmdline)
 {
     USBBus *bus = usb_bus_find(-1 /* any */);
-    DeviceInfo *info;
-    USBDeviceInfo *usb;
+    LegacyUSBFactory *f = NULL;
+    GSList *i;
     char driver[32];
     const char *params;
     int len;
@@ -530,17 +541,13 @@ USBDevice *usbdevice_create(const char *cmdline)
         pstrcpy(driver, sizeof(driver), cmdline);
     }
 
-    for (info = device_info_list; info != NULL; info = info->next) {
-        if (info->bus_info != &usb_bus_info)
-            continue;
-        usb = DO_UPCAST(USBDeviceInfo, qdev, info);
-        if (usb->usbdevice_name == NULL)
-            continue;
-        if (strcmp(usb->usbdevice_name, driver) != 0)
-            continue;
-        break;
+    for (i = legacy_usb_factory; i; i = i->next) {
+        f = i->data;
+        if (strcmp(f->usbdevice_name, driver) == 0) {
+            break;
+        }
     }
-    if (info == NULL) {
+    if (i == NULL) {
 #if 0
         /* no error because some drivers are not converted (yet) */
         error_report("usbdevice %s not found", driver);
@@ -548,14 +555,14 @@ USBDevice *usbdevice_create(const char *cmdline)
         return NULL;
     }
 
-    if (!usb->usbdevice_init) {
+    if (!f->usbdevice_init) {
         if (*params) {
             error_report("usbdevice %s accepts no params", driver);
             return NULL;
         }
-        return usb_create_simple(bus, usb->qdev.name);
+        return usb_create_simple(bus, f->name);
     }
-    return usb->usbdevice_init(params);
+    return f->usbdevice_init(params);
 }
 
 static TypeInfo usb_device_type_info = {

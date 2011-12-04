@@ -574,6 +574,13 @@ static void usb_tablet_class_initfn(ObjectClass *klass, void *data)
     uc->handle_destroy = usb_hid_handle_destroy;
 }
 
+static struct USBDeviceInfo usb_tablet_info = {
+    .qdev.name      = "usb-tablet",
+    .qdev.size      = sizeof(USBHIDState),
+    .qdev.vmsd      = &vmstate_usb_ptr,
+    .qdev.class_init= usb_tablet_class_initfn,
+};
+
 static void usb_mouse_class_initfn(ObjectClass *klass, void *data)
 {
     USBDeviceClass *uc = USB_DEVICE_CLASS(klass);
@@ -587,6 +594,13 @@ static void usb_mouse_class_initfn(ObjectClass *klass, void *data)
     uc->handle_data    = usb_hid_handle_data;
     uc->handle_destroy = usb_hid_handle_destroy;
 }
+
+static struct USBDeviceInfo usb_mouse_info = {
+    .qdev.name      = "usb-mouse",
+    .qdev.size      = sizeof(USBHIDState),
+    .qdev.vmsd      = &vmstate_usb_ptr,
+    .qdev.class_init= usb_mouse_class_initfn,
+};
 
 static void usb_keyboard_class_initfn(ObjectClass *klass, void *data)
 {
@@ -602,32 +616,17 @@ static void usb_keyboard_class_initfn(ObjectClass *klass, void *data)
     uc->handle_destroy = usb_hid_handle_destroy;
 }
 
-static struct USBDeviceInfo hid_info[] = {
-    {
-        .qdev.name      = "usb-tablet",
-        .qdev.size      = sizeof(USBHIDState),
-        .qdev.vmsd      = &vmstate_usb_ptr,
-        .qdev.class_init= usb_tablet_class_initfn,
-        .usbdevice_name = "tablet",
-    },{
-        .qdev.name      = "usb-mouse",
-        .qdev.size      = sizeof(USBHIDState),
-        .qdev.vmsd      = &vmstate_usb_ptr,
-        .qdev.class_init= usb_mouse_class_initfn,
-        .usbdevice_name = "mouse",
-    },{
-        .qdev.name      = "usb-kbd",
-        .qdev.size      = sizeof(USBHIDState),
-        .qdev.vmsd      = &vmstate_usb_kbd,
-        .qdev.class_init= usb_keyboard_class_initfn,
-        .usbdevice_name = "keyboard",
-    },{
-        /* end of list */
-    }
+static struct USBDeviceInfo usb_keyboard_info = {
+    .qdev.name      = "usb-kbd",
+    .qdev.size      = sizeof(USBHIDState),
+    .qdev.vmsd      = &vmstate_usb_kbd,
+    .qdev.class_init= usb_keyboard_class_initfn,
 };
 
 static void usb_hid_register_devices(void)
 {
-    usb_qdev_register_many(hid_info);
+    usb_qdev_register(&usb_tablet_info, "tablet", NULL);
+    usb_qdev_register(&usb_mouse_info, "mouse", NULL);
+    usb_qdev_register(&usb_keyboard_info, "keyboard", NULL);
 }
 device_init(usb_hid_register_devices)
