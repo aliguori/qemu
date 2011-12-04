@@ -1,3 +1,6 @@
+#ifndef QEMU_USB_H
+#define QEMU_USB_H
+
 /*
  * QEMU USB API
  *
@@ -176,7 +179,6 @@ typedef struct USBDeviceClass {
 /* definition of a USB device */
 struct USBDevice {
     DeviceState qdev;
-    USBDeviceInfo *info;
     USBPort *port;
     char *port_path;
     void *opaque;
@@ -404,3 +406,22 @@ static inline USBBus *usb_bus_from_device(USBDevice *d)
 {
     return DO_UPCAST(USBBus, qbus, d->qdev.parent_bus);
 }
+
+int usb_device_handle_packet(USBDevice *dev, USBPacket *p);
+
+void usb_device_cancel_packet(USBDevice *dev, USBPacket *p);
+
+void usb_device_handle_attach(USBDevice *dev);
+
+void usb_device_handle_reset(USBDevice *dev);
+
+int usb_device_handle_control(USBDevice *dev, USBPacket *p, int request, int value,
+                              int index, int length, uint8_t *data);
+
+int usb_device_handle_data(USBDevice *dev, USBPacket *p);
+
+const char *usb_device_get_product_desc(USBDevice *dev);
+
+const USBDesc *usb_device_get_usb_desc(USBDevice *dev);
+
+#endif
