@@ -67,67 +67,60 @@ USBBus *usb_bus_find(int busnr)
 
 static int usb_device_init(USBDevice *dev)
 {
-    USBDeviceInfo *info = DO_UPCAST(USBDeviceInfo, qdev,
-                                    qdev_get_info(DEVICE(dev)));
-    if (info->init) {
-        return info->init(dev);
+    USBDeviceClass *klass = USB_DEVICE_GET_CLASS(dev);
+    if (klass->init) {
+        return klass->init(dev);
     }
     return 0;
 }
 
 static void usb_device_handle_destroy(USBDevice *dev)
 {
-    USBDeviceInfo *info = DO_UPCAST(USBDeviceInfo, qdev,
-                                    qdev_get_info(DEVICE(dev)));
-    if (info->handle_destroy) {
-        info->handle_destroy(dev);
+    USBDeviceClass *klass = USB_DEVICE_GET_CLASS(dev);
+    if (klass->handle_destroy) {
+        klass->handle_destroy(dev);
     }
 }
 
 int usb_device_handle_packet(USBDevice *dev, USBPacket *p)
 {
-    USBDeviceInfo *info = DO_UPCAST(USBDeviceInfo, qdev,
-                                    qdev_get_info(DEVICE(dev)));
-    if (info->handle_packet) {
-        return info->handle_packet(dev, p);
+    USBDeviceClass *klass = USB_DEVICE_GET_CLASS(dev);
+    if (klass->handle_packet) {
+        return klass->handle_packet(dev, p);
     }
     return -ENOSYS;
 }
 
 void usb_device_cancel_packet(USBDevice *dev, USBPacket *p)
 {
-    USBDeviceInfo *info = DO_UPCAST(USBDeviceInfo, qdev,
-                                    qdev_get_info(DEVICE(dev)));
-    if (info->cancel_packet) {
-        info->cancel_packet(dev, p);
+    USBDeviceClass *klass = USB_DEVICE_GET_CLASS(dev);
+    if (klass->cancel_packet) {
+        klass->cancel_packet(dev, p);
     }
 }
 
 void usb_device_handle_attach(USBDevice *dev)
 {
-    USBDeviceInfo *info = DO_UPCAST(USBDeviceInfo, qdev,
-                                    qdev_get_info(DEVICE(dev)));
-    if (info->handle_attach) {
-        info->handle_attach(dev);
+    USBDeviceClass *klass = USB_DEVICE_GET_CLASS(dev);
+    if (klass->handle_attach) {
+        klass->handle_attach(dev);
     }
 }
 
 void usb_device_handle_reset(USBDevice *dev)
 {
-    USBDeviceInfo *info = DO_UPCAST(USBDeviceInfo, qdev,
-                                    qdev_get_info(DEVICE(dev)));
-    if (info->handle_reset) {
-        info->handle_reset(dev);
+    USBDeviceClass *klass = USB_DEVICE_GET_CLASS(dev);
+    if (klass->handle_reset) {
+        klass->handle_reset(dev);
     }
 }
 
 int usb_device_handle_control(USBDevice *dev, USBPacket *p, int request,
                               int value, int index, int length, uint8_t *data)
 {
-    USBDeviceInfo *info = DO_UPCAST(USBDeviceInfo, qdev,
-                                    qdev_get_info(DEVICE(dev)));
-    if (info->handle_control) {
-        return info->handle_control(dev, p, request, value, index, length,
+    USBDeviceClass *klass = USB_DEVICE_GET_CLASS(dev);
+    if (klass->handle_control) {
+        return klass->handle_control(dev, p, request, value, index, length,
                                          data);
     }
     return -ENOSYS;
@@ -135,26 +128,23 @@ int usb_device_handle_control(USBDevice *dev, USBPacket *p, int request,
 
 int usb_device_handle_data(USBDevice *dev, USBPacket *p)
 {
-    USBDeviceInfo *info = DO_UPCAST(USBDeviceInfo, qdev,
-                                    qdev_get_info(DEVICE(dev)));
-    if (info->handle_data) {
-        return info->handle_data(dev, p);
+    USBDeviceClass *klass = USB_DEVICE_GET_CLASS(dev);
+    if (klass->handle_data) {
+        return klass->handle_data(dev, p);
     }
     return -ENOSYS;
 }
 
 const char *usb_device_get_product_desc(USBDevice *dev)
 {
-    USBDeviceInfo *info = DO_UPCAST(USBDeviceInfo, qdev,
-                                    qdev_get_info(DEVICE(dev)));
-    return info->product_desc;
+    USBDeviceClass *klass = USB_DEVICE_GET_CLASS(dev);
+    return klass->product_desc;
 }
 
 const USBDesc *usb_device_get_usb_desc(USBDevice *dev)
 {
-    USBDeviceInfo *info = DO_UPCAST(USBDeviceInfo, qdev,
-                                    qdev_get_info(DEVICE(dev)));
-    return info->usb_desc;
+    USBDeviceClass *klass = USB_DEVICE_GET_CLASS(dev);
+    return klass->usb_desc;
 }
 
 static int usb_qdev_init(DeviceState *qdev, DeviceInfo *base)
