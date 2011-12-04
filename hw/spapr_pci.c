@@ -398,7 +398,7 @@ int spapr_populate_pci_devices(sPAPRPHBState *phb,
     /* Populate PCI devices and allocate IRQs */
     devices = 0;
     QTAILQ_FOREACH(qdev, &bus->qbus.children, sibling) {
-        PCIDevice *dev = DO_UPCAST(PCIDevice, qdev, qdev);
+        PCIDevice *dev = PCI_DEVICE(qdev);
         int irq_index = pci_spapr_map_irq(dev, 0);
         uint32_t *irqmap = interrupt_map[devices];
         uint8_t *config = dev->config;
