@@ -200,19 +200,19 @@ typedef struct LegacyUSBFactory
 
 static GSList *legacy_usb_factory;
 
-void usb_qdev_register(USBDeviceInfo *info,
+void usb_qdev_register(DeviceInfo *info,
                        const char *usbdevice_name,
                        USBDevice *(*usbdevice_init)(const char *params))
 {
-    info->qdev.bus_info = &usb_bus_info;
-    info->qdev.init     = usb_qdev_init;
-    info->qdev.unplug   = qdev_simple_unplug_cb;
-    info->qdev.exit     = usb_qdev_exit;
-    qdev_register_subclass(&info->qdev, TYPE_USB_DEVICE);
+    info->bus_info = &usb_bus_info;
+    info->init     = usb_qdev_init;
+    info->unplug   = qdev_simple_unplug_cb;
+    info->exit     = usb_qdev_exit;
+    qdev_register_subclass(info, TYPE_USB_DEVICE);
 
     if (usbdevice_name) {
         LegacyUSBFactory *f = g_malloc0(sizeof(*f));
-        f->name = info->qdev.name;
+        f->name = info->name;
         f->usbdevice_name = usbdevice_name;
         f->usbdevice_init = usbdevice_init;
         legacy_usb_factory = g_slist_append(legacy_usb_factory, f);

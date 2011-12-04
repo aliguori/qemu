@@ -13,7 +13,6 @@ typedef struct SCSIBus SCSIBus;
 typedef struct SCSIBusInfo SCSIBusInfo;
 typedef struct SCSICommand SCSICommand;
 typedef struct SCSIDevice SCSIDevice;
-typedef struct SCSIDeviceInfo SCSIDeviceInfo;
 typedef struct SCSIRequest SCSIRequest;
 typedef struct SCSIReqOps SCSIReqOps;
 
@@ -109,10 +108,6 @@ struct SCSIReqOps {
     uint8_t *(*get_buf)(SCSIRequest *req);
 };
 
-struct SCSIDeviceInfo {
-    DeviceInfo qdev;
-};
-
 struct SCSIBusInfo {
     int tcq;
     int max_channel, max_target, max_lun;
@@ -130,7 +125,7 @@ struct SCSIBus {
 };
 
 void scsi_bus_new(SCSIBus *bus, DeviceState *host, const SCSIBusInfo *info);
-void scsi_qdev_register(SCSIDeviceInfo *info);
+void scsi_qdev_register(DeviceInfo *info);
 
 static inline SCSIBus *scsi_bus_from_device(SCSIDevice *d)
 {

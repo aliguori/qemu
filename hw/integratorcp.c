@@ -553,9 +553,22 @@ static SysBusDeviceInfo core_info = {
     }
 };
 
+static void icp_pic_class_init(ObjectClass *klass, void *data)
+{
+    SysBusDeviceClass *sdc = SYS_BUS_DEVICE_CLASS(klass);
+
+    sdc->init = icp_pic_init;
+}
+
+static DeviceInfo icp_pic_info = {
+    .name = "integrator_pic",
+    .size = sizeof(icp_pic_state),
+    .class_init = icp_pic_class_init,
+};
+
 static void integratorcp_register_devices(void)
 {
-    sysbus_register_dev("integrator_pic", sizeof(icp_pic_state), icp_pic_init);
+    sysbus_qdev_register(&icp_pic_info);
     sysbus_register_withprop(&core_info);
 }
 

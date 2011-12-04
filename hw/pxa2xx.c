@@ -1472,13 +1472,20 @@ static int pxa2xx_i2c_slave_init(I2CSlave *i2c)
     return 0;
 }
 
-static I2CSlaveInfo pxa2xx_i2c_slave_info = {
-    .qdev.name = "pxa2xx-i2c-slave",
-    .qdev.size = sizeof(PXA2xxI2CSlaveState),
-    .init = pxa2xx_i2c_slave_init,
-    .event = pxa2xx_i2c_event,
-    .recv = pxa2xx_i2c_rx,
-    .send = pxa2xx_i2c_tx
+static void pxa2xx_i2c_slave_class_init(ObjectClass *klass, void *data)
+{
+    I2CSlaveClass *k = I2C_SLAVE_INFO(klass);
+
+    k->init = pxa2xx_i2c_slave_init;
+    k->event = pxa2xx_i2c_event;
+    k->recv = pxa2xx_i2c_rx;
+    k->send = pxa2xx_i2c_tx;
+}
+
+static DeviceInfo pxa2xx_i2c_slave_info = {
+    .name = "pxa2xx-i2c-slave",
+    .size = sizeof(PXA2xxI2CSlaveState),
+    .class_init = pxa2xx_i2c_slave_class_init,
 };
 
 PXA2xxI2CState *pxa2xx_i2c_init(target_phys_addr_t base,
@@ -2284,10 +2291,23 @@ PXA2xxState *pxa255_init(MemoryRegion *address_space, unsigned int sdram_size)
     return s;
 }
 
+static void pxa2xx_ssp_class_init(ObjectClass *klass, void *data)
+{
+    SysBusDeviceClass *sdc = SYS_BUS_DEVICE_CLASS(klass);
+
+    sdc->init = pxa2xx_ssp_init;
+}
+
+static DeviceInfo pxa2xx_ssp_info = {
+    .name = "pxa2xx-ssp",
+    .size = sizeof(PXA2xxSSPState),
+    .class_init = pxa2xx_ssp_class_init,
+};
+
 static void pxa2xx_register_devices(void)
 {
     i2c_register_slave(&pxa2xx_i2c_slave_info);
-    sysbus_register_dev("pxa2xx-ssp", sizeof(PXA2xxSSPState), pxa2xx_ssp_init);
+    sysbus_qdev_register(&pxa2xx_ssp_info);
     sysbus_register_withprop(&pxa2xx_i2c_info);
     sysbus_register_withprop(&pxa2xx_rtc_sysbus_info);
 }

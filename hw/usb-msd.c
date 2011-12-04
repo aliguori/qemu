@@ -649,13 +649,13 @@ static void usb_msd_class_initfn(ObjectClass *klass, void *data)
     uc->handle_data    = usb_msd_handle_data;
 }
 
-static struct USBDeviceInfo msd_info = {
-    .qdev.name      = "usb-storage",
-    .qdev.fw_name   = "storage",
-    .qdev.size      = sizeof(MSDState),
-    .qdev.vmsd      = &vmstate_usb_msd,
-    .qdev.class_init= usb_msd_class_initfn,
-    .qdev.props     = (Property[]) {
+static struct DeviceInfo msd_info = {
+    .name      = "usb-storage",
+    .fw_name   = "storage",
+    .size      = sizeof(MSDState),
+    .vmsd      = &vmstate_usb_msd,
+    .class_init= usb_msd_class_initfn,
+    .props     = (Property[]) {
         DEFINE_BLOCK_PROPERTIES(MSDState, conf),
         DEFINE_PROP_STRING("serial", MSDState, serial),
         DEFINE_PROP_BIT("removable", MSDState, removable, 0, false),

@@ -34,6 +34,14 @@ enum VIOsPAPR_TCEAccess {
 
 #define SPAPR_VTY_BASE_ADDRESS     0x30000000
 
+#define TYPE_VIO_SPAPR_DEVICE "vio-spapr-device"
+#define VIO_SPAPR_DEVICE(obj) \
+     OBJECT_CHECK(VIOsPAPRDevice, (obj), TYPE_VIO_SPAPR_DEVICE)
+#define VIO_SPAPR_DEVICE_CLASS(klass) \
+     OBJECT_CLASS_CHECK(VIOsPAPRDeviceClass, (klass), TYPE_VIO_SPAPR_DEVICE)
+#define VIO_SPAPR_DEVICE_GET_CLASS(obj) \
+     OBJECT_GET_CLASS(VIOsPAPRDeviceClass, (obj), TYPE_VIO_SPAPR_DEVICE)
+
 struct VIOsPAPRDevice;
 
 typedef struct VIOsPAPR_RTCE {
@@ -46,6 +54,16 @@ typedef struct VIOsPAPR_CRQ {
     uint32_t qnext;
     int(*SendFunc)(struct VIOsPAPRDevice *vdev, uint8_t *crq);
 } VIOsPAPR_CRQ;
+
+typedef struct VIOsPAPRDeviceClass {
+    DeviceClass parent_class;
+
+    const char *dt_name, *dt_type, *dt_compatible;
+    target_ulong signal_mask;
+    int (*init)(VIOsPAPRDevice *dev);
+    void (*hcalls)(VIOsPAPRBus *bus);
+    int (*devnode)(VIOsPAPRDevice *dev, void *fdt, int node_off);
+} VIOsPAPRDeviceClass;
 
 typedef struct VIOsPAPRDevice {
     DeviceState qdev;
@@ -70,18 +88,9 @@ typedef struct VIOsPAPRBus {
     BusState bus;
 } VIOsPAPRBus;
 
-typedef struct {
-    DeviceInfo qdev;
-    const char *dt_name, *dt_type, *dt_compatible;
-    target_ulong signal_mask;
-    int (*init)(VIOsPAPRDevice *dev);
-    void (*hcalls)(VIOsPAPRBus *bus);
-    int (*devnode)(VIOsPAPRDevice *dev, void *fdt, int node_off);
-} VIOsPAPRDeviceInfo;
-
 extern VIOsPAPRBus *spapr_vio_bus_init(void);
 extern VIOsPAPRDevice *spapr_vio_find_by_reg(VIOsPAPRBus *bus, uint32_t reg);
-extern void spapr_vio_bus_register_withprop(VIOsPAPRDeviceInfo *info);
+extern void spapr_vio_bus_register_withprop(DeviceInfo *info);
 extern int spapr_populate_vdevice(VIOsPAPRBus *bus, void *fdt);
 
 extern int spapr_vio_signal(VIOsPAPRDevice *dev, target_ulong mode);

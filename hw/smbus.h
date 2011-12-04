@@ -29,30 +29,16 @@
 
 #define TYPE_SMBUS_DEVICE "smbus-device"
 #define SMBUS_DEVICE(obj) \
-     OBJECT_CHECK(SMBUSDevice, (obj), TYPE_SMBUS_DEVICE)
+     OBJECT_CHECK(SMBusDevice, (obj), TYPE_SMBUS_DEVICE)
 #define SMBUS_DEVICE_CLASS(klass) \
-     OBJECT_CLASS_CHECK(SMBUSDeviceClass, (klass), TYPE_SMBUS_DEVICE)
+     OBJECT_CLASS_CHECK(SMBusDeviceClass, (klass), TYPE_SMBUS_DEVICE)
 #define SMBUS_DEVICE_GET_CLASS(obj) \
-     OBJECT_GET_CLASS(SMBUSDeviceClass, (obj), TYPE_SMBUS_DEVICE)
+     OBJECT_GET_CLASS(SMBusDeviceClass, (obj), TYPE_SMBUS_DEVICE)
 
 typedef struct SMBusDeviceClass
 {
     I2CSlaveClass parent_class;
-} SMBusDeviceClass;
 
-struct SMBusDevice {
-    /* The SMBus protocol is implemented on top of I2C.  */
-    I2CSlave i2c;
-
-    /* Remaining fields for internal use only.  */
-    int mode;
-    int data_len;
-    uint8_t data_buf[34]; /* command + len + 32 bytes of data.  */
-    uint8_t command;
-};
-
-typedef struct {
-    I2CSlaveInfo i2c;
     int (*init)(SMBusDevice *dev);
     void (*quick_cmd)(SMBusDevice *dev, uint8_t read);
     void (*send_byte)(SMBusDevice *dev, uint8_t val);
@@ -67,9 +53,20 @@ typedef struct {
        byte at a time.  The device is responsible for adding the length
        byte on block reads.  */
     uint8_t (*read_data)(SMBusDevice *dev, uint8_t cmd, int n);
-} SMBusDeviceInfo;
+} SMBusDeviceClass;
 
-void smbus_register_device(SMBusDeviceInfo *info);
+struct SMBusDevice {
+    /* The SMBus protocol is implemented on top of I2C.  */
+    I2CSlave i2c;
+
+    /* Remaining fields for internal use only.  */
+    int mode;
+    int data_len;
+    uint8_t data_buf[34]; /* command + len + 32 bytes of data.  */
+    uint8_t command;
+};
+
+void smbus_register_device(DeviceInfo *info);
 
 /* Master device commands.  */
 void smbus_quick_command(i2c_bus *bus, uint8_t addr, int read);

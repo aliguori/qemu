@@ -700,13 +700,13 @@ static void rtc_class_initfn(ObjectClass *klass, void *data)
     ic->init = rtc_initfn;
 }
 
-static ISADeviceInfo mc146818rtc_info = {
-    .qdev.name     = "mc146818rtc",
-    .qdev.size     = sizeof(RTCState),
-    .qdev.no_user  = 1,
-    .qdev.vmsd     = &vmstate_rtc,
-    .qdev.class_init          = rtc_class_initfn,
-    .qdev.props    = (Property[]) {
+static DeviceInfo mc146818rtc_info = {
+    .name     = "mc146818rtc",
+    .size     = sizeof(RTCState),
+    .no_user  = 1,
+    .vmsd     = &vmstate_rtc,
+    .class_init          = rtc_class_initfn,
+    .props    = (Property[]) {
         DEFINE_PROP_INT32("base_year", RTCState, base_year, 1980),
         DEFINE_PROP_END_OF_LIST(),
     }

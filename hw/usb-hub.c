@@ -554,12 +554,12 @@ static void  usb_hub_class_initfn(ObjectClass *klass, void *data)
     uc->handle_destroy = usb_hub_handle_destroy;
 }
 
-static struct USBDeviceInfo hub_info = {
-    .qdev.name      = "usb-hub",
-    .qdev.fw_name   = "hub",
-    .qdev.size      = sizeof(USBHubState),
-    .qdev.vmsd      = &vmstate_usb_hub,
-    .qdev.class_init= usb_hub_class_initfn,
+static struct DeviceInfo hub_info = {
+    .name      = "usb-hub",
+    .fw_name   = "hub",
+    .size      = sizeof(USBHubState),
+    .vmsd      = &vmstate_usb_hub,
+    .class_init= usb_hub_class_initfn,
 };
 
 static void usb_hub_register_devices(void)
