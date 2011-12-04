@@ -89,7 +89,6 @@ static const VMStateDescription vmstate_pcibus = {
         VMSTATE_END_OF_LIST()
     }
 };
-
 static int pci_bar(PCIDevice *d, int reg)
 {
     uint8_t type;
@@ -843,7 +842,7 @@ static void pci_unregister_io_regions(PCIDevice *pci_dev)
 
 static int pci_unregister_device(DeviceState *dev)
 {
-    PCIDevice *pci_dev = DO_UPCAST(PCIDevice, qdev, dev);
+    PCIDevice *pci_dev = PCI_DEVICE(dev);
     PCIDeviceInfo *info = DO_UPCAST(PCIDeviceInfo, qdev, qdev_get_info(dev));
     int ret = 0;
 
@@ -1533,7 +1532,7 @@ static int pci_qdev_init(DeviceState *qdev, DeviceInfo *base)
 
 static int pci_unplug_device(DeviceState *qdev)
 {
-    PCIDevice *dev = DO_UPCAST(PCIDevice, qdev, qdev);
+    PCIDevice *dev = PCI_DEVICE(qdev);
     PCIDeviceInfo *info = container_of(qdev_get_info(qdev), PCIDeviceInfo, qdev);
 
     if (info->no_hotplug) {
@@ -1550,7 +1549,7 @@ void pci_qdev_register(PCIDeviceInfo *info)
     info->qdev.unplug = pci_unplug_device;
     info->qdev.exit = pci_unregister_device;
     info->qdev.bus_info = &pci_bus_info;
-    qdev_register(&info->qdev);
+    qdev_register_subclass(&info->qdev, TYPE_PCI_DEVICE);
 }
 
 void pci_qdev_register_many(PCIDeviceInfo *info)
@@ -1569,7 +1568,7 @@ PCIDevice *pci_create_multifunction(PCIBus *bus, int devfn, bool multifunction,
     dev = qdev_create(&bus->qbus, name);
     qdev_prop_set_uint32(dev, "addr", devfn);
     qdev_prop_set_bit(dev, "multifunction", multifunction);
-    return DO_UPCAST(PCIDevice, qdev, dev);
+    return PCI_DEVICE(dev);
 }
 
 PCIDevice *pci_try_create_multifunction(PCIBus *bus, int devfn,
@@ -1584,7 +1583,7 @@ PCIDevice *pci_try_create_multifunction(PCIBus *bus, int devfn,
     }
     qdev_prop_set_uint32(dev, "addr", devfn);
     qdev_prop_set_bit(dev, "multifunction", multifunction);
-    return DO_UPCAST(PCIDevice, qdev, dev);
+    return PCI_DEVICE(dev);
 }
 
 PCIDevice *pci_create_simple_multifunction(PCIBus *bus, int devfn,
@@ -2004,7 +2003,7 @@ static int pci_qdev_find_recursive(PCIBus *bus,
     /* roughly check if given qdev is pci device */
     if (qdev_get_info(qdev)->init == &pci_qdev_init &&
         qdev->parent_bus->info == &pci_bus_info) {
-        *pdev = DO_UPCAST(PCIDevice, qdev, qdev);
+        *pdev = PCI_DEVICE(qdev);
         return 0;
     }
     return -EINVAL;
@@ -2038,3 +2037,18 @@ MemoryRegion *pci_address_space_io(PCIDevice *dev)
 {
     return dev->bus->address_space_io;
 }
+
+static TypeInfo pci_device_type_info = {
+    .name = TYPE_PCI_DEVICE,
+    .parent = TYPE_DEVICE,
+    .instance_size = sizeof(PCIDevice),
+    .abstract = true,
+    .class_size = sizeof(PCIDeviceClass),
+};
+
+static void pci_register_devices(void)
+{
+    type_register_static(&pci_device_type_info);
+}
+
+device_init(pci_register_devices);

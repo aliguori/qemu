@@ -143,7 +143,7 @@ static void i6300esb_disable_timer(I6300State *d)
 
 static void i6300esb_reset(DeviceState *dev)
 {
-    PCIDevice *pdev = DO_UPCAST(PCIDevice, qdev, dev);
+    PCIDevice *pdev = PCI_DEVICE(dev);
     I6300State *d = DO_UPCAST(I6300State, dev, pdev);
 
     i6300esb_debug("I6300State = %p\n", d);
