@@ -1308,13 +1308,13 @@ static void ccid_class_initfn(ObjectClass *klass, void *data)
     uc->handle_destroy = ccid_handle_destroy;
 }
 
-static struct USBDeviceInfo ccid_info = {
-    .qdev.name      = CCID_DEV_NAME,
-    .qdev.desc      = "CCID Rev 1.1 smartcard reader",
-    .qdev.size      = sizeof(USBCCIDState),
-    .qdev.class_init= ccid_class_initfn,
-    .qdev.vmsd      = &ccid_vmstate,
-    .qdev.props     = (Property[]) {
+static struct DeviceInfo ccid_info = {
+    .name      = CCID_DEV_NAME,
+    .desc      = "CCID Rev 1.1 smartcard reader",
+    .size      = sizeof(USBCCIDState),
+    .class_init= ccid_class_initfn,
+    .vmsd      = &ccid_vmstate,
+    .props     = (Property[]) {
         DEFINE_PROP_UINT8("debug", USBCCIDState, debug, 0),
         DEFINE_PROP_END_OF_LIST(),
     },

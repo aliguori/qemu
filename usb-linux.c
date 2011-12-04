@@ -1442,12 +1442,12 @@ static void usb_host_class_initfn(ObjectClass *klass, void *data)
     uc->handle_destroy = usb_host_handle_destroy;
 }
 
-static struct USBDeviceInfo usb_host_dev_info = {
-    .qdev.name      = "usb-host",
-    .qdev.size      = sizeof(USBHostDevice),
-    .qdev.vmsd      = &vmstate_usb_host,
-    .qdev.class_init= usb_host_class_initfn,
-    .qdev.props     = (Property[]) {
+static struct DeviceInfo usb_host_dev_info = {
+    .name      = "usb-host",
+    .size      = sizeof(USBHostDevice),
+    .vmsd      = &vmstate_usb_host,
+    .class_init= usb_host_class_initfn,
+    .props     = (Property[]) {
         DEFINE_PROP_UINT32("hostbus",  USBHostDevice, match.bus_num,    0),
         DEFINE_PROP_UINT32("hostaddr", USBHostDevice, match.addr,       0),
         DEFINE_PROP_STRING("hostport", USBHostDevice, match.port),
