@@ -13,6 +13,18 @@ typedef struct ISABus ISABus;
 typedef struct ISADevice ISADevice;
 typedef struct ISADeviceInfo ISADeviceInfo;
 
+#define TYPE_ISA_DEVICE "isa-device"
+#define ISA_DEVICE(obj) \
+     OBJECT_CHECK(ISADeviceState, (obj), ISA_TYPE_DEVICE)
+#define ISA_DEVICE_CLASS(klass) \
+     OBJECT_CLASS_CHECK(ISADeviceClass, (klass), ISA_TYPE_DEVICE)
+#define ISA_DEVICE_GET_CLASS(obj) \
+     OBJECT_GET_CLASS(ISADeviceClass, (obj), ISA_TYPE_DEVICE)
+
+typedef struct ISADeviceClass {
+    DeviceClass parent_class;
+} ISADeviceClass;
+
 struct ISADevice {
     DeviceState qdev;
     uint32_t isairq[2];
