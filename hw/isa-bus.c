@@ -113,7 +113,7 @@ void isa_register_portio_list(ISADevice *dev, uint16_t start,
 
 static int isa_qdev_init(DeviceState *qdev, DeviceInfo *base)
 {
-    ISADevice *dev = DO_UPCAST(ISADevice, qdev, qdev);
+    ISADevice *dev = ISA_DEVICE(qdev);
     ISADeviceInfo *info = DO_UPCAST(ISADeviceInfo, qdev, base);
 
     dev->isairq[0] = -1;
@@ -138,7 +138,7 @@ ISADevice *isa_create(const char *name)
                  name);
     }
     dev = qdev_create(&isabus->qbus, name);
-    return DO_UPCAST(ISADevice, qdev, dev);
+    return ISA_DEVICE(dev);
 }
 
 ISADevice *isa_try_create(const char *name)
@@ -150,7 +150,7 @@ ISADevice *isa_try_create(const char *name)
                  name);
     }
     dev = qdev_try_create(&isabus->qbus, name);
-    return DO_UPCAST(ISADevice, qdev, dev);
+    return ISA_DEVICE(dev);
 }
 
 ISADevice *isa_create_simple(const char *name)
@@ -164,7 +164,7 @@ ISADevice *isa_create_simple(const char *name)
 
 static void isabus_dev_print(Monitor *mon, DeviceState *dev, int indent)
 {
-    ISADevice *d = DO_UPCAST(ISADevice, qdev, dev);
+    ISADevice *d = ISA_DEVICE(dev);
 
     if (d->isairq[1] != -1) {
         monitor_printf(mon, "%*sisa irqs %d,%d\n", indent, "",

@@ -15,11 +15,11 @@ typedef struct ISADeviceInfo ISADeviceInfo;
 
 #define TYPE_ISA_DEVICE "isa-device"
 #define ISA_DEVICE(obj) \
-     OBJECT_CHECK(ISADeviceState, (obj), ISA_TYPE_DEVICE)
+     OBJECT_CHECK(ISADevice, (obj), TYPE_ISA_DEVICE)
 #define ISA_DEVICE_CLASS(klass) \
-     OBJECT_CLASS_CHECK(ISADeviceClass, (klass), ISA_TYPE_DEVICE)
+     OBJECT_CLASS_CHECK(ISADeviceClass, (klass), TYPE_ISA_DEVICE)
 #define ISA_DEVICE_GET_CLASS(obj) \
-     OBJECT_GET_CLASS(ISADeviceClass, (obj), ISA_TYPE_DEVICE)
+     OBJECT_GET_CLASS(ISADeviceClass, (obj), TYPE_ISA_DEVICE)
 
 typedef struct ISADeviceClass {
     DeviceClass parent_class;

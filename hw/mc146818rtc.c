@@ -624,7 +624,7 @@ static void visit_type_int32(Visitor *v, int *value, const char *name, Error **e
 static void rtc_get_date(DeviceState *dev, Visitor *v, void *opaque,
                          const char *name, Error **errp)
 {
-    ISADevice *isa = DO_UPCAST(ISADevice, qdev, dev);
+    ISADevice *isa = ISA_DEVICE(dev);
     RTCState *s = DO_UPCAST(RTCState, dev, isa);
 
     visit_start_struct(v, NULL, "struct tm", name, 0, errp);
