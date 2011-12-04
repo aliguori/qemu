@@ -600,9 +600,6 @@ static struct USBDeviceInfo serial_info = {
         DEFINE_PROP_CHR("chardev", USBSerialState, cs),
         DEFINE_PROP_END_OF_LIST(),
     },
-
-    .usbdevice_name = "serial",
-    .usbdevice_init = usb_serial_init,
 };
 
 static void usb_braille_class_initfn(ObjectClass *klass, void *data)
@@ -628,13 +625,11 @@ static struct USBDeviceInfo braille_info = {
         DEFINE_PROP_CHR("chardev", USBSerialState, cs),
         DEFINE_PROP_END_OF_LIST(),
     },
-    .usbdevice_name = "braille",
-    .usbdevice_init = usb_braille_init,
 };
 
 static void usb_serial_register_devices(void)
 {
-    usb_qdev_register(&serial_info);
-    usb_qdev_register(&braille_info);
+    usb_qdev_register(&serial_info, "serial", usb_serial_init);
+    usb_qdev_register(&braille_info, "braille", usb_braille_init);
 }
 device_init(usb_serial_register_devices)

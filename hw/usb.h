@@ -258,9 +258,6 @@ struct USBDevice {
 
 struct USBDeviceInfo {
     DeviceInfo qdev;
-    /* handle legacy -usbdevice command line options */
-    const char *usbdevice_name;
-    USBDevice *(*usbdevice_init)(const char *params);
 };
 
 typedef struct USBPortOps {
@@ -384,8 +381,9 @@ struct USBBusOps {
 
 void usb_bus_new(USBBus *bus, USBBusOps *ops, DeviceState *host);
 USBBus *usb_bus_find(int busnr);
-void usb_qdev_register(USBDeviceInfo *info);
-void usb_qdev_register_many(USBDeviceInfo *info);
+void usb_qdev_register(USBDeviceInfo *info,
+                       const char *usbdevice_name,
+                       USBDevice *(*usbdevice_init)(const char *params));
 USBDevice *usb_create(USBBus *bus, const char *name);
 USBDevice *usb_create_simple(USBBus *bus, const char *name);
 USBDevice *usbdevice_create(const char *cmdline);
