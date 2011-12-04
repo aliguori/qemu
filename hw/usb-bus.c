@@ -67,7 +67,7 @@ USBBus *usb_bus_find(int busnr)
 
 static int usb_qdev_init(DeviceState *qdev, DeviceInfo *base)
 {
-    USBDevice *dev = DO_UPCAST(USBDevice, qdev, qdev);
+    USBDevice *dev = USB_DEVICE(qdev);
     USBDeviceInfo *info = DO_UPCAST(USBDeviceInfo, qdev, base);
     int rc;
 
@@ -98,7 +98,7 @@ err:
 
 static int usb_qdev_exit(DeviceState *qdev)
 {
-    USBDevice *dev = DO_UPCAST(USBDevice, qdev, qdev);
+    USBDevice *dev = USB_DEVICE(qdev);
 
     if (dev->attached) {
         usb_device_detach(dev);
@@ -145,7 +145,7 @@ USBDevice *usb_create(USBBus *bus, const char *name)
 #endif
 
     dev = qdev_create(&bus->qbus, name);
-    return DO_UPCAST(USBDevice, qdev, dev);
+    return USB_DEVICE(dev);
 }
 
 USBDevice *usb_create_simple(USBBus *bus, const char *name)
@@ -366,7 +366,7 @@ static const char *usb_speed(unsigned int speed)
 
 static void usb_bus_dev_print(Monitor *mon, DeviceState *qdev, int indent)
 {
-    USBDevice *dev = DO_UPCAST(USBDevice, qdev, qdev);
+    USBDevice *dev = USB_DEVICE(qdev);
     USBBus *bus = usb_bus_from_device(dev);
 
     monitor_printf(mon, "%*saddr %d.%d, port %s, speed %s, name %s%s\n",
@@ -378,13 +378,13 @@ static void usb_bus_dev_print(Monitor *mon, DeviceState *qdev, int indent)
 
 static char *usb_get_dev_path(DeviceState *qdev)
 {
-    USBDevice *dev = DO_UPCAST(USBDevice, qdev, qdev);
+    USBDevice *dev = USB_DEVICE(qdev);
     return g_strdup(dev->port->path);
 }
 
 static char *usb_get_fw_dev_path(DeviceState *qdev)
 {
-    USBDevice *dev = DO_UPCAST(USBDevice, qdev, qdev);
+    USBDevice *dev = USB_DEVICE(qdev);
     char *fw_path, *in;
     ssize_t pos = 0, fw_len;
     long nr;
