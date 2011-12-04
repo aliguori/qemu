@@ -27,6 +27,8 @@ typedef struct InterfaceClass InterfaceClass;
 typedef struct Interface Interface;
 typedef struct InterfaceInfo InterfaceInfo;
 
+#define TYPE_OBJECT NULL
+
 /**
  * @ObjectClass:
  *
@@ -183,7 +185,7 @@ struct TypeInfo
      * to allow a class to set its default virtual method pointers.  This is
      * also the function to use to override virtual methods from a parent class.
      */
-    void (*class_init)(ObjectClass *klass);
+    void (*class_init)(ObjectClass *klass, void *data);
 
     /**
      * @class_finalize
@@ -191,7 +193,15 @@ struct TypeInfo
      * This function is called during class destruction and is meant to release
      * and dynamic parameters allocated by @class_init.
      */
-    void (*class_finalize)(ObjectClass *klass);
+    void (*class_finalize)(ObjectClass *klass, void *data);
+
+    /**
+     * @class_data
+     *
+     * Data to pass to the @class_init and @class_finalize functions.  This can
+     * be useful when building dynamic classes.
+     */
+    void *class_data;
 
     /**
      * Interfaces
@@ -306,7 +316,7 @@ struct InterfaceInfo
      * initialize any default virtual functions for a class and/or override
      * virtual functions in a parent class.
      */
-    void (*interface_initfn)(ObjectClass *class);
+    void (*interface_initfn)(ObjectClass *class, void *data);
 };
 
 #define TYPE_INTERFACE "interface"

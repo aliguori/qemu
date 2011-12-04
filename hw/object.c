@@ -17,7 +17,7 @@
 typedef struct InterfaceImpl
 {
     const char *parent;
-    void (*interface_initfn)(ObjectClass *class);
+    void (*interface_initfn)(ObjectClass *class, void *data);
     Type type;
 } InterfaceImpl;
 
@@ -33,8 +33,10 @@ typedef struct TypeImpl
     void (*base_init)(ObjectClass *klass);
     void (*base_finalize)(ObjectClass *klass);
 
-    void (*class_init)(ObjectClass *klass);
-    void (*class_finalize)(ObjectClass *klass);
+    void (*class_init)(ObjectClass *klass, void *data);
+    void (*class_finalize)(ObjectClass *klass, void *data);
+
+    void *class_data;
 
     void (*instance_init)(Object *obj);
     void (*instance_finalize)(Object *obj);
@@ -61,6 +63,8 @@ Type type_register_static(const TypeInfo *info)
 
     assert(info->name != NULL);
 
+    printf("Added type %s -> %s\n", info->name, info->parent);
+
     ti->name = info->name;
     ti->parent = info->parent;
     ti->type = type;
@@ -73,6 +77,7 @@ Type type_register_static(const TypeInfo *info)
 
     ti->class_init = info->class_init;
     ti->class_finalize = info->class_finalize;
+    ti->class_data = info->class_data;
 
     ti->instance_init = info->instance_init;
     ti->instance_finalize = info->instance_finalize;
@@ -114,6 +119,7 @@ static Type type_register_anonymous(const TypeInfo *info)
 
     ti->class_init = info->class_init;
     ti->class_finalize = info->class_finalize;
+    ti->class_data = info->class_data;
 
     ti->instance_init = info->instance_init;
     ti->instance_finalize = info->instance_finalize;
@@ -237,7 +243,7 @@ static void type_class_init(TypeImpl *ti)
     }
 
     if (ti->class_init) {
-        ti->class_init(ti->class);
+        ti->class_init(ti->class, ti->class_data);
     }
 }
 
