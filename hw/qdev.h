@@ -75,6 +75,7 @@ typedef struct DeviceProperty
 typedef struct DeviceClass {
     ObjectClass parent_class;
     DeviceInfo *info;
+    void (*reset)(DeviceState *dev);
 } DeviceClass;
 
 /* This structure should not be accessed directly.  We declare it here
@@ -395,7 +396,7 @@ static inline const char *qdev_fw_name(DeviceState *dev)
         return info->alias;
     }
 
-    return info->name;
+    return object_get_type(OBJECT(dev));
 }
 
 char *qdev_get_fw_dev_path(DeviceState *dev);
@@ -631,5 +632,7 @@ void qdev_property_add_str(DeviceState *dev, const char *name,
  *          with g_free().
  */
 char *qdev_get_type(DeviceState *dev, Error **errp);
+
+void device_reset(DeviceState *dev);
 
 #endif

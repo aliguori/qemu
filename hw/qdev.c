@@ -48,7 +48,12 @@ static BusState *qbus_find(const char *path);
 static void qdev_subclass_init(ObjectClass *klass, void *data)
 {
     DeviceClass *dc = DEVICE_CLASS(klass);
+
     dc->info = data;
+    dc->reset = dc->info->reset;
+
+    /* Poison to try to detect future uses */
+    dc->info->reset = NULL;
 }
 
 DeviceInfo *qdev_get_info(DeviceState *dev)
@@ -367,8 +372,8 @@ int qdev_init(DeviceState *dev)
                                        dev->alias_required_for_version);
     }
     dev->state = DEV_STATE_INITIALIZED;
-    if (dev->hotplugged && qdev_get_info(dev)->reset) {
-        qdev_get_info(dev)->reset(dev);
+    if (dev->hotplugged) {
+        device_reset(dev);
     }
     return 0;
 }
@@ -401,9 +406,7 @@ int qdev_unplug(DeviceState *dev)
 
 static int qdev_reset_one(DeviceState *dev, void *opaque)
 {
-    if (qdev_get_info(dev)->reset) {
-        qdev_get_info(dev)->reset(dev);
-    }
+    device_reset(dev);
 
     return 0;
 }
@@ -1534,6 +1537,15 @@ void qdev_property_add_str(DeviceState *dev, const char *name,
                       set ? qdev_property_set_str : NULL,
                       qdev_property_release_str,
                       prop, errp);
+}
+
+void device_reset(DeviceState *dev)
+{
+    DeviceClass *klass = DEVICE_GET_CLASS(dev);
+
+    if (klass->reset) {
+        klass->reset(dev);
+    }
 }
 
 static TypeInfo device_type_info = {
