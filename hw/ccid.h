@@ -17,7 +17,7 @@ typedef struct CCIDCardInfo CCIDCardInfo;
 
 #define TYPE_CCID_CARD "ccid-card"
 #define CCID_CARD(obj) \
-     OBJECT_CHECK(CCIDCard, (obj), TYPE_CCID_CARD)
+     OBJECT_CHECK(CCIDCardState, (obj), TYPE_CCID_CARD)
 #define CCID_CARD_CLASS(klass) \
      OBJECT_CLASS_CHECK(CCIDCardClass, (klass), TYPE_CCID_CARD)
 #define CCID_CARD_GET_CLASS(obj) \
