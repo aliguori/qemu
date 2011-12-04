@@ -126,7 +126,7 @@ void isa_qdev_register(ISADeviceInfo *info)
 {
     info->qdev.init = isa_qdev_init;
     info->qdev.bus_info = &isa_bus_info;
-    qdev_register(&info->qdev);
+    qdev_register_subclass(&info->qdev, TYPE_ISA_DEVICE);
 }
 
 ISADevice *isa_create(const char *name)
@@ -189,9 +189,18 @@ static SysBusDeviceInfo isabus_bridge_info = {
     .qdev.no_user = 1,
 };
 
+static TypeInfo isa_device_type_info = {
+    .name = TYPE_ISA_DEVICE,
+    .parent = TYPE_DEVICE,
+    .instance_size = sizeof(ISADevice),
+    .abstract = true,
+    .class_size = sizeof(ISADeviceClass),
+};
+
 static void isabus_register_devices(void)
 {
     sysbus_register_withprop(&isabus_bridge_info);
+    type_register_static(&isa_device_type_info);
 }
 
 static char *isabus_get_fw_dev_path(DeviceState *dev)
