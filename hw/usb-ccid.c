@@ -1318,7 +1318,6 @@ static struct USBDeviceInfo ccid_info = {
         DEFINE_PROP_UINT8("debug", USBCCIDState, debug, 0),
         DEFINE_PROP_END_OF_LIST(),
     },
-    .usbdevice_name = "ccid",
 };
 
 static TypeInfo ccid_card_type_info = {
@@ -1332,6 +1331,6 @@ static TypeInfo ccid_card_type_info = {
 static void ccid_register_devices(void)
 {
     type_register_static(&ccid_card_type_info);
-    usb_qdev_register(&ccid_info);
+    usb_qdev_register(&ccid_info, "ccid", NULL);
 }
 device_init(ccid_register_devices)
