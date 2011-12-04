@@ -461,15 +461,22 @@ static SCSIRequest *scsi_new_request(SCSIDevice *d, uint32_t tag, uint32_t lun,
     return req;
 }
 
+static void scsi_generic_class_initfn(ObjectClass *klass, void *data)
+{
+    SCSIDeviceClass *sc = SCSI_DEVICE_CLASS(klass);
+
+    sc->init         = scsi_generic_initfn;
+    sc->destroy      = scsi_destroy;
+    sc->alloc_req    = scsi_new_request;
+}
+
 static SCSIDeviceInfo scsi_generic_info = {
     .qdev.name    = "scsi-generic",
     .qdev.fw_name = "disk",
     .qdev.desc    = "pass through generic scsi device (/dev/sg*)",
     .qdev.size    = sizeof(SCSIDevice),
     .qdev.reset   = scsi_generic_reset,
-    .init         = scsi_generic_initfn,
-    .destroy      = scsi_destroy,
-    .alloc_req    = scsi_new_request,
+    .qdev.class_init = scsi_generic_class_initfn,
     .qdev.props   = (Property[]) {
         DEFINE_BLOCK_PROPERTIES(SCSIDevice, conf),
         DEFINE_PROP_END_OF_LIST(),
