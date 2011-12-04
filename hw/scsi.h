@@ -68,6 +68,11 @@ struct SCSIRequest {
 
 typedef struct SCSIDeviceClass {
     DeviceClass parent_class;
+    int (*init)(SCSIDevice *dev);
+    void (*destroy)(SCSIDevice *s);
+    SCSIRequest *(*alloc_req)(SCSIDevice *s, uint32_t tag, uint32_t lun,
+                              uint8_t *buf, void *hba_private);
+    void (*unit_attention_reported)(SCSIDevice *s);
 } SCSIDeviceClass;
 
 struct SCSIDevice
@@ -104,14 +109,8 @@ struct SCSIReqOps {
     uint8_t *(*get_buf)(SCSIRequest *req);
 };
 
-typedef int (*scsi_qdev_initfn)(SCSIDevice *dev);
 struct SCSIDeviceInfo {
     DeviceInfo qdev;
-    scsi_qdev_initfn init;
-    void (*destroy)(SCSIDevice *s);
-    SCSIRequest *(*alloc_req)(SCSIDevice *s, uint32_t tag, uint32_t lun,
-                              uint8_t *buf, void *hba_private);
-    void (*unit_attention_reported)(SCSIDevice *s);
 };
 
 struct SCSIBusInfo {

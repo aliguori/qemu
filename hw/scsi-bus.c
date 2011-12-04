@@ -23,32 +23,29 @@ static struct BusInfo scsi_bus_info = {
 };
 static int next_scsi_bus;
 
-static int scsi_device_init(SCSIDevice *dev)
+static int scsi_device_init(SCSIDevice *s)
 {
-    SCSIDeviceInfo *info = DO_UPCAST(SCSIDeviceInfo, qdev,
-                                     qdev_get_info(DEVICE(dev)));
-    if (info->init) {
-        return info->init(dev);
+    SCSIDeviceClass *sc = SCSI_DEVICE_GET_CLASS(s);
+    if (sc->init) {
+        return sc->init(s);
     }
     return 0;
 }
 
 static void scsi_device_destroy(SCSIDevice *s)
 {
-    SCSIDeviceInfo *info = DO_UPCAST(SCSIDeviceInfo, qdev,
-                                     qdev_get_info(DEVICE(s)));
-    if (info->destroy) {
-        info->destroy(s);
+    SCSIDeviceClass *sc = SCSI_DEVICE_GET_CLASS(s);
+    if (sc->destroy) {
+        sc->destroy(s);
     }
 }
 
 static SCSIRequest *scsi_device_alloc_req(SCSIDevice *s, uint32_t tag, uint32_t lun,
                                           uint8_t *buf, void *hba_private)
 {
-    SCSIDeviceInfo *info = DO_UPCAST(SCSIDeviceInfo, qdev,
-                                     qdev_get_info(DEVICE(s)));
-    if (info->alloc_req) {
-        return info->alloc_req(s, tag, lun, buf, hba_private);
+    SCSIDeviceClass *sc = SCSI_DEVICE_GET_CLASS(s);
+    if (sc->alloc_req) {
+        return sc->alloc_req(s, tag, lun, buf, hba_private);
     }
 
     return NULL;
@@ -56,10 +53,9 @@ static SCSIRequest *scsi_device_alloc_req(SCSIDevice *s, uint32_t tag, uint32_t 
 
 static void scsi_device_unit_attention_reported(SCSIDevice *s)
 {
-    SCSIDeviceInfo *info = DO_UPCAST(SCSIDeviceInfo, qdev,
-                                     qdev_get_info(DEVICE(s)));
-    if (info->unit_attention_reported) {
-        info->unit_attention_reported(s);
+    SCSIDeviceClass *sc = SCSI_DEVICE_GET_CLASS(s);
+    if (sc->unit_attention_reported) {
+        sc->unit_attention_reported(s);
     }
 }
 
