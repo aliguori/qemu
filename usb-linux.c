@@ -1456,13 +1456,11 @@ static struct USBDeviceInfo usb_host_dev_info = {
         DEFINE_PROP_UINT32("isobufs",  USBHostDevice, iso_urb_count,    4),
         DEFINE_PROP_END_OF_LIST(),
     },
-    .usbdevice_name = "host",
-    .usbdevice_init = usb_host_device_open,
 };
 
 static void usb_host_register_devices(void)
 {
-    usb_qdev_register(&usb_host_dev_info);
+    usb_qdev_register(&usb_host_dev_info, "host", usb_host_device_open);
 }
 device_init(usb_host_register_devices)
 
