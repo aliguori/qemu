@@ -161,8 +161,8 @@ void pci_device_reset(PCIDevice *dev)
     int r;
     /* TODO: call the below unconditionally once all pci devices
      * are qdevified */
-    if (qdev_get_info(&dev->qdev)) {
-        qdev_reset_all(&dev->qdev);
+    if (OBJECT(dev)->type != 0) {
+        qdev_reset_all(DEVICE(dev));
     }
 
     dev->irq_state = 0;
