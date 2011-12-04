@@ -111,6 +111,11 @@ static DeviceInfo *qdev_find_info(BusInfo *bus_info, const char *name)
     return NULL;
 }
 
+/* FIXME: need to figure out somethign to do with bus.
+ *
+ * The general problem is that we don't want to take a bus argument on
+ * create.  there's simply no way to pass it to instance init.
+ */
 static DeviceState *qdev_create_from_info(BusState *bus, DeviceInfo *info)
 {
     DeviceState *dev;

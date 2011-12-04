@@ -127,6 +127,18 @@ enum {
     QEMU_PCI_CAP_SERR = (1 << QEMU_PCI_CAP_SERR_BITNR),
 };
 
+#define TYPE_PCI_DEVICE "pci-device"
+#define PCI_DEVICE(obj) \
+     OBJECT_CHECK(PCIDevice, (obj), TYPE_PCI_DEVICE)
+#define PCI_DEVICE_CLASS(klass) \
+     OBJECT_CLASS_CHECK(PCIDeviceClass, (klass), TYPE_PCI_DEVICE)
+#define PCI_DEVICE_GET_CLASS(obj) \
+     OBJECT_GET_CLASS(PCIDeviceClass, (obj), TYPE_PCI_DEVICE)
+
+typedef struct PCIDeviceClass {
+    DeviceClass parent_class;
+} PCIDeviceClass;
+
 struct PCIDevice {
     DeviceState qdev;
     /* PCI config space */
