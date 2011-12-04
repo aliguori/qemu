@@ -89,7 +89,6 @@ static const VMStateDescription vmstate_pcibus = {
         VMSTATE_END_OF_LIST()
     }
 };
-
 static int pci_bar(PCIDevice *d, int reg)
 {
     uint8_t type;
@@ -1550,7 +1549,7 @@ void pci_qdev_register(PCIDeviceInfo *info)
     info->qdev.unplug = pci_unplug_device;
     info->qdev.exit = pci_unregister_device;
     info->qdev.bus_info = &pci_bus_info;
-    qdev_register(&info->qdev);
+    qdev_register_subclass(&info->qdev, TYPE_PCI_DEVICE);
 }
 
 void pci_qdev_register_many(PCIDeviceInfo *info)
@@ -2038,3 +2037,18 @@ MemoryRegion *pci_address_space_io(PCIDevice *dev)
 {
     return dev->bus->address_space_io;
 }
+
+static TypeInfo pci_device_type_info = {
+    .name = TYPE_PCI_DEVICE,
+    .parent = TYPE_DEVICE,
+    .instance_size = sizeof(PCIDevice),
+    .abstract = true,
+    .class_size = sizeof(PCIDeviceClass),
+};
+
+static void pci_register_devices(void)
+{
+    type_register_static(&pci_device_type_info);
+}
+
+device_init(pci_register_devices);
