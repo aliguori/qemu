@@ -842,7 +842,7 @@ static void pci_unregister_io_regions(PCIDevice *pci_dev)
 
 static int pci_unregister_device(DeviceState *dev)
 {
-    PCIDevice *pci_dev = DO_UPCAST(PCIDevice, qdev, dev);
+    PCIDevice *pci_dev = PCI_DEVICE(dev);
     PCIDeviceInfo *info = DO_UPCAST(PCIDeviceInfo, qdev, qdev_get_info(dev));
     int ret = 0;
 
@@ -1532,7 +1532,7 @@ static int pci_qdev_init(DeviceState *qdev, DeviceInfo *base)
 
 static int pci_unplug_device(DeviceState *qdev)
 {
-    PCIDevice *dev = DO_UPCAST(PCIDevice, qdev, qdev);
+    PCIDevice *dev = PCI_DEVICE(qdev);
     PCIDeviceInfo *info = container_of(qdev_get_info(qdev), PCIDeviceInfo, qdev);
 
     if (info->no_hotplug) {
@@ -1568,7 +1568,7 @@ PCIDevice *pci_create_multifunction(PCIBus *bus, int devfn, bool multifunction,
     dev = qdev_create(&bus->qbus, name);
     qdev_prop_set_uint32(dev, "addr", devfn);
     qdev_prop_set_bit(dev, "multifunction", multifunction);
-    return DO_UPCAST(PCIDevice, qdev, dev);
+    return PCI_DEVICE(dev);
 }
 
 PCIDevice *pci_try_create_multifunction(PCIBus *bus, int devfn,
@@ -1583,7 +1583,7 @@ PCIDevice *pci_try_create_multifunction(PCIBus *bus, int devfn,
     }
     qdev_prop_set_uint32(dev, "addr", devfn);
     qdev_prop_set_bit(dev, "multifunction", multifunction);
-    return DO_UPCAST(PCIDevice, qdev, dev);
+    return PCI_DEVICE(dev);
 }
 
 PCIDevice *pci_create_simple_multifunction(PCIBus *bus, int devfn,
@@ -2003,7 +2003,7 @@ static int pci_qdev_find_recursive(PCIBus *bus,
     /* roughly check if given qdev is pci device */
     if (qdev_get_info(qdev)->init == &pci_qdev_init &&
         qdev->parent_bus->info == &pci_bus_info) {
-        *pdev = DO_UPCAST(PCIDevice, qdev, qdev);
+        *pdev = PCI_DEVICE(qdev);
         return 0;
     }
     return -EINVAL;

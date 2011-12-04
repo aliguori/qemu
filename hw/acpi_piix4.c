@@ -278,7 +278,7 @@ static void piix4_update_hotplug(PIIX4PMState *s)
 
     QTAILQ_FOREACH_SAFE(qdev, &bus->children, sibling, next) {
         PCIDeviceInfo *info = container_of(qdev_get_info(qdev), PCIDeviceInfo, qdev);
-        PCIDevice *pdev = DO_UPCAST(PCIDevice, qdev, qdev);
+        PCIDevice *pdev = PCI_DEVICE(qdev);
         int slot = PCI_SLOT(pdev->devfn);
 
         if (info->no_hotplug) {
@@ -488,7 +488,7 @@ static void pciej_write(void *opaque, uint32_t addr, uint32_t val)
     int slot = ffs(val) - 1;
 
     QTAILQ_FOREACH_SAFE(qdev, &bus->children, sibling, next) {
-        dev = DO_UPCAST(PCIDevice, qdev, qdev);
+        dev = PCI_DEVICE(qdev);
         info = container_of(qdev_get_info(qdev), PCIDeviceInfo, qdev);
         if (PCI_SLOT(dev->devfn) == slot && !info->no_hotplug) {
             qdev_free(qdev);
@@ -551,7 +551,7 @@ static int piix4_device_hotplug(DeviceState *qdev, PCIDevice *dev,
 {
     int slot = PCI_SLOT(dev->devfn);
     PIIX4PMState *s = DO_UPCAST(PIIX4PMState, dev,
-                                DO_UPCAST(PCIDevice, qdev, qdev));
+                                PCI_DEVICE(qdev));
 
     /* Don't send event when device is enabled during qemu machine creation:
      * it is present on boot, no hotplug event is necessary. We do send an
