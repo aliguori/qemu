@@ -77,7 +77,6 @@ struct SCSIDevice
     QEMUBH *bh;
     uint32_t id;
     BlockConf conf;
-    SCSIDeviceInfo *info;
     SCSISense unit_attention;
     bool sense_is_ua;
     uint8_t sense[SCSI_SENSE_BUF_SIZE];
