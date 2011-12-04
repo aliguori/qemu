@@ -1763,7 +1763,7 @@ static int pci_add_option_rom(PCIDevice *pdev, bool is_default_rom)
     if (qdev_get_info(&pdev->qdev)->vmsd)
         snprintf(name, sizeof(name), "%s.rom", qdev_get_info(&pdev->qdev)->vmsd->name);
     else
-        snprintf(name, sizeof(name), "%s.rom", qdev_get_info(&pdev->qdev)->name);
+        snprintf(name, sizeof(name), "%s.rom", object_get_type(OBJECT(pdev)));
     pdev->has_rom = true;
     memory_region_init_ram(&pdev->rom, &pdev->qdev, name, size);
     ptr = memory_region_get_ram_ptr(&pdev->rom);
