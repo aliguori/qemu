@@ -163,7 +163,7 @@ static VIOsPAPRDevice *vty_lookup(sPAPREnvironment *spapr, target_ulong reg)
          * (early debug does work there, despite having no vty with
          * reg==0. */
         QTAILQ_FOREACH(qdev, &spapr->vio_bus->bus.children, sibling) {
-            if (qdev->info == &spapr_vty.qdev) {
+            if (qdev_get_info(qdev) == &spapr_vty.qdev) {
                 return DO_UPCAST(VIOsPAPRDevice, qdev, qdev);
             }
         }

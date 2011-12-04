@@ -164,6 +164,7 @@ static int pci_piix_ide_initfn(PCIDevice *dev)
     return 0;
 }
 
+#if 0
 static int pci_piix3_xen_ide_unplug(DeviceState *dev)
 {
     PCIDevice *pci_dev;
@@ -189,13 +190,18 @@ static int pci_piix3_xen_ide_unplug(DeviceState *dev)
     qdev_reset_all(&(pci_ide->dev.qdev));
     return 0;
 }
+#endif
 
 PCIDevice *pci_piix3_xen_ide_init(PCIBus *bus, DriveInfo **hd_table, int devfn)
 {
     PCIDevice *dev;
 
     dev = pci_create_simple(bus, devfn, "piix3-ide-xen");
+    /* FIXME: BROKEN! */
+    abort();
+#if 0
     dev->qdev.info->unplug = pci_piix3_xen_ide_unplug;
+#endif
     pci_ide_create_devs(dev, hd_table);
     return dev;
 }
