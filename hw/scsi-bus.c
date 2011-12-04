@@ -25,24 +25,30 @@ static int next_scsi_bus;
 
 static int scsi_device_init(SCSIDevice *dev)
 {
-    if (dev->info->init) {
-        return dev->info->init(dev);
+    SCSIDeviceInfo *info = DO_UPCAST(SCSIDeviceInfo, qdev,
+                                     qdev_get_info(DEVICE(dev)));
+    if (info->init) {
+        return info->init(dev);
     }
     return 0;
 }
 
 static void scsi_device_destroy(SCSIDevice *s)
 {
-    if (s->info->destroy) {
-        s->info->destroy(s);
+    SCSIDeviceInfo *info = DO_UPCAST(SCSIDeviceInfo, qdev,
+                                     qdev_get_info(DEVICE(s)));
+    if (info->destroy) {
+        info->destroy(s);
     }
 }
 
 static SCSIRequest *scsi_device_alloc_req(SCSIDevice *s, uint32_t tag, uint32_t lun,
                                           uint8_t *buf, void *hba_private)
 {
-    if (s->info->alloc_req) {
-        return s->info->alloc_req(s, tag, lun, buf, hba_private);
+    SCSIDeviceInfo *info = DO_UPCAST(SCSIDeviceInfo, qdev,
+                                     qdev_get_info(DEVICE(s)));
+    if (info->alloc_req) {
+        return info->alloc_req(s, tag, lun, buf, hba_private);
     }
 
     return NULL;
@@ -50,8 +56,10 @@ static SCSIRequest *scsi_device_alloc_req(SCSIDevice *s, uint32_t tag, uint32_t 
 
 static void scsi_device_unit_attention_reported(SCSIDevice *s)
 {
-    if (s->info->unit_attention_reported) {
-        s->info->unit_attention_reported(s);
+    SCSIDeviceInfo *info = DO_UPCAST(SCSIDeviceInfo, qdev,
+                                     qdev_get_info(DEVICE(s)));
+    if (info->unit_attention_reported) {
+        info->unit_attention_reported(s);
     }
 }
 
@@ -114,7 +122,6 @@ static void scsi_dma_restart_cb(void *opaque, int running, RunState state)
 static int scsi_qdev_init(DeviceState *qdev, DeviceInfo *base)
 {
     SCSIDevice *dev = SCSI_DEVICE(qdev);
-    SCSIDeviceInfo *info = DO_UPCAST(SCSIDeviceInfo, qdev, base);
     SCSIBus *bus = DO_UPCAST(SCSIBus, qbus, dev->qdev.parent_bus);
     SCSIDevice *d;
     int rc = -1;
@@ -158,7 +165,6 @@ static int scsi_qdev_init(DeviceState *qdev, DeviceInfo *base)
         }
     }
 
-    dev->info = info;
     QTAILQ_INIT(&dev->requests);
     rc = scsi_device_init(dev);
     if (rc == 0) {
