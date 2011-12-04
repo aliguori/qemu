@@ -11,8 +11,8 @@
  *
  */
 
-#ifndef QOBJECT_H
-#define QOBJECT_H
+#ifndef QEMU_OBJECT_H
+#define QEMU_OBJECT_H
 
 #include "qemu-common.h"
 
