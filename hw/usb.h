@@ -174,39 +174,7 @@ struct USBDescString {
 
 typedef struct USBDeviceClass {
     DeviceClass parent_class;
-} USBDeviceClass;
 
-/* definition of a USB device */
-struct USBDevice {
-    DeviceState qdev;
-    USBPort *port;
-    char *port_path;
-    void *opaque;
-
-    /* Actual connected speed */
-    int speed;
-    /* Supported speeds, not in info because it may be variable (hostdevs) */
-    int speedmask;
-    uint8_t addr;
-    char product_desc[32];
-    int auto_attach;
-    int attached;
-
-    int32_t state;
-    uint8_t setup_buf[8];
-    uint8_t data_buf[4096];
-    int32_t remote_wakeup;
-    int32_t setup_state;
-    int32_t setup_len;
-    int32_t setup_index;
-
-    QLIST_HEAD(, USBDescString) strings;
-    const USBDescDevice *device;
-    const USBDescConfig *config;
-};
-
-struct USBDeviceInfo {
-    DeviceInfo qdev;
     int (*init)(USBDevice *dev);
 
     /*
@@ -257,7 +225,39 @@ struct USBDeviceInfo {
 
     const char *product_desc;
     const USBDesc *usb_desc;
+} USBDeviceClass;
 
+/* definition of a USB device */
+struct USBDevice {
+    DeviceState qdev;
+    USBPort *port;
+    char *port_path;
+    void *opaque;
+
+    /* Actual connected speed */
+    int speed;
+    /* Supported speeds, not in info because it may be variable (hostdevs) */
+    int speedmask;
+    uint8_t addr;
+    char product_desc[32];
+    int auto_attach;
+    int attached;
+
+    int32_t state;
+    uint8_t setup_buf[8];
+    uint8_t data_buf[4096];
+    int32_t remote_wakeup;
+    int32_t setup_state;
+    int32_t setup_len;
+    int32_t setup_index;
+
+    QLIST_HEAD(, USBDescString) strings;
+    const USBDescDevice *device;
+    const USBDescConfig *config;
+};
+
+struct USBDeviceInfo {
+    DeviceInfo qdev;
     /* handle legacy -usbdevice command line options */
     const char *usbdevice_name;
     USBDevice *(*usbdevice_init)(const char *params);
