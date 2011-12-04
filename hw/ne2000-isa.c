@@ -82,10 +82,16 @@ static int isa_ne2000_initfn(ISADevice *dev)
     return 0;
 }
 
+static void isa_ne2000_class_initfn(ObjectClass *klass, void *data)
+{
+    ISADeviceClass *ic = ISA_DEVICE_CLASS(klass);
+    ic->init = isa_ne2000_initfn;
+}
+
 static ISADeviceInfo ne2000_isa_info = {
     .qdev.name  = "ne2k_isa",
     .qdev.size  = sizeof(ISANE2000State),
-    .init       = isa_ne2000_initfn,
+    .qdev.class_init       = isa_ne2000_class_initfn,
     .qdev.props = (Property[]) {
         DEFINE_PROP_HEX32("iobase", ISANE2000State, iobase, 0x300),
         DEFINE_PROP_UINT32("irq",   ISANE2000State, isairq, 9),
