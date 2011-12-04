@@ -23,6 +23,7 @@ typedef struct ISADeviceInfo ISADeviceInfo;
 
 typedef struct ISADeviceClass {
     DeviceClass parent_class;
+    int (*init)(ISADevice *dev);
 } ISADeviceClass;
 
 struct ISADevice {
@@ -32,10 +33,8 @@ struct ISADevice {
     int ioport_id;
 };
 
-typedef int (*isa_qdev_initfn)(ISADevice *dev);
 struct ISADeviceInfo {
     DeviceInfo qdev;
-    isa_qdev_initfn init;
 };
 
 ISABus *isa_bus_new(DeviceState *dev, MemoryRegion *address_space_io);

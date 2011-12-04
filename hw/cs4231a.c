@@ -665,12 +665,18 @@ int cs4231a_init (qemu_irq *pic)
     return 0;
 }
 
+static void cs4231a_class_initfn(ObjectClass *klass, void *data)
+{
+    ISADeviceClass *ic = ISA_DEVICE_CLASS(klass);
+    ic->init = cs4231a_initfn;
+}
+
 static ISADeviceInfo cs4231a_info = {
     .qdev.name     = "cs4231a",
     .qdev.desc     = "Crystal Semiconductor CS4231A",
     .qdev.size     = sizeof (CSState),
     .qdev.vmsd     = &vmstate_cs4231a,
-    .init          = cs4231a_initfn,
+    .qdev.class_init = cs4231a_class_initfn,
     .qdev.props    = (Property[]) {
         DEFINE_PROP_HEX32  ("iobase",  CSState, port, 0x534),
         DEFINE_PROP_UINT32 ("irq",     CSState, irq,  9),

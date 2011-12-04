@@ -719,8 +719,14 @@ static int m48t59_init1(SysBusDevice *dev)
     return 0;
 }
 
+static void m48t59_init_class_isa1(ObjectClass *klass, void *data)
+{
+    ISADeviceClass *ic = ISA_DEVICE_CLASS(klass);
+    ic->init = m48t59_init_isa1;
+}
+
 static ISADeviceInfo m48t59_isa_info = {
-    .init = m48t59_init_isa1,
+    .qdev.class_init = m48t59_init_class_isa1,
     .qdev.name = "m48t59_isa",
     .qdev.size = sizeof(M48t59ISAState),
     .qdev.reset = m48t59_reset_isa,

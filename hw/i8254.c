@@ -535,13 +535,19 @@ static int pit_initfn(ISADevice *dev)
     return 0;
 }
 
+static void pit_class_initfn(ObjectClass *klass, void *data)
+{
+    ISADeviceClass *ic = ISA_DEVICE_CLASS(klass);
+    ic->init = pit_initfn;
+}
+
 static ISADeviceInfo pit_info = {
     .qdev.name     = "isa-pit",
     .qdev.size     = sizeof(PITState),
     .qdev.vmsd     = &vmstate_pit,
     .qdev.reset    = pit_reset,
     .qdev.no_user  = 1,
-    .init          = pit_initfn,
+    .qdev.class_init          = pit_class_initfn,
     .qdev.props = (Property[]) {
         DEFINE_PROP_UINT32("irq", PITState, irq,  -1),
         DEFINE_PROP_HEX32("iobase", PITState, iobase,  -1),
