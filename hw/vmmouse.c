@@ -269,8 +269,14 @@ static int vmmouse_initfn(ISADevice *dev)
     return 0;
 }
 
+static void vmmouse_class_initfn(ObjectClass *klass, void *data)
+{
+    ISADeviceClass *ic = ISA_DEVICE_CLASS(klass);
+    ic->init = vmmouse_initfn;
+}
+
 static ISADeviceInfo vmmouse_info = {
-    .init          = vmmouse_initfn,
+    .qdev.class_init          = vmmouse_class_initfn,
     .qdev.name     = "vmmouse",
     .qdev.size     = sizeof(VMMouseState),
     .qdev.vmsd     = &vmstate_vmmouse,

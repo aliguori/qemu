@@ -114,12 +114,16 @@ void isa_register_portio_list(ISADevice *dev, uint16_t start,
 static int isa_qdev_init(DeviceState *qdev, DeviceInfo *base)
 {
     ISADevice *dev = ISA_DEVICE(qdev);
-    ISADeviceInfo *info = DO_UPCAST(ISADeviceInfo, qdev, base);
+    ISADeviceClass *klass = ISA_DEVICE_GET_CLASS(dev);
 
     dev->isairq[0] = -1;
     dev->isairq[1] = -1;
 
-    return info->init(dev);
+    if (klass->init) {
+        return klass->init(dev);
+    }
+
+    return 0;
 }
 
 void isa_qdev_register(ISADeviceInfo *info)

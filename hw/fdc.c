@@ -1959,8 +1959,14 @@ static const VMStateDescription vmstate_isa_fdc ={
     }
 };
 
+static void isabus_fdc_class_init1(ObjectClass *klass, void *data)
+{
+    ISADeviceClass *ic = ISA_DEVICE_CLASS(klass);
+    ic->init = isabus_fdc_init1;
+}
+
 static ISADeviceInfo isa_fdc_info = {
-    .init = isabus_fdc_init1,
+    .qdev.class_init = isabus_fdc_class_init1,
     .qdev.name  = "isa-fdc",
     .qdev.fw_name  = "fdc",
     .qdev.size  = sizeof(FDCtrlISABus),

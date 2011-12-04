@@ -583,10 +583,16 @@ bool parallel_mm_init(MemoryRegion *address_space,
     return true;
 }
 
+static void parallel_isa_class_initfn(ObjectClass *klass, void *data)
+{
+    ISADeviceClass *ic = ISA_DEVICE_CLASS(klass);
+    ic->init = parallel_isa_initfn;
+}
+
 static ISADeviceInfo parallel_isa_info = {
     .qdev.name  = "isa-parallel",
     .qdev.size  = sizeof(ISAParallelState),
-    .init       = parallel_isa_initfn,
+    .qdev.class_init       = parallel_isa_class_initfn,
     .qdev.props = (Property[]) {
         DEFINE_PROP_UINT32("index", ISAParallelState, index,   -1),
         DEFINE_PROP_HEX32("iobase", ISAParallelState, iobase,  -1),
