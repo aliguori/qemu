@@ -6,7 +6,7 @@
 #include "qemu-char.h"
 #include "qemu-option.h"
 #include "qapi/qapi-visit-core.h"
-#include "qobject.h"
+#include "object.h"
 
 typedef struct Property Property;
 
@@ -68,13 +68,13 @@ typedef struct DeviceProperty
 } DeviceProperty;
 
 typedef struct DeviceClass {
-    QObjectClass parent_class;
+    ObjectClass parent_class;
 } DeviceClass;
 
 /* This structure should not be accessed directly.  We declare it here
    so that it can be embedded in individual device state structures.  */
 struct DeviceState {
-    QObject parent_obj;
+    Object parent_obj;
 
     const char *id;
     enum DevState state;
