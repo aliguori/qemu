@@ -10,52 +10,52 @@
  * See the COPYING file in the top-level directory.
  */
 
-#include "qobject.h"
+#include "object.h"
 
 #define MAX_INTERFACES 32
 
-typedef struct QInterfaceImpl
+typedef struct InterfaceImpl
 {
     const char *parent;
-    void (*interface_initfn)(QObjectClass *class);
-    QType type;
-} QInterfaceImpl;
+    void (*interface_initfn)(ObjectClass *class);
+    Type type;
+} InterfaceImpl;
 
-typedef struct QTypeImpl
+typedef struct TypeImpl
 {
     const char *name;
-    QType type;
+    Type type;
 
     size_t class_size;
 
     size_t instance_size;
 
-    void (*base_init)(QObjectClass *klass);
-    void (*base_finalize)(QObjectClass *klass);
+    void (*base_init)(ObjectClass *klass);
+    void (*base_finalize)(ObjectClass *klass);
 
-    void (*class_init)(QObjectClass *klass);
-    void (*class_finalize)(QObjectClass *klass);
+    void (*class_init)(ObjectClass *klass);
+    void (*class_finalize)(ObjectClass *klass);
 
-    void (*instance_init)(QObject *obj);
-    void (*instance_finalize)(QObject *obj);
+    void (*instance_init)(Object *obj);
+    void (*instance_finalize)(Object *obj);
 
     bool abstract;
 
     const char *parent;
 
-    QObjectClass *class;
+    ObjectClass *class;
 
     int num_interfaces;
-    QInterfaceImpl interfaces[MAX_INTERFACES];
-} QTypeImpl;
+    InterfaceImpl interfaces[MAX_INTERFACES];
+} TypeImpl;
 
 static int num_types = 1;
-static QTypeImpl type_table[1024];
+static TypeImpl type_table[1024];
 
-QType qtype_register_static(const QTypeInfo *info)
+Type type_register_static(const TypeInfo *info)
 {
-    QType type = num_types++;
-    QTypeImpl *ti;
+    Type type = num_types++;
+    TypeImpl *ti;
 
     ti = &type_table[type];
 
@@ -92,10 +92,10 @@ QType qtype_register_static(const QTypeInfo *info)
     return type;
 }
 
-static QType qtype_register_anonymous(const QTypeInfo *info)
+static Type type_register_anonymous(const TypeInfo *info)
 {
-    QType type = num_types++;
-    QTypeImpl *ti;
+    Type type = num_types++;
+    TypeImpl *ti;
     char buffer[32];
     static int count;
 
@@ -131,7 +131,7 @@ static QType qtype_register_anonymous(const QTypeInfo *info)
     return type;
 }
 
-static QTypeImpl *qtype_get_instance(QType type)
+static TypeImpl *type_get_instance(Type type)
 {
     assert(type != 0);
     assert(type < num_types);
@@ -139,7 +139,7 @@ static QTypeImpl *qtype_get_instance(QType type)
     return &type_table[type];
 }
 
-QType qtype_get_by_name(const char *name)
+Type type_get_by_name(const char *name)
 {
     int i;
 
@@ -156,84 +156,84 @@ QType qtype_get_by_name(const char *name)
     return 0;
 }
 
-static void qtype_class_base_init(QTypeImpl *base_ti, const char *typename)
+static void type_class_base_init(TypeImpl *base_ti, const char *typename)
 {
-    QTypeImpl *ti;
+    TypeImpl *ti;
 
     if (!typename) {
         return;
     }
 
-    ti = qtype_get_instance(qtype_get_by_name(typename));
+    ti = type_get_instance(type_get_by_name(typename));
 
-    qtype_class_base_init(base_ti, ti->parent);
+    type_class_base_init(base_ti, ti->parent);
 
     if (ti->base_init) {
         ti->base_init(base_ti->class);
     }
 }
 
-static size_t qtype_class_get_size(QTypeImpl *ti)
+static size_t type_class_get_size(TypeImpl *ti)
 {
     if (ti->class_size) {
         return ti->class_size;
     }
 
     if (ti->parent) {
-        return qtype_class_get_size(qtype_get_instance(qtype_get_by_name(ti->parent)));
+        return type_class_get_size(type_get_instance(type_get_by_name(ti->parent)));
     }
 
-    return sizeof(QObjectClass);
+    return sizeof(ObjectClass);
 }
 
-static void qtype_class_interface_init(QTypeImpl *ti, QInterfaceImpl *iface)
+static void type_class_interface_init(TypeImpl *ti, InterfaceImpl *iface)
 {
-    QTypeInfo info = {
-        .instance_size = sizeof(QInterface),
+    TypeInfo info = {
+        .instance_size = sizeof(Interface),
         .parent = iface->parent,
-        .class_size = sizeof(QInterfaceClass),
+        .class_size = sizeof(InterfaceClass),
         .class_init = iface->interface_initfn,
         .abstract = true,
     };
 
-    iface->type = qtype_register_anonymous(&info);
+    iface->type = type_register_anonymous(&info);
 }
 
-static void qtype_class_init(QTypeImpl *ti)
+static void type_class_init(TypeImpl *ti)
 {
-    size_t class_size = sizeof(QObjectClass);
+    size_t class_size = sizeof(ObjectClass);
     int i;
 
     if (ti->class) {
         return;
     }
 
-    ti->class_size = qtype_class_get_size(ti);
+    ti->class_size = type_class_get_size(ti);
 
     ti->class = g_malloc0(ti->class_size);
     ti->class->type = ti->type;
 
     if (ti->parent) {
-        QTypeImpl *ti_parent;
+        TypeImpl *ti_parent;
 
-        ti_parent = qtype_get_instance(qtype_get_by_name(ti->parent));
+        ti_parent = type_get_instance(type_get_by_name(ti->parent));
 
-        qtype_class_init(ti_parent);
+        type_class_init(ti_parent);
 
         class_size = ti_parent->class_size;
         assert(ti_parent->class_size <= ti->class_size);
 
-        memcpy((void *)ti->class + sizeof(QObjectClass),
-               (void *)ti_parent->class + sizeof(QObjectClass),
-               ti_parent->class_size - sizeof(QObjectClass));
+        memcpy((void *)ti->class + sizeof(ObjectClass),
+               (void *)ti_parent->class + sizeof(ObjectClass),
+               ti_parent->class_size - sizeof(ObjectClass));
     }
 
     memset((void *)ti->class + class_size, 0, ti->class_size - class_size);
 
-    qtype_class_base_init(ti, ti->parent);
+    type_class_base_init(ti, ti->parent);
 
     for (i = 0; i < ti->num_interfaces; i++) {
-        qtype_class_interface_init(ti, &ti->interfaces[i]);
+        type_class_interface_init(ti, &ti->interfaces[i]);
     }
 
     if (ti->class_init) {
@@ -241,28 +241,28 @@ static void qtype_class_init(QTypeImpl *ti)
     }
 }
 
-static void qobject_interface_init(QObject *obj, QInterfaceImpl *iface)
+static void object_interface_init(Object *obj, InterfaceImpl *iface)
 {
-    QTypeImpl *ti = qtype_get_instance(iface->type);
-    QInterface *iface_obj;
+    TypeImpl *ti = type_get_instance(iface->type);
+    Interface *iface_obj;
 
-    iface_obj = QINTERFACE(qobject_new(ti->name));
+    iface_obj = INTERFACE(object_new(ti->name));
     iface_obj->obj = obj;
 
     obj->interfaces = g_slist_prepend(obj->interfaces, iface_obj);
 }
 
-static void qobject_init(QObject *obj, const char *typename)
+static void object_init(Object *obj, const char *typename)
 {
-    QTypeImpl *ti = qtype_get_instance(qtype_get_by_name(typename));
+    TypeImpl *ti = type_get_instance(type_get_by_name(typename));
     int i;
 
     if (ti->parent) {
-        qobject_init(obj, ti->parent);
+        object_init(obj, ti->parent);
     }
 
     for (i = 0; i < ti->num_interfaces; i++) {
-        qobject_interface_init(obj, &ti->interfaces[i]);
+        object_interface_init(obj, &ti->interfaces[i]);
     }
 
     if (ti->instance_init) {
@@ -270,14 +270,14 @@ static void qobject_init(QObject *obj, const char *typename)
     }
 }
 
-void qobject_initialize(void *data, const char *typename)
+void object_initialize(void *data, const char *typename)
 {
-    QTypeImpl *ti = qtype_get_instance(qtype_get_by_name(typename));
-    QObject *obj = data;
+    TypeImpl *ti = type_get_instance(type_get_by_name(typename));
+    Object *obj = data;
 
-    g_assert(ti->instance_size >= sizeof(QObjectClass));
+    g_assert(ti->instance_size >= sizeof(ObjectClass));
 
-    qtype_class_init(ti);
+    type_class_init(ti);
 
     g_assert(ti->abstract == false);
 
@@ -285,81 +285,81 @@ void qobject_initialize(void *data, const char *typename)
 
     obj->class = ti->class;
 
-    qobject_init(obj, typename);
+    object_init(obj, typename);
 }
 
-static void qobject_deinit(QObject *obj, const char *typename)
+static void object_deinit(Object *obj, const char *typename)
 {
-    QTypeImpl *ti = qtype_get_instance(qtype_get_by_name(typename));
+    TypeImpl *ti = type_get_instance(type_get_by_name(typename));
 
     if (ti->instance_finalize) {
         ti->instance_finalize(obj);
     }
 
     while (obj->interfaces) {
-        QInterface *iface_obj = obj->interfaces->data;
+        Interface *iface_obj = obj->interfaces->data;
         obj->interfaces = g_slist_delete_link(obj->interfaces, obj->interfaces);
-        qobject_delete(QOBJECT(iface_obj));
+        object_delete(OBJECT(iface_obj));
     }
 
     if (ti->parent) {
-        qobject_init(obj, ti->parent);
+        object_init(obj, ti->parent);
     }
 }
 
-void qobject_finalize(void *data)
+void object_finalize(void *data)
 {
-    QObject *obj = data;
-    QTypeImpl *ti = qtype_get_instance(obj->class->type);
+    Object *obj = data;
+    TypeImpl *ti = type_get_instance(obj->class->type);
 
-    qobject_deinit(obj, ti->name);
+    object_deinit(obj, ti->name);
 }
 
-const char *qtype_get_name(QType type)
+const char *type_get_name(Type type)
 {
-    QTypeImpl *ti = qtype_get_instance(type);
+    TypeImpl *ti = type_get_instance(type);
     return ti->name;
 }
 
-QObject *qobject_new(const char *typename)
+Object *object_new(const char *typename)
 {
-    QTypeImpl *ti = qtype_get_instance(qtype_get_by_name(typename));
-    QObject *obj;
+    TypeImpl *ti = type_get_instance(type_get_by_name(typename));
+    Object *obj;
 
     obj = g_malloc(ti->instance_size);
-    qobject_initialize(obj, typename);
+    object_initialize(obj, typename);
 
     return obj;
 }
 
-void qobject_delete(QObject *obj)
+void object_delete(Object *obj)
 {
-    qobject_finalize(obj);
+    object_finalize(obj);
     g_free(obj);
 }
 
-bool qobject_is_type(QObject *obj, const char *typename)
+bool object_is_type(Object *obj, const char *typename)
 {
-    QType target_type = qtype_get_by_name(typename);
-    QType type = obj->class->type;
+    Type target_type = type_get_by_name(typename);
+    Type type = obj->class->type;
     GSList *i;
 
     /* Check if typename is a direct ancestor of type */
     while (type) {
-        QTypeImpl *ti = qtype_get_instance(type);
+        TypeImpl *ti = type_get_instance(type);
 
         if (ti->type == target_type) {
             return true;
         }
 
-        type = qtype_get_by_name(ti->parent);
+        type = type_get_by_name(ti->parent);
     }
 
     /* Check if obj has an interface of typename */
     for (i = obj->interfaces; i; i = i->next) {
-        QInterface *iface = i->data;
+        Interface *iface = i->data;
 
-        if (qobject_is_type(QOBJECT(iface), typename)) {
+        if (object_is_type(OBJECT(iface), typename)) {
             return true;
         }
     }
@@ -367,29 +367,29 @@ bool qobject_is_type(QObject *obj, const char *typename)
     return false;
 }
 
-QObject *qobject_dynamic_cast(QObject *obj, const char *typename)
+Object *object_dynamic_cast(Object *obj, const char *typename)
 {
     GSList *i;
 
     /* Check if typename is a direct ancestor */
-    if (qobject_is_type(obj, typename)) {
+    if (object_is_type(obj, typename)) {
         return obj;
     }
 
     /* Check if obj has an interface of typename */
     for (i = obj->interfaces; i; i = i->next) {
-        QInterface *iface = i->data;
+        Interface *iface = i->data;
 
-        if (qobject_is_type(QOBJECT(iface), typename)) {
-            return QOBJECT(iface);
+        if (object_is_type(OBJECT(iface), typename)) {
+            return OBJECT(iface);
         }
     }
 
     /* Check if obj is an interface and it's containing object is a direct ancestor of typename */
-    if (qobject_is_type(obj, TYPE_QINTERFACE)) {
-        QInterface *iface = QINTERFACE(obj);
+    if (object_is_type(obj, TYPE_INTERFACE)) {
+        Interface *iface = INTERFACE(obj);
 
-        if (qobject_is_type(iface->obj, typename)) {
+        if (object_is_type(iface->obj, typename)) {
             return iface->obj;
         }
     }
@@ -400,22 +400,22 @@ QObject *qobject_dynamic_cast(QObject *obj, const char *typename)
 
 static void register_interface(void)
 {
-    static QTypeInfo interface_info = {
-        .name = TYPE_QINTERFACE,
-        .instance_size = sizeof(QInterface),
+    static TypeInfo interface_info = {
+        .name = TYPE_INTERFACE,
+        .instance_size = sizeof(Interface),
         .abstract = true,
     };
 
-    qtype_register_static(&interface_info);
+    type_register_static(&interface_info);
 }
 
 device_init(register_interface);
 
-QObject *qobject_dynamic_cast_assert(QObject *obj, const char *typename)
+Object *object_dynamic_cast_assert(Object *obj, const char *typename)
 {
-    QObject *inst;
+    Object *inst;
 
-    inst = qobject_dynamic_cast(obj, typename);
+    inst = object_dynamic_cast(obj, typename);
 
     if (!inst) {
         fprintf(stderr, "Object %p is not an instance of type %s\n", obj, typename);
@@ -425,19 +425,19 @@ QObject *qobject_dynamic_cast_assert(QObject *obj, const char *typename)
     return inst;
 }
 
-QObjectClass *qobject_check_class(QObjectClass *class, const char *typename)
+ObjectClass *object_check_class(ObjectClass *class, const char *typename)
 {
-    QType target_type = qtype_get_by_name(typename);
-    QType type = class->type;
+    Type target_type = type_get_by_name(typename);
+    Type type = class->type;
 
     while (type) {
-        QTypeImpl *ti = qtype_get_instance(type);
+        TypeImpl *ti = type_get_instance(type);
 
         if (ti->type == target_type) {
             return class;
         }
 
-        type = qtype_get_by_name(ti->parent);
+        type = type_get_by_name(ti->parent);
     }
 
     fprintf(stderr, "Object %p is not an instance of type %d\n", class, (int)type);
@@ -446,18 +446,18 @@ QObjectClass *qobject_check_class(QObjectClass *class, const char *typename)
     return NULL;
 }
 
-const char *qobject_get_type(QObject *obj)
+const char *object_get_type(Object *obj)
 {
-    return qtype_get_name(obj->class->type);
+    return type_get_name(obj->class->type);
 }
 
-QObjectClass *qobject_get_class(QObject *obj)
+ObjectClass *object_get_class(Object *obj)
 {
     return obj->class;
 }
 
-QObjectClass *qobject_get_super(QObject *obj)
+ObjectClass *object_get_super(Object *obj)
 {
-    return qtype_get_instance(qtype_get_by_name(qtype_get_instance(obj->class->type)->parent))->class;
+    return type_get_instance(type_get_by_name(type_get_instance(obj->class->type)->parent))->class;
 }
 
