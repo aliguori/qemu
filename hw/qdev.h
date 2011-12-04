@@ -69,6 +69,7 @@ typedef struct DeviceProperty
 
 typedef struct DeviceClass {
     ObjectClass parent_class;
+    DeviceInfo *info;
 } DeviceClass;
 
 /* This structure should not be accessed directly.  We declare it here
@@ -80,7 +81,6 @@ struct DeviceState {
     enum DevState state;
     QemuOpts *opts;
     int hotplugged;
-    DeviceInfo *info;
     BusState *parent_bus;
     int num_gpio_out;
     qemu_irq *gpio_out;
@@ -378,9 +378,19 @@ void qdev_prop_set_defaults(DeviceState *dev, Property *props);
 void qdev_prop_register_global_list(GlobalProperty *props);
 void qdev_prop_set_globals(DeviceState *dev);
 
+DeviceInfo *qdev_get_info(DeviceState *dev);
+
 static inline const char *qdev_fw_name(DeviceState *dev)
 {
-    return dev->info->fw_name ? : dev->info->alias ? : dev->info->name;
+    DeviceInfo *info = qdev_get_info(dev);
+
+    if (info->fw_name) {
+        return info->fw_name;
+    } else if (info->alias) {
+        return info->alias;
+    }
+
+    return info->name;
 }
 
 char *qdev_get_fw_dev_path(DeviceState *dev);
