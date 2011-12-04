@@ -115,14 +115,21 @@ static int prep_hb_initfn(PCIDevice *d)
     return 0;
 }
 
-static PCIDeviceInfo prep_hb_info = {
-    .qdev.name = "PREP Host Bridge - Motorola Raven",
-    .qdev.size = sizeof(PCIDevice),
-    .init = prep_hb_initfn,
-    .vendor_id = PCI_VENDOR_ID_MOTOROLA,
-    .device_id = PCI_DEVICE_ID_MOTOROLA_RAVEN,
-    .revision = 0x00,
-    .class_id = PCI_CLASS_BRIDGE_HOST,
+static void prep_hb_class_init(ObjectClass *klass, void *data)
+{
+    PCIDeviceClass *k = PCI_DEVICE_CLASS(klass);
+
+    k->init = prep_hb_initfn;
+    k->vendor_id = PCI_VENDOR_ID_MOTOROLA;
+    k->device_id = PCI_DEVICE_ID_MOTOROLA_RAVEN;
+    k->revision = 0x00;
+    k->class_id = PCI_CLASS_BRIDGE_HOST;
+}
+
+static DeviceInfo prep_hb_info = {
+    .name = "PREP Host Bridge - Motorola Raven",
+    .size = sizeof(PCIDevice),
+    .class_init = prep_hb_class_init,
 };
 
 static void prep_register(void)
