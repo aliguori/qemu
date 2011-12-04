@@ -126,11 +126,11 @@ static int isa_qdev_init(DeviceState *qdev, DeviceInfo *base)
     return 0;
 }
 
-void isa_qdev_register(ISADeviceInfo *info)
+void isa_qdev_register(DeviceInfo *info)
 {
-    info->qdev.init = isa_qdev_init;
-    info->qdev.bus_info = &isa_bus_info;
-    qdev_register_subclass(&info->qdev, TYPE_ISA_DEVICE);
+    info->init = isa_qdev_init;
+    info->bus_info = &isa_bus_info;
+    qdev_register_subclass(info, TYPE_ISA_DEVICE);
 }
 
 ISADevice *isa_create(const char *name)

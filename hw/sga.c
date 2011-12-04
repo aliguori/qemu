@@ -47,11 +47,11 @@ static void isa_cirrus_vga_class_initfn(ObjectClass *klass, void *data)
     ic->init = isa_cirrus_vga_initfn;
 }
 
-static ISADeviceInfo sga_info = {
-    .qdev.name    = "sga",
-    .qdev.desc    = "Serial Graphics Adapter",
-    .qdev.size    = sizeof(ISASGAState),
-    .qdev.class_init         = isa_cirrus_vga_class_initfn,
+static DeviceInfo sga_info = {
+    .name    = "sga",
+    .desc    = "Serial Graphics Adapter",
+    .size    = sizeof(ISASGAState),
+    .class_init         = isa_cirrus_vga_class_initfn,
 };
 
 static void sga_register(void)
