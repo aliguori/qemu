@@ -16,64 +16,64 @@
 
 #include "qemu-common.h"
 
-typedef uint64_t QType;
+typedef uint64_t Type;
 
-typedef struct QObjectClass QObjectClass;
-typedef struct QObject QObject;
+typedef struct ObjectClass ObjectClass;
+typedef struct Object Object;
 
-typedef struct QTypeInfo QTypeInfo;
+typedef struct TypeInfo TypeInfo;
 
-typedef struct QInterfaceClass QInterfaceClass;
-typedef struct QInterface QInterface;
-typedef struct QInterfaceInfo QInterfaceInfo;
+typedef struct InterfaceClass InterfaceClass;
+typedef struct Interface Interface;
+typedef struct InterfaceInfo InterfaceInfo;
 
 /**
- * @QObjectClass:
+ * @ObjectClass:
  *
- * The base for all classes.  The only thing that @QObjectClass contains is an
+ * The base for all classes.  The only thing that @ObjectClass contains is an
  * integer type handle.
  */
-struct QObjectClass
+struct ObjectClass
 {
     /**
      * @type the handle of the type for a class
      */
-    QType type;
+    Type type;
 };
 
 /**
- * @QObject:
+ * @Object:
  *
  * The base for all objects.  The first member of this object is a pointer to
- * a @QObjectClass.  Since C guarantees that the first member of a structure
+ * a @ObjectClass.  Since C guarantees that the first member of a structure
  * always begins at byte 0 of that structure, as long as any sub-object places
- * its parent as the first member, we can cast directly to a @QObject.
+ * its parent as the first member, we can cast directly to a @Object.
  *
- * As a result, @QObject contains a reference to the objects type as its
+ * As a result, @Object contains a reference to the objects type as its
  * first member.  This allows identification of the real type of the object at
  * run time.
  *
- * @QObject also contains a list of @QInterfaces that this object
+ * @Object also contains a list of @Interfaces that this object
  * implements.
  */
-struct QObject
+struct Object
 {
     /**
      * @class the type of the instantiated object.
      */
-    QObjectClass *class;
+    ObjectClass *class;
 
     /**
-     * @interfaces a list of @QInterface objects implemented by this object
+     * @interfaces a list of @Interface objects implemented by this object
      */
     GSList *interfaces;
 };
 
 /**
- * @QTypeInfo:
+ * @TypeInfo:
  *
  */
-struct QTypeInfo
+struct TypeInfo
 {
     /**
      * @name the name of the type
@@ -93,7 +93,7 @@ struct QTypeInfo
      */
 
     /**
-     * @instance_size the size of the object (derivative of @QObject).  If
+     * @instance_size the size of the object (derivative of @Object).  If
      * @instance_size is 0, then the size of the object will be the size of the
      * parent object.
      */
@@ -106,7 +106,7 @@ struct QTypeInfo
      * have already been initialized so the type is only responsible for
      * initializing its own members.
      */
-    void (*instance_init)(QObject *obj);
+    void (*instance_init)(Object *obj);
 
     /**
      * @instance_finalize
@@ -115,7 +115,7 @@ struct QTypeInfo
      * the parent @instance_finalize function has been called.  An object should
      * only free the members that are unique to its type in this function.
      */
-    void (*instance_finalize)(QObject *obj);
+    void (*instance_finalize)(Object *obj);
 
     /**
      * @abstract
@@ -152,7 +152,7 @@ struct QTypeInfo
      */
 
     /**
-     * @class_size the size of the class object (derivative of @QObjectClass)
+     * @class_size the size of the class object (derivative of @ObjectClass)
      * for this object.  If @class_size is 0, then the size of the class will be
      * assumed to be the size of the parent class.  This allows a type to avoid
      * implementing an explicit class type if they are not adding additional
@@ -166,7 +166,7 @@ struct QTypeInfo
      * This function is called after memcpy()'ing the base class into the new
      * class to reinitialize any members that require deep copy.
      */
-    void (*base_init)(QObjectClass *klass);
+    void (*base_init)(ObjectClass *klass);
 
     /**
      * @base_finalize
@@ -174,7 +174,7 @@ struct QTypeInfo
      * This function is called during a class's destruction and is meant to
      * allow any dynamic parameters allocated by @base_init to be released.
      */
-    void (*base_finalize)(QObjectClass *klass);
+    void (*base_finalize)(ObjectClass *klass);
 
     /**
      * @class_init
@@ -183,7 +183,7 @@ struct QTypeInfo
      * to allow a class to set its default virtual method pointers.  This is
      * also the function to use to override virtual methods from a parent class.
      */
-    void (*class_init)(QObjectClass *klass);
+    void (*class_init)(ObjectClass *klass);
 
     /**
      * @class_finalize
@@ -191,15 +191,15 @@ struct QTypeInfo
      * This function is called during class destruction and is meant to release
      * and dynamic parameters allocated by @class_init.
      */
-    void (*class_finalize)(QObjectClass *klass);
+    void (*class_finalize)(ObjectClass *klass);
 
     /**
-     * QInterfaces
+     * Interfaces
      *
-     * QInterfaces allow a limited form of multiple inheritance.  Instances are
+     * Interfaces allow a limited form of multiple inheritance.  Instances are
      * similar to normal types except for the fact that are only defined by
      * their classes and never carry any state.  You can cast an object to one
-     * of its @QInterface types and vice versa.
+     * of its @Interface types and vice versa.
      */
 
     /**
@@ -207,63 +207,63 @@ struct QTypeInfo
      * should point to a static array that's terminated with a zero filled
      * element.
      */
-    QInterfaceInfo *interfaces;
+    InterfaceInfo *interfaces;
 };
 
 /**
- * @QOBJECT
+ * @OBJECT
  *
- * Converts an object to a @QObject.  Since all objects are @QObjects,
+ * Converts an object to a @Object.  Since all objects are @Objects,
  * this function will always succeed.
  */
-#define QOBJECT(obj) \
-    ((QObject *)(obj))
+#define OBJECT(obj) \
+    ((Object *)(obj))
 
 /**
- * @QOBJECT_CHECK
+ * @OBJECT_CHECK
  *
- * A type safe version of @qobject_dynamic_cast_assert.  Typically each class
+ * A type safe version of @object_dynamic_cast_assert.  Typically each class
  * will define a macro based on this type to perform type safe dynamic_casts to
  * this object type.
  *
  * If an invalid object is passed to this function, a run time assert will be
  * generated.
  */
-#define QOBJECT_CHECK(type, obj, name) \
-    ((type *)qobject_dynamic_cast_assert((QObject *)(obj), (name)))
+#define OBJECT_CHECK(type, obj, name) \
+    ((type *)object_dynamic_cast_assert((Object *)(obj), (name)))
 
 /**
- * @QOBJECT_CLASS_CHECK
+ * @OBJECT_CLASS_CHECK
  *
- * A type safe version of @qobject_check_class.  This macro is typically wrapped
+ * A type safe version of @object_check_class.  This macro is typically wrapped
  * by each type to perform type safe casts of a class to a specific class type.
  */
-#define QOBJECT_CLASS_CHECK(class, obj, name) \
-    ((class *)qobject_check_class((QObjectClass *)(obj), (name)))
+#define OBJECT_CLASS_CHECK(class, obj, name) \
+    ((class *)object_check_class((ObjectClass *)(obj), (name)))
 
 /**
- * @QOBJECT_GET_CLASS
+ * @OBJECT_GET_CLASS
  *
  * This function will return a specific class for a given object.  Its generally
  * used by each type to provide a type safe macro to get a specific class type
  * from an object.
  */
-#define QOBJECT_GET_CLASS(class, obj, name) \
-    QOBJECT_CLASS_CHECK(class, qobject_get_class(QOBJECT(obj)), name)
+#define OBJECT_GET_CLASS(class, obj, name) \
+    OBJECT_CLASS_CHECK(class, object_get_class(OBJECT(obj)), name)
 
 /**
- * @QQInterface:
+ * @Interface:
  *
- * The base for all QInterfaces.  This is a subclass of QObject.  Subclasses
- * of @QInterface should never have an instance that contains anything other
- * than a single @QInterface member.
+ * The base for all Interfaces.  This is a subclass of Object.  Subclasses
+ * of @Interface should never have an instance that contains anything other
+ * than a single @Interface member.
  */ 
-struct QInterface
+struct Interface
 {
     /**
      * @parent base class
      */
-    QObject parent;
+    Object parent;
 
     /* private */
 
@@ -271,29 +271,29 @@ struct QInterface
      * @obj a pointer to the object that implements this interface.  This is
      * used to allow casting from an interface to the base object.
      */
-    QObject *obj;
+    Object *obj;
 };
 
 /**
- * @QInterfaceClass:
+ * @InterfaceClass:
  *
  * The class for all interfaces.  Subclasses of this class should only add
  * virtual methods.
  */
-struct QInterfaceClass
+struct InterfaceClass
 {
     /**
      * @parent_class the base class
      */
-    QObjectClass parent_class;
+    ObjectClass parent_class;
 };
 
 /**
- * @QInterfaceInfo:
+ * @InterfaceInfo:
  *
  * The information associated with an interface.
  */
-struct QInterfaceInfo
+struct InterfaceInfo
 {
     /**
      * @type the name of the interface
@@ -306,17 +306,17 @@ struct QInterfaceInfo
      * initialize any default virtual functions for a class and/or override
      * virtual functions in a parent class.
      */
-    void (*interface_initfn)(QObjectClass *class);
+    void (*interface_initfn)(ObjectClass *class);
 };
 
-#define TYPE_QINTERFACE "interface"
-#define QINTERFACE(obj) QOBJECT_CHECK(QInterface, obj, TYPE_QINTERFACE)
+#define TYPE_INTERFACE "interface"
+#define INTERFACE(obj) OBJECT_CHECK(Interface, obj, TYPE_INTERFACE)
 
 /**
- * @qobject_new:
+ * @object_new:
  *
  * This function will initialize a new object using heap allocated memory.  This
- * function should be paired with @qobject_delete to free the resources
+ * function should be paired with @object_delete to free the resources
  * associated with the object.
  *
  * @typename: The name of the type of the object to instantiate
@@ -324,21 +324,21 @@ struct QInterfaceInfo
  * Returns:   The newly allocated and instantiated object.
  *
  */
-QObject *qobject_new(const char *typename);
+Object *object_new(const char *typename);
 
 /**
- * @qobject_delete:
+ * @object_delete:
  *
  * Finalize an object and then free the memory associated with it.  This should
- * be paired with @qobject_new to free the resources associated with an object.
+ * be paired with @object_new to free the resources associated with an object.
  *
  * @obj:  The object to free.
  *
  */
-void qobject_delete(QObject *obj);
+void object_delete(Object *obj);
 
 /**
- * @qobject_initialize:
+ * @object_initialize:
  *
  * This function will initialize an object.  The memory for the object should
  * have already been allocated.
@@ -348,10 +348,10 @@ void qobject_delete(QObject *obj);
  * @typename: The name of the type of the object to instantiate
  *
  */
-void qobject_initialize(void *obj, const char *typename);
+void object_initialize(void *obj, const char *typename);
 
 /**
- * @qobject_finalize:
+ * @object_finalize:
  *
  * This function destroys and object without freeing the memory associated with
  * it.
@@ -359,10 +359,10 @@ void qobject_initialize(void *obj, const char *typename);
  * @obj:  The object to finalize.
  *
  */
-void qobject_finalize(void *obj);
+void object_finalize(void *obj);
 
 /**
- * @qobject_dynamic_cast:
+ * @object_dynamic_cast:
  *
  * This function will determine if @obj is-a @typename.  @obj can refer to an
  * object or an interface associated with an object.
@@ -374,10 +374,10 @@ void qobject_finalize(void *obj);
  * Returns:
  *
  */
-QObject *qobject_dynamic_cast(QObject *obj, const char *typename);
+Object *object_dynamic_cast(Object *obj, const char *typename);
 
 /**
- * @qobject_dynamic_cast_assert:
+ * @object_dynamic_cast_assert:
  *
  * @obj:
  *
@@ -386,10 +386,10 @@ QObject *qobject_dynamic_cast(QObject *obj, const char *typename);
  * Returns:
  *
  */
-QObject *qobject_dynamic_cast_assert(QObject *obj, const char *typename);
+Object *object_dynamic_cast_assert(Object *obj, const char *typename);
 
 /**
- * @qobject_is_type:
+ * @object_is_type:
  *
  * @obj:
  *
@@ -398,49 +398,49 @@ QObject *qobject_dynamic_cast_assert(QObject *obj, const char *typename);
  * Returns:
  *
  */
-bool qobject_is_type(QObject *obj, const char *typename);
+bool object_is_type(Object *obj, const char *typename);
 
 /**
- * @qobject_get_class:
+ * @object_get_class:
  *
  * @obj:
  *
  * Returns:
  *
  */
-QObjectClass *qobject_get_class(QObject *obj);
+ObjectClass *object_get_class(Object *obj);
 
 /**
- * @qobject_get_type:
+ * @object_get_type:
  *
  * @obj:
  *
  * Returns:
  */
-const char *qobject_get_type(QObject *obj);
+const char *object_get_type(Object *obj);
 
 /**
- * @qobject_get_super:
+ * @object_get_super:
  *
  * @obj:
  *
  * Returns:
  */
-QObjectClass *qobject_get_super(QObject *obj);
+ObjectClass *object_get_super(Object *obj);
 
 /**/
 
 /**
- * @qtype_register_static:
+ * @type_register_static:
  *
  * @info:
  *
  * Returns:
  */
-QType qtype_register_static(const QTypeInfo *info);
+Type type_register_static(const TypeInfo *info);
 
 /**
- * @qobject_check_class:
+ * @object_check_class:
  *
  * @obj:
  *
@@ -448,24 +448,24 @@ QType qtype_register_static(const QTypeInfo *info);
  *
  * Returns:
  */
-QObjectClass *qobject_check_class(QObjectClass *obj, const char *typename);
+ObjectClass *object_check_class(ObjectClass *obj, const char *typename);
 
 /**
- * @qtype_get_by_name:
+ * @type_get_by_name:
  *
  * @name:
  *
  * Returns:
  */
-QType qtype_get_by_name(const char *name);
+Type type_get_by_name(const char *name);
 
 /**
- * @qtype_get_name:
+ * @type_get_name:
  *
  * @type:
  *
  * Returns:
  */
-const char *qtype_get_name(QType type);
+const char *type_get_name(Type type);
 
 #endif
