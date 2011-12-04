@@ -190,16 +190,35 @@ static int spapr_main_pci_host_init(PCIDevice *d)
     return 0;
 }
 
-static PCIDeviceInfo spapr_main_pci_host_info = {
-    .qdev.name = "spapr-pci-host-bridge",
-    .qdev.size = sizeof(PCIDevice),
-    .init      = spapr_main_pci_host_init,
+static void spapr_main_pci_host_class_init(ObjectClass *klass, void *data)
+{
+    PCIDeviceClass *k = PCI_DEVICE_CLASS(klass);
+
+    k->init = spapr_main_pci_host_init;
+}
+
+static DeviceInfo spapr_main_pci_host_info = {
+    .name = "spapr-pci-host-bridge",
+    .size = sizeof(PCIDevice),
+    .class_init = spapr_main_pci_host_class_init,
+};
+
+static void spapr_phb_class_init(ObjectClass *klass, void *data)
+{
+    SysBusDeviceClass *sdc = SYS_BUS_DEVICE_CLASS(klass);
+
+    sdc->init = spapr_phb_init;
+}
+
+static DeviceInfo spapr_phb_info = {
+    .name = "spapr-pci-host-bridge",
+    .size = sizeof(sPAPRPHBState),
+    .class_init = spapr_phb_class_init,
 };
 
 static void spapr_register_devices(void)
 {
-    sysbus_register_dev("spapr-pci-host-bridge", sizeof(sPAPRPHBState),
-                        spapr_phb_init);
+    sysbus_qdev_register(&spapr_phb_info);
     pci_qdev_register(&spapr_main_pci_host_info);
 }
 
@@ -398,7 +417,7 @@ int spapr_populate_pci_devices(sPAPRPHBState *phb,
     /* Populate PCI devices and allocate IRQs */
     devices = 0;
     QTAILQ_FOREACH(qdev, &bus->qbus.children, sibling) {
-        PCIDevice *dev = DO_UPCAST(PCIDevice, qdev, qdev);
+        PCIDevice *dev = PCI_DEVICE(qdev);
         int irq_index = pci_spapr_map_irq(dev, 0);
         uint32_t *irqmap = interrupt_map[devices];
         uint8_t *config = dev->config;
