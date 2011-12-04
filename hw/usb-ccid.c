@@ -1121,7 +1121,7 @@ void ccid_card_card_inserted(CCIDCardState *card)
 static int ccid_card_exit(DeviceState *qdev)
 {
     int ret = 0;
-    CCIDCardState *card = DO_UPCAST(CCIDCardState, qdev, qdev);
+    CCIDCardState *card = CCID_CARD(qdev);
     CCIDCardInfo *info = DO_UPCAST(CCIDCardInfo, qdev, qdev_get_info(qdev));
     USBCCIDState *s =
         DO_UPCAST(USBCCIDState, dev.qdev, card->qdev.parent_bus->parent);
@@ -1139,7 +1139,7 @@ static int ccid_card_exit(DeviceState *qdev)
 
 static int ccid_card_init(DeviceState *qdev, DeviceInfo *base)
 {
-    CCIDCardState *card = DO_UPCAST(CCIDCardState, qdev, qdev);
+    CCIDCardState *card = CCID_CARD(qdev);
     CCIDCardInfo *info = DO_UPCAST(CCIDCardInfo, qdev, base);
     USBCCIDState *s =
         DO_UPCAST(USBCCIDState, dev.qdev, card->qdev.parent_bus->parent);
