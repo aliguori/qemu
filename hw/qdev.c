@@ -115,6 +115,7 @@ static DeviceInfo *qdev_find_info(BusInfo *bus_info, const char *name)
     return NULL;
 }
 
+
 static void qdev_property_add_legacy(DeviceState *dev, Property *prop,
                                      Error **errp);
 
