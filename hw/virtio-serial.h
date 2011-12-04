@@ -62,10 +62,21 @@ struct virtio_serial_conf {
 
 /* == In-qemu interface == */
 
+#define TYPE_VIRTIO_SERIAL_PORT "virtio-serial-port"
+#define VIRTIO_SERIAL_PORT(obj) \
+     OBJECT_CHECK(VirtIOSerialPort, (obj), TYPE_VIRTIO_SERIAL_PORT)
+#define VIRTIO_SERIAL_PORT_CLASS(klass) \
+     OBJECT_CLASS_CHECK(VirtIOSerialPortClass, (klass), TYPE_VIRTIO_SERIAL_PORT)
+#define VIRTIO_SERIAL_PORT_GET_CLASS(obj) \
+     OBJECT_GET_CLASS(VirtIOSerialPortClass, (obj), TYPE_VIRTIO_SERIAL_PORT)
+
 typedef struct VirtIOSerial VirtIOSerial;
 typedef struct VirtIOSerialBus VirtIOSerialBus;
 typedef struct VirtIOSerialPort VirtIOSerialPort;
-typedef struct VirtIOSerialPortInfo VirtIOSerialPortInfo;
+
+typedef struct VirtIOSerialPortClass {
+    DeviceClass parent_class;
+} VirtIOSerialPortClass;
 
 /*
  * This is the state that's shared between all the ports.  Some of the
