@@ -692,7 +692,7 @@ static void qbus_list_bus(DeviceState *dev)
     const char *sep = " ";
 
     error_printf("child busses at \"%s\":",
-                 dev->id ? dev->id : qdev_get_info(dev)->name);
+                 dev->id ? dev->id : object_get_typename(OBJECT(dev)));
     QLIST_FOREACH(child, &dev->child_bus, sibling) {
         error_printf("%s\"%s\"", sep, child->name);
         sep = ", ";
@@ -707,7 +707,7 @@ static void qbus_list_dev(BusState *bus)
 
     error_printf("devices at \"%s\":", bus->name);
     QTAILQ_FOREACH(dev, &bus->children, sibling) {
-        error_printf("%s\"%s\"", sep, qdev_get_info(dev)->name);
+        error_printf("%s\"%s\"", sep, object_get_typename(OBJECT(dev)));
         if (dev->id)
             error_printf("/\"%s\"", dev->id);
         sep = ", ";
@@ -743,7 +743,7 @@ static DeviceState *qbus_find_dev(BusState *bus, char *elem)
         }
     }
     QTAILQ_FOREACH(dev, &bus->children, sibling) {
-        if (strcmp(qdev_get_info(dev)->name, elem) == 0) {
+        if (strcmp(object_get_typename(OBJECT(dev)), elem) == 0) {
             return dev;
         }
     }
@@ -950,7 +950,7 @@ static void qdev_print_props(Monitor *mon, DeviceState *dev, Property *props,
 static void qdev_print(Monitor *mon, DeviceState *dev, int indent)
 {
     BusState *child;
-    qdev_printf("dev: %s, id \"%s\"\n", qdev_get_info(dev)->name,
+    qdev_printf("dev: %s, id \"%s\"\n", object_get_typename(OBJECT(dev)),
                 dev->id ? dev->id : "");
     indent += 2;
     if (dev->num_gpio_in) {
@@ -1040,7 +1040,7 @@ static int qdev_get_fw_dev_path_helper(DeviceState *dev, char *p, int size)
             l += snprintf(p + l, size - l, "%s", d);
             g_free(d);
         } else {
-            l += snprintf(p + l, size - l, "%s", qdev_get_info(dev)->name);
+            l += snprintf(p + l, size - l, "%s", object_get_typename(OBJECT(dev)));
         }
     }
     l += snprintf(p + l , size - l, "/");
@@ -1062,7 +1062,7 @@ char* qdev_get_fw_dev_path(DeviceState *dev)
 
 char *qdev_get_type(DeviceState *dev, Error **errp)
 {
-    return g_strdup(qdev_get_info(dev)->name);
+    return g_strdup(object_get_typename(OBJECT(dev)));
 }
 
 void qdev_ref(DeviceState *dev)
@@ -1264,7 +1264,7 @@ void qdev_property_add_child(DeviceState *dev, const char *name,
 {
     gchar *type;
 
-    type = g_strdup_printf("child<%s>", qdev_get_info(child)->name);
+    type = g_strdup_printf("child<%s>", object_get_typename(OBJECT(child)));
 
     qdev_property_add(dev, name, type, qdev_get_child_property,
                       NULL, NULL, child, errp);
@@ -1315,7 +1315,7 @@ static void qdev_set_link_property(DeviceState *dev, Visitor *v, void *opaque,
         if (target) {
             gchar *target_type;
 
-            target_type = g_strdup_printf("link<%s>", qdev_get_info(target)->name);
+            target_type = g_strdup_printf("link<%s>", object_get_typename(OBJECT(target)));
             if (strcmp(target_type, type) == 0) {
                 *child = target;
                 qdev_ref(target);
