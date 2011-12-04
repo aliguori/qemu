@@ -23,6 +23,38 @@ static struct BusInfo scsi_bus_info = {
 };
 static int next_scsi_bus;
 
+static int scsi_device_init(SCSIDevice *dev)
+{
+    if (dev->info->init) {
+        return dev->info->init(dev);
+    }
+    return 0;
+}
+
+static void scsi_device_destroy(SCSIDevice *s)
+{
+    if (s->info->destroy) {
+        s->info->destroy(s);
+    }
+}
+
+static SCSIRequest *scsi_device_alloc_req(SCSIDevice *s, uint32_t tag, uint32_t lun,
+                                          uint8_t *buf, void *hba_private)
+{
+    if (s->info->alloc_req) {
+        return s->info->alloc_req(s, tag, lun, buf, hba_private);
+    }
+
+    return NULL;
+}
+
+static void scsi_device_unit_attention_reported(SCSIDevice *s)
+{
+    if (s->info->unit_attention_reported) {
+        s->info->unit_attention_reported(s);
+    }
+}
+
 /* Create a scsi bus, and attach devices to it.  */
 void scsi_bus_new(SCSIBus *bus, DeviceState *host, const SCSIBusInfo *info)
 {
@@ -128,7 +160,7 @@ static int scsi_qdev_init(DeviceState *qdev, DeviceInfo *base)
 
     dev->info = info;
     QTAILQ_INIT(&dev->requests);
-    rc = dev->info->init(dev);
+    rc = scsi_device_init(dev);
     if (rc == 0) {
         dev->vmsentry = qemu_add_vm_change_state_handler(scsi_dma_restart_cb,
                                                          dev);
@@ -145,9 +177,7 @@ static int scsi_qdev_exit(DeviceState *qdev)
     if (dev->vmsentry) {
         qemu_del_vm_change_state_handler(dev->vmsentry);
     }
-    if (dev->info->destroy) {
-        dev->info->destroy(dev);
-    }
+    scsi_device_destroy(dev);
     return 0;
 }
 
@@ -398,9 +428,7 @@ static int32_t scsi_target_send_command(SCSIRequest *req, uint8_t *buf)
                                        MIN(req->cmd.xfer, sizeof r->buf),
                                        (req->cmd.buf[1] & 1) == 0);
         if (r->req.dev->sense_is_ua) {
-            if (r->req.dev->info->unit_attention_reported) {
-                r->req.dev->info->unit_attention_reported(req->dev);
-            }
+            scsi_device_unit_attention_reported(req->dev);
             r->req.dev->sense_len = 0;
             r->req.dev->sense_is_ua = false;
         }
@@ -507,7 +535,7 @@ SCSIRequest *scsi_req_new(SCSIDevice *d, uint32_t tag, uint32_t lun,
             req = scsi_req_alloc(&reqops_target_command, d, tag, lun,
                                  hba_private);
         } else {
-            req = d->info->alloc_req(d, tag, lun, buf, hba_private);
+            req = scsi_device_alloc_req(d, tag, lun, buf, hba_private);
         }
     }
 
@@ -597,9 +625,7 @@ int scsi_req_get_sense(SCSIRequest *req, uint8_t *buf, int len)
      * Here we handle unit attention clearing for UA_INTLCK_CTRL == 00b.
      */
     if (req->dev->sense_is_ua) {
-        if (req->dev->info->unit_attention_reported) {
-            req->dev->info->unit_attention_reported(req->dev);
-        }
+        scsi_device_unit_attention_reported(req->dev);
         req->dev->sense_len = 0;
         req->dev->sense_is_ua = false;
     }
