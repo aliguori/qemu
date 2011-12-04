@@ -556,14 +556,20 @@ qemu_irq *i8259_init(ISABus *bus, qemu_irq parent_irq)
     return irq_set;
 }
 
-static ISADeviceInfo i8259_info = {
-    .qdev.name     = "isa-i8259",
-    .qdev.size     = sizeof(PicState),
-    .qdev.vmsd     = &vmstate_pic,
-    .qdev.reset    = pic_reset,
-    .qdev.no_user  = 1,
-    .init          = pic_initfn,
-    .qdev.props = (Property[]) {
+static void pic_class_initfn(ObjectClass *klass, void *data)
+{
+    ISADeviceClass *ic = ISA_DEVICE_CLASS(klass);
+    ic->init = pic_initfn;
+}
+
+static DeviceInfo i8259_info = {
+    .name     = "isa-i8259",
+    .size     = sizeof(PicState),
+    .vmsd     = &vmstate_pic,
+    .reset    = pic_reset,
+    .no_user  = 1,
+    .class_init          = pic_class_initfn,
+    .props = (Property[]) {
         DEFINE_PROP_HEX32("iobase", PicState, iobase,  -1),
         DEFINE_PROP_HEX32("elcr_addr", PicState, elcr_addr,  -1),
         DEFINE_PROP_HEX8("elcr_mask", PicState, elcr_mask,  -1),
