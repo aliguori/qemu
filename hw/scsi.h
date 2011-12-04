@@ -58,6 +58,18 @@ struct SCSIRequest {
     QTAILQ_ENTRY(SCSIRequest) next;
 };
 
+#define TYPE_SCSI_DEVICE "scsi-device"
+#define SCSI_DEVICE(obj) \
+     OBJECT_CHECK(SCSIDevice, (obj), TYPE_SCSI_DEVICE)
+#define SCSI_DEVICE_CLASS(klass) \
+     OBJECT_CLASS_CHECK(SCSIDeviceClass, (klass), TYPE_SCSI_DEVICE)
+#define SCSI_DEVICE_GET_CLASS(obj) \
+     OBJECT_GET_CLASS(SCSIDeviceClass, (obj), TYPE_SCSI_DEVICE)
+
+typedef struct SCSIDeviceClass {
+    DeviceClass parent_class;
+} SCSIDeviceClass;
+
 struct SCSIDevice
 {
     DeviceState qdev;
