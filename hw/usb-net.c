@@ -1422,13 +1422,10 @@ static struct USBDeviceInfo net_info = {
         DEFINE_NIC_PROPERTIES(USBNetState, conf),
         DEFINE_PROP_END_OF_LIST(),
     },
-
-    .usbdevice_name = "net",
-    .usbdevice_init = usb_net_init,
 };
 
 static void usb_net_register_devices(void)
 {
-    usb_qdev_register(&net_info);
+    usb_qdev_register(&net_info, "net", usb_net_init);
 }
 device_init(usb_net_register_devices)
