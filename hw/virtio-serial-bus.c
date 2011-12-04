@@ -135,7 +135,7 @@ static void do_flush_queued_data(VirtIOSerialPort *port, VirtQueue *vq,
     assert(port);
     assert(virtio_queue_ready(vq));
 
-    info = DO_UPCAST(VirtIOSerialPortInfo, qdev, port->dev.info);
+    info = DO_UPCAST(VirtIOSerialPortInfo, qdev, qdev_get_info(&port->dev));
 
     while (!port->throttled) {
         unsigned int i;
@@ -358,7 +358,7 @@ static void handle_control_message(VirtIOSerial *vser, void *buf, size_t len)
 
     trace_virtio_serial_handle_control_message_port(port->id);
 
-    info = DO_UPCAST(VirtIOSerialPortInfo, qdev, port->dev.info);
+    info = DO_UPCAST(VirtIOSerialPortInfo, qdev, qdev_get_info(&port->dev));
 
     switch(cpkt.event) {
     case VIRTIO_CONSOLE_PORT_READY:
@@ -809,7 +809,7 @@ static int virtser_port_qdev_exit(DeviceState *qdev)
 {
     VirtIOSerialPort *port = DO_UPCAST(VirtIOSerialPort, dev, qdev);
     VirtIOSerialPortInfo *info = DO_UPCAST(VirtIOSerialPortInfo, qdev,
-                                           port->dev.info);
+                                           qdev_get_info(&port->dev));
     VirtIOSerial *vser = port->vser;
 
     qemu_bh_delete(port->bh);
