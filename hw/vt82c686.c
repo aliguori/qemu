@@ -343,15 +343,22 @@ void vt82c686b_ac97_init(PCIBus *bus, int devfn)
     qdev_init_nofail(&dev->qdev);
 }
 
-static PCIDeviceInfo via_ac97_info = {
-    .qdev.name          = "VT82C686B_AC97",
-    .qdev.desc          = "AC97",
-    .qdev.size          = sizeof(VT686AC97State),
-    .init               = vt82c686b_ac97_initfn,
-    .vendor_id          = PCI_VENDOR_ID_VIA,
-    .device_id          = PCI_DEVICE_ID_VIA_AC97,
-    .revision           = 0x50,
-    .class_id           = PCI_CLASS_MULTIMEDIA_AUDIO,
+static void via_ac97_class_init(ObjectClass *klass, void *data)
+{
+    PCIDeviceClass *k = PCI_DEVICE_CLASS(klass);
+
+    k->init = vt82c686b_ac97_initfn;
+    k->vendor_id = PCI_VENDOR_ID_VIA;
+    k->device_id = PCI_DEVICE_ID_VIA_AC97;
+    k->revision = 0x50;
+    k->class_id = PCI_CLASS_MULTIMEDIA_AUDIO;
+}
+
+static DeviceInfo via_ac97_info = {
+    .name = "VT82C686B_AC97",
+    .desc = "AC97",
+    .size = sizeof(VT686AC97State),
+    .class_init = via_ac97_class_init,
 };
 
 static void vt82c686b_ac97_register(void)
@@ -382,15 +389,22 @@ void vt82c686b_mc97_init(PCIBus *bus, int devfn)
     qdev_init_nofail(&dev->qdev);
 }
 
-static PCIDeviceInfo via_mc97_info = {
-    .qdev.name          = "VT82C686B_MC97",
-    .qdev.desc          = "MC97",
-    .qdev.size          = sizeof(VT686MC97State),
-    .init               = vt82c686b_mc97_initfn,
-    .vendor_id          = PCI_VENDOR_ID_VIA,
-    .device_id          = PCI_DEVICE_ID_VIA_MC97,
-    .class_id           = PCI_CLASS_COMMUNICATION_OTHER,
-    .revision           = 0x30,
+static void via_mc97_class_init(ObjectClass *klass, void *data)
+{
+    PCIDeviceClass *k = PCI_DEVICE_CLASS(klass);
+
+    k->init = vt82c686b_mc97_initfn;
+    k->vendor_id = PCI_VENDOR_ID_VIA;
+    k->device_id = PCI_DEVICE_ID_VIA_MC97;
+    k->class_id = PCI_CLASS_COMMUNICATION_OTHER;
+    k->revision = 0x30;
+}
+
+static DeviceInfo via_mc97_info = {
+    .name = "VT82C686B_MC97",
+    .desc = "MC97",
+    .size = sizeof(VT686MC97State),
+    .class_init = via_mc97_class_init,
 };
 
 static void vt82c686b_mc97_register(void)
@@ -448,21 +462,30 @@ i2c_bus *vt82c686b_pm_init(PCIBus *bus, int devfn, uint32_t smb_io_base,
     return s->smb.smbus;
 }
 
-static PCIDeviceInfo via_pm_info = {
-    .qdev.name          = "VT82C686B_PM",
-    .qdev.desc          = "PM",
-    .qdev.size          = sizeof(VT686PMState),
-    .qdev.vmsd          = &vmstate_acpi,
-    .init               = vt82c686b_pm_initfn,
-    .config_write       = pm_write_config,
-    .vendor_id          = PCI_VENDOR_ID_VIA,
-    .device_id          = PCI_DEVICE_ID_VIA_ACPI,
-    .class_id           = PCI_CLASS_BRIDGE_OTHER,
-    .revision           = 0x40,
-    .qdev.props         = (Property[]) {
-        DEFINE_PROP_UINT32("smb_io_base", VT686PMState, smb_io_base, 0),
-        DEFINE_PROP_END_OF_LIST(),
-    }
+static Property via_pm_properties[] = {
+    DEFINE_PROP_UINT32("smb_io_base", VT686PMState, smb_io_base, 0),
+    DEFINE_PROP_END_OF_LIST(),
+};
+
+static void via_pm_class_init(ObjectClass *klass, void *data)
+{
+    PCIDeviceClass *k = PCI_DEVICE_CLASS(klass);
+
+    k->init = vt82c686b_pm_initfn;
+    k->config_write = pm_write_config;
+    k->vendor_id = PCI_VENDOR_ID_VIA;
+    k->device_id = PCI_DEVICE_ID_VIA_ACPI;
+    k->class_id = PCI_CLASS_BRIDGE_OTHER;
+    k->revision = 0x40;
+}
+
+static DeviceInfo via_pm_info = {
+    .name = "VT82C686B_PM",
+    .desc = "PM",
+    .size = sizeof(VT686PMState),
+    .vmsd = &vmstate_acpi,
+    .props = via_pm_properties,
+    .class_init = via_pm_class_init,
 };
 
 static void vt82c686b_pm_register(void)
@@ -516,18 +539,25 @@ int vt82c686b_init(PCIBus *bus, int devfn)
     return d->devfn;
 }
 
-static PCIDeviceInfo via_info = {
-    .qdev.name    = "VT82C686B",
-    .qdev.desc    = "ISA bridge",
-    .qdev.size    = sizeof(VT82C686BState),
-    .qdev.vmsd    = &vmstate_via,
-    .qdev.no_user = 1,
-    .init         = vt82c686b_initfn,
-    .config_write = vt82c686b_write_config,
-    .vendor_id    = PCI_VENDOR_ID_VIA,
-    .device_id    = PCI_DEVICE_ID_VIA_ISA_BRIDGE,
-    .class_id     = PCI_CLASS_BRIDGE_ISA,
-    .revision     = 0x40,
+static void via_class_init(ObjectClass *klass, void *data)
+{
+    PCIDeviceClass *k = PCI_DEVICE_CLASS(klass);
+
+    k->init = vt82c686b_initfn;
+    k->config_write = vt82c686b_write_config;
+    k->vendor_id = PCI_VENDOR_ID_VIA;
+    k->device_id = PCI_DEVICE_ID_VIA_ISA_BRIDGE;
+    k->class_id = PCI_CLASS_BRIDGE_ISA;
+    k->revision = 0x40;
+}
+
+static DeviceInfo via_info = {
+    .name = "VT82C686B",
+    .desc = "ISA bridge",
+    .size = sizeof(VT82C686BState),
+    .vmsd = &vmstate_via,
+    .no_user = 1,
+    .class_init = via_class_init,
 };
 
 static void vt82c686b_register(void)

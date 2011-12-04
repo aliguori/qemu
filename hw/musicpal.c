@@ -1594,14 +1594,26 @@ static void musicpal_machine_init(void)
 
 machine_init(musicpal_machine_init);
 
+static void mv88w8618_wlan_class_init(ObjectClass *klass, void *data)
+{
+    SysBusDeviceClass *sdc = SYS_BUS_DEVICE_CLASS(klass);
+
+    sdc->init = mv88w8618_wlan_init;
+}
+
+static DeviceInfo mv88w8618_wlan_info = {
+    .name = "mv88w8618_wlan",
+    .size = sizeof(SysBusDevice),
+    .class_init = mv88w8618_wlan_class_init,
+};
+
 static void musicpal_register_devices(void)
 {
     sysbus_register_withprop(&mv88w8618_pic_info);
     sysbus_register_withprop(&mv88w8618_pit_info);
     sysbus_register_withprop(&mv88w8618_flashcfg_info);
     sysbus_register_withprop(&mv88w8618_eth_info);
-    sysbus_register_dev("mv88w8618_wlan", sizeof(SysBusDevice),
-                        mv88w8618_wlan_init);
+    sysbus_qdev_register(&mv88w8618_wlan_info);
     sysbus_register_withprop(&musicpal_lcd_info);
     sysbus_register_withprop(&musicpal_gpio_info);
     sysbus_register_withprop(&musicpal_key_info);

@@ -141,19 +141,28 @@ static void vty_hcalls(VIOsPAPRBus *bus)
     spapr_register_hypercall(H_GET_TERM_CHAR, h_get_term_char);
 }
 
-static VIOsPAPRDeviceInfo spapr_vty_info = {
-    .init = spapr_vty_init,
-    .dt_name = "vty",
-    .dt_type = "serial",
-    .dt_compatible = "hvterm1",
-    .hcalls = vty_hcalls,
-    .qdev.name = "spapr-vty",
-    .qdev.size = sizeof(VIOsPAPRVTYDevice),
-    .qdev.props = (Property[]) {
-        DEFINE_SPAPR_PROPERTIES(VIOsPAPRVTYDevice, sdev, SPAPR_VTY_BASE_ADDRESS, 0),
-        DEFINE_PROP_CHR("chardev", VIOsPAPRVTYDevice, chardev),
-        DEFINE_PROP_END_OF_LIST(),
-    },
+static Property spapr_vty_properties[] = {
+    DEFINE_SPAPR_PROPERTIES(VIOsPAPRVTYDevice, sdev, SPAPR_VTY_BASE_ADDRESS, 0),
+    DEFINE_PROP_CHR("chardev", VIOsPAPRVTYDevice, chardev),
+    DEFINE_PROP_END_OF_LIST(),
+};
+
+static void spapr_vty_class_init(ObjectClass *klass, void *data)
+{
+    VIOsPAPRDeviceClass *k = VIO_SPAPR_DEVICE_CLASS(klass);
+
+    k->init = spapr_vty_init;
+    k->dt_name = "vty";
+    k->dt_type = "serial";
+    k->dt_compatible = "hvterm1";
+    k->hcalls = vty_hcalls;
+}
+
+static DeviceInfo spapr_vty_info = {
+    .name = "spapr-vty",
+    .size = sizeof(VIOsPAPRVTYDevice),
+    .props = spapr_vty_properties,
+    .class_init = spapr_vty_class_init,
 };
 
 static VIOsPAPRDevice *vty_lookup(sPAPREnvironment *spapr, target_ulong reg)

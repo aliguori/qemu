@@ -732,11 +732,11 @@ static void pci_config_free(PCIDevice *pci_dev)
 
 /* -1 for devfn means auto assign */
 static PCIDevice *do_pci_register_device(PCIDevice *pci_dev, PCIBus *bus,
-                                         const char *name, int devfn,
-                                         const PCIDeviceInfo *info)
+                                         const char *name, int devfn)
 {
-    PCIConfigReadFunc *config_read = info->config_read;
-    PCIConfigWriteFunc *config_write = info->config_write;
+    PCIDeviceClass *pc = PCI_DEVICE_GET_CLASS(pci_dev);
+    PCIConfigReadFunc *config_read = pc->config_read;
+    PCIConfigWriteFunc *config_write = pc->config_write;
 
     if (devfn < 0) {
         for(devfn = bus->devfn_min ; devfn < ARRAY_SIZE(bus->devices);
@@ -758,29 +758,29 @@ static PCIDevice *do_pci_register_device(PCIDevice *pci_dev, PCIBus *bus,
     pci_dev->irq_state = 0;
     pci_config_alloc(pci_dev);
 
-    pci_config_set_vendor_id(pci_dev->config, info->vendor_id);
-    pci_config_set_device_id(pci_dev->config, info->device_id);
-    pci_config_set_revision(pci_dev->config, info->revision);
-    pci_config_set_class(pci_dev->config, info->class_id);
+    pci_config_set_vendor_id(pci_dev->config, pc->vendor_id);
+    pci_config_set_device_id(pci_dev->config, pc->device_id);
+    pci_config_set_revision(pci_dev->config, pc->revision);
+    pci_config_set_class(pci_dev->config, pc->class_id);
 
-    if (!info->is_bridge) {
-        if (info->subsystem_vendor_id || info->subsystem_id) {
+    if (!pc->is_bridge) {
+        if (pc->subsystem_vendor_id || pc->subsystem_id) {
             pci_set_word(pci_dev->config + PCI_SUBSYSTEM_VENDOR_ID,
-                         info->subsystem_vendor_id);
+                         pc->subsystem_vendor_id);
             pci_set_word(pci_dev->config + PCI_SUBSYSTEM_ID,
-                         info->subsystem_id);
+                         pc->subsystem_id);
         } else {
             pci_set_default_subsystem_id(pci_dev);
         }
     } else {
         /* subsystem_vendor_id/subsystem_id are only for header type 0 */
-        assert(!info->subsystem_vendor_id);
-        assert(!info->subsystem_id);
+        assert(!pc->subsystem_vendor_id);
+        assert(!pc->subsystem_id);
     }
     pci_init_cmask(pci_dev);
     pci_init_wmask(pci_dev);
     pci_init_w1cmask(pci_dev);
-    if (info->is_bridge) {
+    if (pc->is_bridge) {
         pci_init_wmask_bridge(pci_dev);
     }
     if (pci_init_multifunction(bus, pci_dev)) {
@@ -807,26 +807,6 @@ static void do_pci_unregister_device(PCIDevice *pci_dev)
     pci_config_free(pci_dev);
 }
 
-/* TODO: obsolete. eliminate this once all pci devices are qdevifed. */
-PCIDevice *pci_register_device(PCIBus *bus, const char *name,
-                               int instance_size, int devfn,
-                               PCIConfigReadFunc *config_read,
-                               PCIConfigWriteFunc *config_write)
-{
-    PCIDevice *pci_dev;
-    PCIDeviceInfo info = {
-        .config_read = config_read,
-        .config_write = config_write,
-    };
-
-    pci_dev = g_malloc0(instance_size);
-    pci_dev = do_pci_register_device(pci_dev, bus, name, devfn, &info);
-    if (pci_dev == NULL) {
-        hw_error("PCI: can't register device\n");
-    }
-    return pci_dev;
-}
-
 static void pci_unregister_io_regions(PCIDevice *pci_dev)
 {
     PCIIORegion *r;
@@ -843,11 +823,11 @@ static void pci_unregister_io_regions(PCIDevice *pci_dev)
 static int pci_unregister_device(DeviceState *dev)
 {
     PCIDevice *pci_dev = PCI_DEVICE(dev);
-    PCIDeviceInfo *info = DO_UPCAST(PCIDeviceInfo, qdev, qdev_get_info(dev));
+    PCIDeviceClass *pc = PCI_DEVICE_GET_CLASS(pci_dev);
     int ret = 0;
 
-    if (info->exit)
-        ret = info->exit(pci_dev);
+    if (pc->exit)
+        ret = pc->exit(pci_dev);
     if (ret)
         return ret;
 
@@ -1479,13 +1459,13 @@ PCIDevice *pci_find_device(PCIBus *bus, int bus_num, uint8_t devfn)
 static int pci_qdev_init(DeviceState *qdev, DeviceInfo *base)
 {
     PCIDevice *pci_dev = (PCIDevice *)qdev;
-    PCIDeviceInfo *info = container_of(base, PCIDeviceInfo, qdev);
+    PCIDeviceClass *pc = PCI_DEVICE_GET_CLASS(pci_dev);
     PCIBus *bus;
     int rc;
     bool is_default_rom;
 
     /* initialize cap_present for pci_is_express() and pci_config_size() */
-    if (info->is_express) {
+    if (pc->is_express) {
         pci_dev->cap_present |= QEMU_PCI_CAP_EXPRESS;
     }
 
@@ -1494,13 +1474,13 @@ static int pci_qdev_init(DeviceState *qdev, DeviceInfo *base)
                                      pci_dev->devfn, info);
     if (pci_dev == NULL)
         return -1;
-    if (qdev->hotplugged && info->no_hotplug) {
-        qerror_report(QERR_DEVICE_NO_HOTPLUG, info->qdev.name);
+    if (qdev->hotplugged && pc->no_hotplug) {
+        qerror_report(QERR_DEVICE_NO_HOTPLUG, pc->qdev.name);
         do_pci_unregister_device(pci_dev);
         return -1;
     }
-    if (info->init) {
-        rc = info->init(pci_dev);
+    if (pc->init) {
+        rc = pc->init(pci_dev);
         if (rc != 0) {
             do_pci_unregister_device(pci_dev);
             return rc;
@@ -1509,8 +1489,8 @@ static int pci_qdev_init(DeviceState *qdev, DeviceInfo *base)
 
     /* rom loading */
     is_default_rom = false;
-    if (pci_dev->romfile == NULL && info->romfile != NULL) {
-        pci_dev->romfile = g_strdup(info->romfile);
+    if (pci_dev->romfile == NULL && pc->romfile != NULL) {
+        pci_dev->romfile = g_strdup(pc->romfile);
         is_default_rom = true;
     }
     pci_add_option_rom(pci_dev, is_default_rom);
@@ -1533,31 +1513,23 @@ static int pci_qdev_init(DeviceState *qdev, DeviceInfo *base)
 static int pci_unplug_device(DeviceState *qdev)
 {
     PCIDevice *dev = PCI_DEVICE(qdev);
-    PCIDeviceInfo *info = container_of(qdev_get_info(qdev), PCIDeviceInfo, qdev);
+    PCIDeviceClass *pc = PCI_DEVICE_GET_CLASS(dev);
 
-    if (info->no_hotplug) {
-        qerror_report(QERR_DEVICE_NO_HOTPLUG, info->qdev.name);
+    if (pc->no_hotplug) {
+        qerror_report(QERR_DEVICE_NO_HOTPLUG, object_get_type(OBJECT(dev)));
         return -1;
     }
     return dev->bus->hotplug(dev->bus->hotplug_qdev, dev,
                              PCI_HOTPLUG_DISABLED);
 }
 
-void pci_qdev_register(PCIDeviceInfo *info)
+void pci_qdev_register(DeviceInfo *info)
 {
-    info->qdev.init = pci_qdev_init;
-    info->qdev.unplug = pci_unplug_device;
-    info->qdev.exit = pci_unregister_device;
-    info->qdev.bus_info = &pci_bus_info;
-    qdev_register_subclass(&info->qdev, TYPE_PCI_DEVICE);
-}
-
-void pci_qdev_register_many(PCIDeviceInfo *info)
-{
-    while (info->qdev.name) {
-        pci_qdev_register(info);
-        info++;
-    }
+    info->init = pci_qdev_init;
+    info->unplug = pci_unplug_device;
+    info->exit = pci_unregister_device;
+    info->bus_info = &pci_bus_info;
+    qdev_register_subclass(info, TYPE_PCI_DEVICE);
 }
 
 PCIDevice *pci_create_multifunction(PCIBus *bus, int devfn, bool multifunction,
