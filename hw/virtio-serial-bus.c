@@ -829,7 +829,7 @@ void virtio_serial_port_qdev_register(VirtIOSerialPortInfo *info)
     info->qdev.bus_info = &virtser_bus_info;
     info->qdev.exit = virtser_port_qdev_exit;
     info->qdev.unplug = qdev_simple_unplug_cb;
-    qdev_register(&info->qdev);
+    qdev_register_subclass(&info->qdev, TYPE_VIRTIO_SERIAL_PORT);
 }
 
 VirtIODevice *virtio_serial_init(DeviceState *dev, virtio_serial_conf *conf)
@@ -925,3 +925,18 @@ void virtio_serial_exit(VirtIODevice *vdev)
 
     virtio_cleanup(vdev);
 }
+
+static TypeInfo virtio_serial_port_type_info = {
+    .name = TYPE_VIRTIO_SERIAL_PORT,
+    .parent = TYPE_DEVICE,
+    .instance_size = sizeof(VirtIOSerialPort),
+    .abstract = true,
+    .class_size = sizeof(VirtIOSerialPortClass),
+};
+
+static void virtio_serial_register_devices(void)
+{
+    type_register_static(&virtio_serial_port_type_info);
+}
+
+device_init(virtio_serial_register_devices);
