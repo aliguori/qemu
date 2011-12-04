@@ -225,7 +225,7 @@ int usb_desc_other(const USBDescOther *desc, uint8_t *dest, size_t len)
 
 static void usb_desc_setdefaults(USBDevice *dev)
 {
-    const USBDesc *desc = dev->info->usb_desc;
+    const USBDesc *desc = usb_device_get_usb_desc(dev);
 
     assert(desc != NULL);
     switch (dev->speed) {
@@ -242,7 +242,7 @@ static void usb_desc_setdefaults(USBDevice *dev)
 
 void usb_desc_init(USBDevice *dev)
 {
-    const USBDesc *desc = dev->info->usb_desc;
+    const USBDesc *desc = usb_device_get_usb_desc(dev);
 
     assert(desc != NULL);
     dev->speed = USB_SPEED_FULL;
@@ -258,7 +258,7 @@ void usb_desc_init(USBDevice *dev)
 
 void usb_desc_attach(USBDevice *dev)
 {
-    const USBDesc *desc = dev->info->usb_desc;
+    const USBDesc *desc = usb_device_get_usb_desc(dev);
 
     assert(desc != NULL);
     if (desc->high && (dev->port->speedmask & USB_SPEED_MASK_HIGH)) {
@@ -267,7 +267,7 @@ void usb_desc_attach(USBDevice *dev)
         dev->speed = USB_SPEED_FULL;
     } else {
         fprintf(stderr, "usb: port/device speed mismatch for \"%s\"\n",
-                dev->info->product_desc);
+                usb_device_get_product_desc(dev));
         return;
     }
     usb_desc_setdefaults(dev);
@@ -323,7 +323,7 @@ int usb_desc_string(USBDevice *dev, int index, uint8_t *dest, size_t len)
 
     str = usb_desc_get_string(dev, index);
     if (str == NULL) {
-        str = dev->info->usb_desc->str[index];
+        str = usb_device_get_usb_desc(dev)->str[index];
         if (str == NULL) {
             return 0;
         }
@@ -342,7 +342,7 @@ int usb_desc_string(USBDevice *dev, int index, uint8_t *dest, size_t len)
 
 int usb_desc_get_descriptor(USBDevice *dev, int value, uint8_t *dest, size_t len)
 {
-    const USBDesc *desc = dev->info->usb_desc;
+    const USBDesc *desc = usb_device_get_usb_desc(dev);
     const USBDescDevice *other_dev;
     uint8_t buf[256];
     uint8_t type = value >> 8;
@@ -350,9 +350,9 @@ int usb_desc_get_descriptor(USBDevice *dev, int value, uint8_t *dest, size_t len
     int ret = -1;
 
     if (dev->speed == USB_SPEED_HIGH) {
-        other_dev = dev->info->usb_desc->full;
+        other_dev = usb_device_get_usb_desc(dev)->full;
     } else {
-        other_dev = dev->info->usb_desc->high;
+        other_dev = usb_device_get_usb_desc(dev)->high;
     }
 
     switch(type) {
@@ -407,7 +407,7 @@ int usb_desc_get_descriptor(USBDevice *dev, int value, uint8_t *dest, size_t len
 int usb_desc_handle_control(USBDevice *dev, USBPacket *p,
         int request, int value, int index, int length, uint8_t *data)
 {
-    const USBDesc *desc = dev->info->usb_desc;
+    const USBDesc *desc = usb_device_get_usb_desc(dev);
     int i, ret = -1;
 
     assert(desc != NULL);
