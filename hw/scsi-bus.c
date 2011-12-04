@@ -157,7 +157,7 @@ void scsi_qdev_register(SCSIDeviceInfo *info)
     info->qdev.init     = scsi_qdev_init;
     info->qdev.unplug   = qdev_simple_unplug_cb;
     info->qdev.exit     = scsi_qdev_exit;
-    qdev_register(&info->qdev);
+    qdev_register_subclass(&info->qdev, TYPE_SCSI_DEVICE);
 }
 
 /* handle legacy '-drive if=scsi,...' cmd line args */
@@ -1393,3 +1393,18 @@ SCSIDevice *scsi_device_find(SCSIBus *bus, int channel, int id, int lun)
     }
     return target_dev;
 }
+
+static TypeInfo scsi_device_type_info = {
+    .name = TYPE_SCSI_DEVICE,
+    .parent = TYPE_DEVICE,
+    .instance_size = sizeof(SCSIDevice),
+    .abstract = true,
+    .class_size = sizeof(SCSIDeviceClass),
+};
+
+static void scsi_register_devices(void)
+{
+    type_register_static(&scsi_device_type_info);
+}
+
+device_init(scsi_register_devices);

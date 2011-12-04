@@ -161,6 +161,18 @@ struct USBDescString {
     QLIST_ENTRY(USBDescString) next;
 };
 
+#define TYPE_USB_DEVICE "usb-device"
+#define USB_DEVICE(obj) \
+     OBJECT_CHECK(USBDevice, (obj), TYPE_USB_DEVICE)
+#define USB_DEVICE_CLASS(klass) \
+     OBJECT_CLASS_CHECK(USBDeviceClass, (klass), TYPE_USB_DEVICE)
+#define USB_DEVICE_GET_CLASS(obj) \
+     OBJECT_GET_CLASS(USBDeviceClass, (obj), TYPE_USB_DEVICE)
+
+typedef struct USBDeviceClass {
+    DeviceClass parent_class;
+} USBDeviceClass;
+
 /* definition of a USB device */
 struct USBDevice {
     DeviceState qdev;
