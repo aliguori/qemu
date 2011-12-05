@@ -10,7 +10,7 @@
 #include "i2c.h"
 
 typedef struct {
-    i2c_slave i2c;
+    I2CSlave i2c;
     time_t offset;
     struct tm now;
     uint8_t nvram[56];
@@ -18,7 +18,7 @@ typedef struct {
     int addr_byte;
 } DS1338State;
 
-static void ds1338_event(i2c_slave *i2c, enum i2c_event event)
+static void ds1338_event(I2CSlave *i2c, enum i2c_event event)
 {
     DS1338State *s = FROM_I2C_SLAVE(DS1338State, i2c);
 
@@ -48,7 +48,7 @@ static void ds1338_event(i2c_slave *i2c, enum i2c_event event)
     }
 }
 
-static int ds1338_recv(i2c_slave *i2c)
+static int ds1338_recv(I2CSlave *i2c)
 {
     DS1338State *s = FROM_I2C_SLAVE(DS1338State, i2c);
     uint8_t res;
@@ -58,7 +58,7 @@ static int ds1338_recv(i2c_slave *i2c)
     return res;
 }
 
-static int ds1338_send(i2c_slave *i2c, uint8_t data)
+static int ds1338_send(I2CSlave *i2c, uint8_t data)
 {
     DS1338State *s = FROM_I2C_SLAVE(DS1338State, i2c);
     if (s->addr_byte) {
@@ -110,7 +110,7 @@ static int ds1338_send(i2c_slave *i2c, uint8_t data)
     return 0;
 }
 
-static int ds1338_init(i2c_slave *i2c)
+static int ds1338_init(I2CSlave *i2c)
 {
     return 0;
 }
