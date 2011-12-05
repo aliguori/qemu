@@ -1,3 +1,6 @@
+#ifndef QEMU_SMBUS_H
+#define QEMU_SMBUS_H
+
 /*
  * QEMU SMBus API
  *
@@ -82,3 +85,5 @@ void smbus_write_block(i2c_bus *bus, uint8_t addr, uint8_t command, uint8_t *dat
 
 void smbus_eeprom_init(i2c_bus *smbus, int nb_eeprom,
                        const uint8_t *eeprom_spd, int size);
+
+#endif
