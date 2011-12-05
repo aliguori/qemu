@@ -26,6 +26,19 @@ typedef void (*i2c_event_cb)(I2CSlave *s, enum i2c_event event);
 
 typedef int (*i2c_slave_initfn)(I2CSlave *dev);
 
+#define TYPE_I2C_SLAVE "i2c-slave"
+#define I2C_SLAVE(obj) \
+     OBJECT_CHECK(I2CSlave, (obj), TYPE_I2C_SLAVE)
+#define I2C_SLAVE_CLASS(klass) \
+     OBJECT_CLASS_CHECK(I2CSlaveClass, (klass), TYPE_I2C_SLAVE)
+#define I2C_SLAVE_GET_CLASS(obj) \
+     OBJECT_GET_CLASS(I2CSlaveClass, (obj), TYPE_I2C_SLAVE)
+
+typedef struct I2CSlaveClass
+{
+    DeviceClass parent_class;
+} I2CSlaveClass;
+
 typedef struct {
     DeviceInfo qdev;
 
@@ -58,6 +71,7 @@ int i2c_recv(i2c_bus *bus);
 #define FROM_I2C_SLAVE(type, dev) DO_UPCAST(type, i2c, dev)
 
 void i2c_register_slave(I2CSlaveInfo *type);
+void i2c_register_slave_subclass(I2CSlaveInfo *info, const char *parent);
 
 DeviceState *i2c_create_slave(i2c_bus *bus, const char *name, uint8_t addr);
 
