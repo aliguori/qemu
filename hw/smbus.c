@@ -213,7 +213,7 @@ void smbus_register_device(SMBusDeviceInfo *info)
     info->i2c.event = smbus_i2c_event;
     info->i2c.recv = smbus_i2c_recv;
     info->i2c.send = smbus_i2c_send;
-    i2c_register_slave(&info->i2c);
+    i2c_register_slave_subclass(&info->i2c, TYPE_SMBUS_DEVICE);
 }
 
 /* Master device commands.  */
