@@ -316,3 +316,18 @@ void smbus_write_block(i2c_bus *bus, uint8_t addr, uint8_t command, uint8_t *dat
         i2c_send(bus, data[i]);
     i2c_end_transfer(bus);
 }
+
+static TypeInfo smbus_device_type_info = {
+    .name = TYPE_SMBUS_DEVICE,
+    .parent = TYPE_I2C_SLAVE,
+    .instance_size = sizeof(SMBusDevice),
+    .abstract = true,
+    .class_size = sizeof(SMBusDeviceClass),
+};
+
+static void smbus_device_register_devices(void)
+{
+    type_register_static(&smbus_device_type_info);
+}
+
+device_init(smbus_device_register_devices);
