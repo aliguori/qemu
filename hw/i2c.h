@@ -71,6 +71,7 @@ int i2c_recv(i2c_bus *bus);
 #define FROM_I2C_SLAVE(type, dev) DO_UPCAST(type, i2c, dev)
 
 void i2c_register_slave(I2CSlaveInfo *type);
+void i2c_register_slave_subclass(I2CSlaveInfo *info, const char *parent);
 
 DeviceState *i2c_create_slave(i2c_bus *bus, const char *name, uint8_t addr);
 
