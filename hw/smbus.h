@@ -24,6 +24,19 @@
 
 #include "i2c.h"
 
+#define TYPE_SMBUS_DEVICE "smbus-device"
+#define SMBUS_DEVICE(obj) \
+     OBJECT_CHECK(SMBUSDevice, (obj), TYPE_SMBUS_DEVICE)
+#define SMBUS_DEVICE_CLASS(klass) \
+     OBJECT_CLASS_CHECK(SMBUSDeviceClass, (klass), TYPE_SMBUS_DEVICE)
+#define SMBUS_DEVICE_GET_CLASS(obj) \
+     OBJECT_GET_CLASS(SMBUSDeviceClass, (obj), TYPE_SMBUS_DEVICE)
+
+typedef struct SMBusDeviceClass
+{
+    I2CSlaveClass parent_class;
+} SMBusDeviceClass;
+
 struct SMBusDevice {
     /* The SMBus protocol is implemented on top of I2C.  */
     I2CSlave i2c;
