@@ -484,7 +484,7 @@ static void vlan_hcalls(VIOsPAPRBus *bus)
     spapr_register_hypercall(H_MULTICAST_CTRL, h_multicast_ctrl);
 }
 
-static VIOsPAPRDeviceInfo spapr_vlan = {
+static VIOsPAPRDeviceInfo spapr_vlan_info = {
     .init = spapr_vlan_init,
     .devnode = spapr_vlan_devnode,
     .dt_name = "l-lan",
@@ -503,6 +503,6 @@ static VIOsPAPRDeviceInfo spapr_vlan = {
 
 static void spapr_vlan_register(void)
 {
-    spapr_vio_bus_register_withprop(&spapr_vlan);
+    spapr_vio_bus_register_withprop(&spapr_vlan_info);
 }
 device_init(spapr_vlan_register);
