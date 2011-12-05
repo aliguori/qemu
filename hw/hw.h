@@ -662,10 +662,10 @@ extern const VMStateDescription vmstate_i2c_slave;
 
 #define VMSTATE_I2C_SLAVE(_field, _state) {                          \
     .name       = (stringify(_field)),                               \
-    .size       = sizeof(i2c_slave),                                 \
+    .size       = sizeof(I2CSlave),                                 \
     .vmsd       = &vmstate_i2c_slave,                                \
     .flags      = VMS_STRUCT,                                        \
-    .offset     = vmstate_offset_value(_state, _field, i2c_slave),   \
+    .offset     = vmstate_offset_value(_state, _field, I2CSlave),   \
 }
 
 extern const VMStateDescription vmstate_usb_device;
