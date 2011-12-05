@@ -194,3 +194,18 @@ DeviceState *i2c_create_slave(i2c_bus *bus, const char *name, uint8_t addr)
     qdev_init_nofail(dev);
     return dev;
 }
+
+static TypeInfo i2c_slave_type_info = {
+    .name = TYPE_I2C_SLAVE,
+    .parent = TYPE_DEVICE,
+    .instance_size = sizeof(I2CSlave),
+    .abstract = true,
+    .class_size = sizeof(I2CSlaveClass),
+};
+
+static void i2c_slave_register_devices(void)
+{
+    type_register_static(&i2c_slave_type_info);
+}
+
+device_init(i2c_slave_register_devices);
