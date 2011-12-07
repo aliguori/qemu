@@ -901,10 +901,10 @@ static DeviceInfo virtio_balloon_info = {
 
 static void virtio_pci_register_devices(void)
 {
-    pci_qdev_register(virtio_blk_info);
-    pci_qdev_register(virtio_net_info);
-    pci_qdev_register(virtio_serial_info);
-    pci_qdev_register(virtio_balloon_info);
+    pci_qdev_register(&virtio_blk_info);
+    pci_qdev_register(&virtio_net_info);
+    pci_qdev_register(&virtio_serial_info);
+    pci_qdev_register(&virtio_balloon_info);
 }
 
 device_init(virtio_pci_register_devices)
