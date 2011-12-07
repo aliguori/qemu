@@ -141,7 +141,7 @@ static void vty_hcalls(VIOsPAPRBus *bus)
     spapr_register_hypercall(H_GET_TERM_CHAR, h_get_term_char);
 }
 
-static VIOsPAPRDeviceInfo spapr_vty = {
+static VIOsPAPRDeviceInfo spapr_vty_info = {
     .init = spapr_vty_init,
     .dt_name = "vty",
     .dt_type = "serial",
@@ -183,6 +183,6 @@ static VIOsPAPRDevice *vty_lookup(sPAPREnvironment *spapr, target_ulong reg)
 
 static void spapr_vty_register(void)
 {
-    spapr_vio_bus_register_withprop(&spapr_vty);
+    spapr_vio_bus_register_withprop(&spapr_vty_info);
 }
 device_init(spapr_vty_register);
