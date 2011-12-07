@@ -343,13 +343,20 @@ static int ioapic_init1(SysBusDevice *dev)
     return 0;
 }
 
-static SysBusDeviceInfo ioapic_info = {
-    .init = ioapic_init1,
-    .qdev.name = "ioapic",
-    .qdev.size = sizeof(IOAPICState),
-    .qdev.vmsd = &vmstate_ioapic,
-    .qdev.reset = ioapic_reset,
-    .qdev.no_user = 1,
+static void ioapic_class_init(ObjectClass *klass, void *data)
+{
+    SysBusDeviceClass *k = SYS_BUS_DEVICE_CLASS(klass);
+
+    k->init = ioapic_init1;
+}
+
+static DeviceInfo ioapic_info = {
+    .name = "ioapic",
+    .size = sizeof(IOAPICState),
+    .vmsd = &vmstate_ioapic,
+    .reset = ioapic_reset,
+    .no_user = 1,
+    .class_init = ioapic_class_init,
 };
 
 static void ioapic_register_devices(void)

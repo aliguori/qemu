@@ -289,20 +289,29 @@ static int syborg_virtio_net_init(SysBusDevice *dev)
     return syborg_virtio_init(proxy, vdev);
 }
 
-static SysBusDeviceInfo syborg_virtio_net_info = {
-    .init = syborg_virtio_net_init,
-    .qdev.name  = "syborg,virtio-net",
-    .qdev.size  = sizeof(SyborgVirtIOProxy),
-    .qdev.props = (Property[]) {
-        DEFINE_NIC_PROPERTIES(SyborgVirtIOProxy, nic),
-        DEFINE_VIRTIO_NET_FEATURES(SyborgVirtIOProxy, host_features),
-        DEFINE_PROP_UINT32("x-txtimer", SyborgVirtIOProxy,
-                           net.txtimer, TX_TIMER_INTERVAL),
-        DEFINE_PROP_INT32("x-txburst", SyborgVirtIOProxy,
-                          net.txburst, TX_BURST),
-        DEFINE_PROP_STRING("tx", SyborgVirtIOProxy, net.tx),
-        DEFINE_PROP_END_OF_LIST(),
-    }
+static Property syborg_virtio_net_properties[] = {
+    DEFINE_NIC_PROPERTIES(SyborgVirtIOProxy, nic),
+    DEFINE_VIRTIO_NET_FEATURES(SyborgVirtIOProxy, host_features),
+    DEFINE_PROP_UINT32("x-txtimer", SyborgVirtIOProxy,
+    net.txtimer, TX_TIMER_INTERVAL),
+    DEFINE_PROP_INT32("x-txburst", SyborgVirtIOProxy,
+    net.txburst, TX_BURST),
+    DEFINE_PROP_STRING("tx", SyborgVirtIOProxy, net.tx),
+    DEFINE_PROP_END_OF_LIST(),
+};
+
+static void syborg_virtio_net_class_init(ObjectClass *klass, void *data)
+{
+    SysBusDeviceClass *k = SYS_BUS_DEVICE_CLASS(klass);
+
+    k->init = syborg_virtio_net_init;
+}
+
+static DeviceInfo syborg_virtio_net_info = {
+    .name = "syborg,virtio-net",
+    .size = sizeof(SyborgVirtIOProxy),
+    .props = syborg_virtio_net_properties,
+    .class_init = syborg_virtio_net_class_init,
 };
 
 static void syborg_virtio_register_devices(void)
