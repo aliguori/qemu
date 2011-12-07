@@ -132,7 +132,7 @@ static const MemoryRegionOps unin_data_ops = {
     .endianness = DEVICE_LITTLE_ENDIAN,
 };
 
-static int pci_unin_main_init_device(SysBusDevice *dev)
+static int pci_unin_main_device_init(SysBusDevice *dev)
 {
     UNINState *s;
 
@@ -152,7 +152,7 @@ static int pci_unin_main_init_device(SysBusDevice *dev)
 }
 
 
-static int pci_u3_agp_init_device(SysBusDevice *dev)
+static int pci_u3_agp_device_init(SysBusDevice *dev)
 {
     UNINState *s;
 
@@ -171,7 +171,7 @@ static int pci_u3_agp_init_device(SysBusDevice *dev)
     return 0;
 }
 
-static int pci_unin_agp_init_device(SysBusDevice *dev)
+static int pci_unin_agp_device_init(SysBusDevice *dev)
 {
     UNINState *s;
 
@@ -187,7 +187,7 @@ static int pci_unin_agp_init_device(SysBusDevice *dev)
     return 0;
 }
 
-static int pci_unin_internal_init_device(SysBusDevice *dev)
+static int pci_unin_internal_device_init(SysBusDevice *dev)
 {
     UNINState *s;
 
