@@ -199,9 +199,7 @@ static const VMStateDescription vmstate_lm32_timer = {
 };
 
 static Property lm32_timer_properties[] = {
-    DEFINE_PROP_UINT32(,
-    "frequency", LM32TimerState, freq_hz, DEFAULT_FREQUENCY,
-    ),
+    DEFINE_PROP_UINT32("frequency", LM32TimerState, freq_hz, DEFAULT_FREQUENCY),
     DEFINE_PROP_END_OF_LIST(),
 };
 
