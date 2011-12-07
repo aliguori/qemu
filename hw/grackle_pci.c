@@ -115,10 +115,22 @@ static int pci_grackle_init_device(SysBusDevice *dev)
     return 0;
 }
 
+static void grackle_class_init(ObjectClass *klass, void *data)
+{
+    SysBusDeviceClass *sbc = SYS_BUS_DEVICE_CLASS(klass);
+
+    sbc->init = pci_grackle_init_device;
+}
+
+static DeviceInfo grackle_info = {
+    .name = "grackle",
+    .size = sizeof(GrackleState),
+    .class_init = grackle_class_init,
+};
+
 static void grackle_register_devices(void)
 {
-    sysbus_register_dev("grackle", sizeof(GrackleState),
-                        pci_grackle_init_device);
+    sysbus_register_withprop(&grackle_info);
 }
 
 device_init(grackle_register_devices)
