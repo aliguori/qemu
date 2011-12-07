@@ -117,7 +117,7 @@ static int ds1338_init(I2CSlave *i2c)
 
 static void ds1338_class_init(ObjectClass *klass, void *data)
 {
-    I2CSlaveClass *k = I2C_SLAVE_INFO(klass);
+    I2CSlaveClass *k = I2C_SLAVE_CLASS(klass);
 
     k->init = ds1338_init;
     k->event = ds1338_event;

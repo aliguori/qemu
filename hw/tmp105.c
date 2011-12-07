@@ -228,7 +228,7 @@ static int tmp105_init(I2CSlave *i2c)
 
 static void tmp105_class_init(ObjectClass *klass, void *data)
 {
-    I2CSlaveClass *k = I2C_SLAVE_INFO(klass);
+    I2CSlaveClass *k = I2C_SLAVE_CLASS(klass);
 
     k->init = tmp105_init;
     k->event = tmp105_event;
