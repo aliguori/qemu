@@ -178,16 +178,25 @@ static const VMStateDescription vmstate_a9mp_priv = {
     }
 };
 
-static SysBusDeviceInfo a9mp_priv_info = {
-    .init = a9mp_priv_init,
-    .qdev.name  = "a9mpcore_priv",
-    .qdev.size  = sizeof(a9mp_priv_state),
-    .qdev.vmsd = &vmstate_a9mp_priv,
-    .qdev.reset = a9mp_priv_reset,
-    .qdev.props = (Property[]) {
-        DEFINE_PROP_UINT32("num-cpu", a9mp_priv_state, num_cpu, 1),
-        DEFINE_PROP_END_OF_LIST(),
-    }
+static Property a9mp_priv_properties[] = {
+    DEFINE_PROP_UINT32("num-cpu", a9mp_priv_state, num_cpu, 1),
+    DEFINE_PROP_END_OF_LIST(),
+};
+
+static void a9mp_priv_class_init(ObjectClass *klass, void *data)
+{
+    SysBusDeviceClass *k = SYS_BUS_DEVICE_CLASS(klass);
+
+    k->init = a9mp_priv_init;
+}
+
+static DeviceInfo a9mp_priv_info = {
+    .name = "a9mpcore_priv",
+    .size = sizeof(a9mp_priv_state),
+    .props = a9mp_priv_properties,
+    .vmsd = &vmstate_a9mp_priv,
+    .reset = a9mp_priv_reset,
+    .class_init = a9mp_priv_class_init,
 };
 
 static void a9mp_register_devices(void)
