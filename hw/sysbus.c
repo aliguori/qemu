@@ -148,29 +148,19 @@ void sysbus_init_ioports(SysBusDevice *dev, pio_addr_t ioport, pio_addr_t size)
 
 static int sysbus_device_init(DeviceState *dev, DeviceInfo *base)
 {
-    SysBusDeviceInfo *info = container_of(base, SysBusDeviceInfo, qdev);
+    SysBusDevice *sd = SYS_BUS_DEVICE(dev);
+    SysBusDeviceClass *sbc = SYS_BUS_DEVICE_GET_CLASS(sd);
 
-    return info->init(sysbus_from_qdev(dev));
+    return sbc->init(sd);
 }
 
-void sysbus_register_withprop(SysBusDeviceInfo *info)
+void sysbus_register_withprop(DeviceInfo *info)
 {
-    info->qdev.init = sysbus_device_init;
-    info->qdev.bus_info = &system_bus_info;
+    info->init = sysbus_device_init;
+    info->bus_info = &system_bus_info;
 
-    assert(info->qdev.size >= sizeof(SysBusDevice));
-    qdev_register_subclass(&info->qdev, TYPE_SYS_BUS_DEVICE);
-}
-
-void sysbus_register_dev(const char *name, size_t size, sysbus_initfn init)
-{
-    SysBusDeviceInfo *info;
-
-    info = g_malloc0(sizeof(*info));
-    info->qdev.name = g_strdup(name);
-    info->qdev.size = size;
-    info->init = init;
-    sysbus_register_withprop(info);
+    assert(info->size >= sizeof(SysBusDevice));
+    qdev_register_subclass(info, TYPE_SYS_BUS_DEVICE);
 }
 
 DeviceState *sysbus_create_varargs(const char *name,

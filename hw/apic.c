@@ -1006,18 +1006,27 @@ static int apic_init1(SysBusDevice *dev)
     return 0;
 }
 
-static SysBusDeviceInfo apic_info = {
-    .init = apic_init1,
-    .qdev.name = "apic",
-    .qdev.size = sizeof(APICState),
-    .qdev.vmsd = &vmstate_apic,
-    .qdev.reset = apic_reset,
-    .qdev.no_user = 1,
-    .qdev.props = (Property[]) {
-        DEFINE_PROP_UINT8("id", APICState, id, -1),
-        DEFINE_PROP_PTR("cpu_env", APICState, cpu_env),
-        DEFINE_PROP_END_OF_LIST(),
-    }
+static Property apic_properties[] = {
+    DEFINE_PROP_UINT8("id", APICState, id, -1),
+    DEFINE_PROP_PTR("cpu_env", APICState, cpu_env),
+    DEFINE_PROP_END_OF_LIST(),
+};
+
+static void apic_class_init(ObjectClass *klass, void *data)
+{
+    SysBusDeviceClass *k = SYS_BUS_DEVICE_CLASS(klass);
+
+    k->init = apic_init1;
+}
+
+static DeviceInfo apic_info = {
+    .name = "apic",
+    .size = sizeof(APICState),
+    .vmsd = &vmstate_apic,
+    .reset = apic_reset,
+    .no_user = 1,
+    .props = apic_properties,
+    .class_init = apic_class_init,
 };
 
 static void apic_register_devices(void)

@@ -345,27 +345,41 @@ PCIBus *i440fx_init(PCII440FXState **pi440fx_state, int *piix3_devfn,
     return b;
 }
 
-static PCIDeviceInfo i440fx_info = {
-    .qdev.name    = "i440FX",
-    .qdev.desc    = "Host bridge",
-    .qdev.size    = sizeof(PCII440FXState),
-    .qdev.vmsd    = &vmstate_i440fx,
-    .qdev.no_user = 1,
-    .no_hotplug   = 1,
-    .init         = i440fx_initfn,
-    .config_write = i440fx_write_config,
-    .vendor_id    = PCI_VENDOR_ID_INTEL,
-    .device_id    = PCI_DEVICE_ID_INTEL_82441,
-    .revision     = 0x02,
-    .class_id     = PCI_CLASS_BRIDGE_HOST,
+static void i440fx_class_init(ObjectClass *klass, void *data)
+{
+    PCIDeviceClass *k = PCI_DEVICE_CLASS(klass);
+
+    k->no_hotplug = 1;
+    k->init = i440fx_initfn;
+    k->config_write = i440fx_write_config;
+    k->vendor_id = PCI_VENDOR_ID_INTEL;
+    k->device_id = PCI_DEVICE_ID_INTEL_82441;
+    k->revision = 0x02;
+    k->class_id = PCI_CLASS_BRIDGE_HOST;
+}
+
+static DeviceInfo i440fx_info = {
+    .name = "i440FX",
+    .desc = "Host bridge",
+    .size = sizeof(PCII440FXState),
+    .vmsd = &vmstate_i440fx,
+    .no_user = 1,
+    .class_init = i440fx_class_init,
 };
 
-static SysBusDeviceInfo i440fx_pcihost_info = {
-    .init         = i440fx_pcihost_initfn,
-    .qdev.name    = "i440FX-pcihost",
-    .qdev.fw_name = "pci",
-    .qdev.size    = sizeof(I440FXState),
-    .qdev.no_user = 1,
+static void i440fx_pcihost_class_init(ObjectClass *klass, void *data)
+{
+    SysBusDeviceClass *k = SYS_BUS_DEVICE_CLASS(klass);
+
+    k->init = i440fx_pcihost_initfn;
+}
+
+static DeviceInfo i440fx_pcihost_info = {
+    .name = "i440FX-pcihost",
+    .fw_name = "pci",
+    .size = sizeof(I440FXState),
+    .no_user = 1,
+    .class_init = i440fx_pcihost_class_init,
 };
 
 static void i440fx_register(void)

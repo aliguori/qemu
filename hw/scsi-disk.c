@@ -1739,14 +1739,14 @@ static void scsi_hd_class_initfn(ObjectClass *klass, void *data)
     sc->unit_attention_reported = scsi_disk_unit_attention_reported;
 }
 
-static SCSIDeviceInfo scsi_hd_info = {
-    .qdev.name    = "scsi-hd",
-    .qdev.fw_name = "disk",
-    .qdev.desc    = "virtual SCSI disk",
-    .qdev.size    = sizeof(SCSIDiskState),
-    .qdev.reset   = scsi_disk_reset,
-    .qdev.class_init = scsi_hd_class_initfn,
-    .qdev.props   = (Property[]) {
+static DeviceInfo scsi_hd_info = {
+    .name    = "scsi-hd",
+    .fw_name = "disk",
+    .desc    = "virtual SCSI disk",
+    .size    = sizeof(SCSIDiskState),
+    .reset   = scsi_disk_reset,
+    .class_init = scsi_hd_class_initfn,
+    .props   = (Property[]) {
         DEFINE_SCSI_DISK_PROPERTIES(),
         DEFINE_PROP_BIT("removable", SCSIDiskState, removable, 0, false),
         DEFINE_PROP_END_OF_LIST(),
@@ -1763,14 +1763,14 @@ static void scsi_cd_class_initfn(ObjectClass *klass, void *data)
     sc->unit_attention_reported = scsi_disk_unit_attention_reported;
 }
 
-static SCSIDeviceInfo scsi_cd_info = {
-    .qdev.name    = "scsi-cd",
-    .qdev.fw_name = "disk",
-    .qdev.desc    = "virtual SCSI CD-ROM",
-    .qdev.size    = sizeof(SCSIDiskState),
-    .qdev.reset   = scsi_disk_reset,
-    .qdev.class_init = scsi_cd_class_initfn,
-    .qdev.props   = (Property[]) {
+static DeviceInfo scsi_cd_info = {
+    .name    = "scsi-cd",
+    .fw_name = "disk",
+    .desc    = "virtual SCSI CD-ROM",
+    .size    = sizeof(SCSIDiskState),
+    .reset   = scsi_disk_reset,
+    .class_init = scsi_cd_class_initfn,
+    .props   = (Property[]) {
         DEFINE_SCSI_DISK_PROPERTIES(),
         DEFINE_PROP_END_OF_LIST(),
     },
@@ -1786,14 +1786,14 @@ static void scsi_block_class_initfn(ObjectClass *klass, void *data)
     sc->alloc_req    = scsi_block_new_request;
 }
 
-static SCSIDeviceInfo scsi_block_info = {
-    .qdev.name    = "scsi-block",
-    .qdev.fw_name = "disk",
-    .qdev.desc    = "SCSI block device passthrough",
-    .qdev.size    = sizeof(SCSIDiskState),
-    .qdev.reset   = scsi_disk_reset,
-    .qdev.class_init = scsi_block_class_initfn,
-    .qdev.props   = (Property[]) {
+static DeviceInfo scsi_block_info = {
+    .name    = "scsi-block",
+    .fw_name = "disk",
+    .desc    = "SCSI block device passthrough",
+    .size    = sizeof(SCSIDiskState),
+    .reset   = scsi_disk_reset,
+    .class_init = scsi_block_class_initfn,
+    .props   = (Property[]) {
         DEFINE_SCSI_DISK_PROPERTIES(),
         DEFINE_PROP_END_OF_LIST(),
     },
@@ -1810,14 +1810,14 @@ static void scsi_disk_class_initfn(ObjectClass *klass, void *data)
     sc->unit_attention_reported = scsi_disk_unit_attention_reported;
 }
 
-static SCSIDeviceInfo scsi_disk_info = {
-    .qdev.name    = "scsi-disk", /* legacy -device scsi-disk */
-    .qdev.fw_name = "disk",
-    .qdev.desc    = "virtual SCSI disk or CD-ROM (legacy)",
-    .qdev.size    = sizeof(SCSIDiskState),
-    .qdev.reset   = scsi_disk_reset,
-    .qdev.class_init = scsi_disk_class_initfn,
-    .qdev.props   = (Property[]) {
+static DeviceInfo scsi_disk_info = {
+    .name    = "scsi-disk", /* legacy -device scsi-disk */
+    .fw_name = "disk",
+    .desc    = "virtual SCSI disk or CD-ROM (legacy)",
+    .size    = sizeof(SCSIDiskState),
+    .reset   = scsi_disk_reset,
+    .class_init = scsi_disk_class_initfn,
+    .props   = (Property[]) {
         DEFINE_SCSI_DISK_PROPERTIES(),
         DEFINE_PROP_BIT("removable", SCSIDiskState, removable, 0, false),
         DEFINE_PROP_END_OF_LIST(),

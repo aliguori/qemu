@@ -470,14 +470,14 @@ static void scsi_generic_class_initfn(ObjectClass *klass, void *data)
     sc->alloc_req    = scsi_new_request;
 }
 
-static SCSIDeviceInfo scsi_generic_info = {
-    .qdev.name    = "scsi-generic",
-    .qdev.fw_name = "disk",
-    .qdev.desc    = "pass through generic scsi device (/dev/sg*)",
-    .qdev.size    = sizeof(SCSIDevice),
-    .qdev.reset   = scsi_generic_reset,
-    .qdev.class_init = scsi_generic_class_initfn,
-    .qdev.props   = (Property[]) {
+static DeviceInfo scsi_generic_info = {
+    .name    = "scsi-generic",
+    .fw_name = "disk",
+    .desc    = "pass through generic scsi device (/dev/sg*)",
+    .size    = sizeof(SCSIDevice),
+    .reset   = scsi_generic_reset,
+    .class_init = scsi_generic_class_initfn,
+    .props   = (Property[]) {
         DEFINE_BLOCK_PROPERTIES(SCSIDevice, conf),
         DEFINE_PROP_END_OF_LIST(),
     },

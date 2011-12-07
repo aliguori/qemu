@@ -410,10 +410,10 @@ static void usb_host_class_initfn(ObjectClass *klass, void *data)
     uc->handle_destroy = usb_host_handle_destroy;
 }
 
-static struct USBDeviceInfo usb_host_dev_info = {
-    .qdev.name      = "usb-host",
-    .qdev.size      = sizeof(USBHostDevice),
-    .qdev.class_init= usb_host_initfn,
+static struct DeviceInfo usb_host_dev_info = {
+    .name      = "usb-host",
+    .size      = sizeof(USBHostDevice),
+    .class_init= usb_host_initfn,
 };
 
 static void usb_host_register_devices(void)

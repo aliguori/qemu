@@ -75,11 +75,11 @@ VIOsPAPRDevice *spapr_vio_find_by_reg(VIOsPAPRBus *bus, uint32_t reg)
 
 static char *vio_format_dev_name(VIOsPAPRDevice *dev)
 {
-    VIOsPAPRDeviceInfo *info = (VIOsPAPRDeviceInfo *)dev->qdev.info;
+    VIOsPAPRDeviceClass *pc = VIO_SPAPR_DEVICE_GET_CLASS(dev);
     char *name;
 
     /* Device tree style name device@reg */
-    if (asprintf(&name, "%s@%x", info->dt_name, dev->reg) < 0) {
+    if (asprintf(&name, "%s@%x", pc->dt_name, dev->reg) < 0) {
         return NULL;
     }
 
@@ -90,7 +90,7 @@ static char *vio_format_dev_name(VIOsPAPRDevice *dev)
 static int vio_make_devnode(VIOsPAPRDevice *dev,
                             void *fdt)
 {
-    VIOsPAPRDeviceInfo *info = (VIOsPAPRDeviceInfo *)dev->qdev.info;
+    VIOsPAPRDeviceClass *pc = VIO_SPAPR_DEVICE_GET_CLASS(dev);
     int vdevice_off, node_off, ret;
     char *dt_name;
 
@@ -115,17 +115,17 @@ static int vio_make_devnode(VIOsPAPRDevice *dev,
         return ret;
     }
 
-    if (info->dt_type) {
+    if (pc->dt_type) {
         ret = fdt_setprop_string(fdt, node_off, "device_type",
-                                 info->dt_type);
+                                 pc->dt_type);
         if (ret < 0) {
             return ret;
         }
     }
 
-    if (info->dt_compatible) {
+    if (pc->dt_compatible) {
         ret = fdt_setprop_string(fdt, node_off, "compatible",
-                                 info->dt_compatible);
+                                 pc->dt_compatible);
         if (ret < 0) {
             return ret;
         }
@@ -163,8 +163,8 @@ static int vio_make_devnode(VIOsPAPRDevice *dev,
         }
     }
 
-    if (info->devnode) {
-        ret = (info->devnode)(dev, fdt, node_off);
+    if (pc->devnode) {
+        ret = (pc->devnode)(dev, fdt, node_off);
         if (ret < 0) {
             return ret;
         }
@@ -623,8 +623,8 @@ static void rtas_quiesce(sPAPREnvironment *spapr, uint32_t token,
 
 static int spapr_vio_busdev_init(DeviceState *qdev, DeviceInfo *qinfo)
 {
-    VIOsPAPRDeviceInfo *info = (VIOsPAPRDeviceInfo *)qinfo;
     VIOsPAPRDevice *dev = (VIOsPAPRDevice *)qdev;
+    VIOsPAPRDeviceClass *pc = VIO_SPAPR_DEVICE_GET_CLASS(dev);
     char *id;
 
     /* Don't overwrite ids assigned on the command line */
@@ -643,16 +643,16 @@ static int spapr_vio_busdev_init(DeviceState *qdev, DeviceInfo *qinfo)
 
     rtce_init(dev);
 
-    return info->init(dev);
+    return pc->init(dev);
 }
 
-void spapr_vio_bus_register_withprop(VIOsPAPRDeviceInfo *info)
+void spapr_vio_bus_register_withprop(DeviceInfo *info)
 {
-    info->qdev.init = spapr_vio_busdev_init;
-    info->qdev.bus_info = &spapr_vio_bus_info;
+    info->init = spapr_vio_busdev_init;
+    info->bus_info = &spapr_vio_bus_info;
 
-    assert(info->qdev.size >= sizeof(VIOsPAPRDevice));
-    qdev_register(&info->qdev);
+    assert(info->size >= sizeof(VIOsPAPRDevice));
+    qdev_register_subclass(info, TYPE_VIO_SPAPR_DEVICE);
 }
 
 static target_ulong h_vio_signal(CPUState *env, sPAPREnvironment *spapr,
@@ -662,15 +662,15 @@ static target_ulong h_vio_signal(CPUState *env, sPAPREnvironment *spapr,
     target_ulong reg = args[0];
     target_ulong mode = args[1];
     VIOsPAPRDevice *dev = spapr_vio_find_by_reg(spapr->vio_bus, reg);
-    VIOsPAPRDeviceInfo *info;
+    VIOsPAPRDeviceClass *pc;
 
     if (!dev) {
         return H_PARAMETER;
     }
 
-    info = (VIOsPAPRDeviceInfo *)dev->qdev.info;
+    pc = VIO_SPAPR_DEVICE_GET_CLASS(dev);
 
-    if (mode & ~info->signal_mask) {
+    if (mode & ~pc->signal_mask) {
         return H_PARAMETER;
     }
 
@@ -711,8 +711,12 @@ VIOsPAPRBus *spapr_vio_bus_init(void)
     spapr_rtas_register("ibm,set-tce-bypass", rtas_set_tce_bypass);
     spapr_rtas_register("quiesce", rtas_quiesce);
 
+#if 0
+    /* Evil and broken */
+
     for (qinfo = device_info_list; qinfo; qinfo = qinfo->next) {
         VIOsPAPRDeviceInfo *info = (VIOsPAPRDeviceInfo *)qinfo;
+        VIOsPAPRDeviceClass *pc = VIO_SPAPR_DEVICE_GET_CLASS(dev);
 
         if (qinfo->bus_info != &spapr_vio_bus_info) {
             continue;
@@ -722,6 +726,7 @@ VIOsPAPRBus *spapr_vio_bus_init(void)
             info->hcalls(bus);
         }
     }
+#endif
 
     return bus;
 }
@@ -734,16 +739,32 @@ static int spapr_vio_bridge_init(SysBusDevice *dev)
     return 0;
 }
 
-static SysBusDeviceInfo spapr_vio_bridge_info = {
-    .init = spapr_vio_bridge_init,
-    .qdev.name  = "spapr-vio-bridge",
-    .qdev.size  = sizeof(SysBusDevice),
-    .qdev.no_user = 1,
+static void spapr_vio_bridge_class_init(ObjectClass *klass, void *data)
+{
+    SysBusDeviceClass *k = SYS_BUS_DEVICE_CLASS(klass);
+
+    k->init = spapr_vio_bridge_init;
+}
+
+static DeviceInfo spapr_vio_bridge_info = {
+    .name = "spapr-vio-bridge",
+    .size = sizeof(SysBusDevice),
+    .no_user = 1,
+    .class_init = spapr_vio_bridge_class_init,
+};
+
+static TypeInfo spapr_vio_type_info = {
+    .name = TYPE_VIO_SPAPR_DEVICE,
+    .parent = TYPE_DEVICE,
+    .instance_size = sizeof(VIOsPAPRDevice),
+    .abstract = true,
+    .class_size = sizeof(VIOsPAPRDeviceClass),
 };
 
 static void spapr_vio_register_devices(void)
 {
     sysbus_register_withprop(&spapr_vio_bridge_info);
+    type_register_static(&spapr_vio_type_info);
 }
 
 device_init(spapr_vio_register_devices)
