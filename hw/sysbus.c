@@ -159,7 +159,7 @@ void sysbus_register_withprop(SysBusDeviceInfo *info)
     info->qdev.bus_info = &system_bus_info;
 
     assert(info->qdev.size >= sizeof(SysBusDevice));
-    qdev_register(&info->qdev);
+    qdev_register_subclass(&info->qdev, TYPE_SYS_BUS_DEVICE);
 }
 
 void sysbus_register_dev(const char *name, size_t size, sysbus_initfn init)
@@ -292,3 +292,18 @@ void sysbus_del_io(SysBusDevice *dev, MemoryRegion *mem)
 {
     memory_region_del_subregion(get_system_io(), mem);
 }
+
+static TypeInfo sysbus_device_type_info = {
+    .name = TYPE_SYS_BUS_DEVICE,
+    .parent = TYPE_DEVICE,
+    .instance_size = sizeof(SysBusDevice),
+    .abstract = true,
+    .class_size = sizeof(SysBusDeviceClass),
+};
+
+static void sysbus_register(void)
+{
+    type_register_static(&sysbus_device_type_info);
+}
+
+device_init(sysbus_register);
