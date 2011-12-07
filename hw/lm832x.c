@@ -496,7 +496,7 @@ void lm832x_key_event(DeviceState *dev, int key, int state)
 
 static void lm8323_class_init(ObjectClass *klass, void *data)
 {
-    I2CSlaveClass *k = I2C_SLAVE_INFO(klass);
+    I2CSlaveClass *k = I2C_SLAVE_CLASS(klass);
 
     k->init = lm8323_init;
     k->event = lm_i2c_event;
