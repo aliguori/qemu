@@ -47,7 +47,7 @@ typedef struct mv88w8618_audio_state {
     uint32_t play_pos;
     uint32_t last_free;
     uint32_t clock_div;
-    DeviceState *wm;
+    void *wm;
 } mv88w8618_audio_state;
 
 static void mv88w8618_audio_callback(void *opaque, int free_out, int free_in)
