@@ -1233,12 +1233,19 @@ static const VMStateDescription vmstate_pxa2xx_rtc_regs = {
     },
 };
 
-static SysBusDeviceInfo pxa2xx_rtc_sysbus_info = {
-    .init       = pxa2xx_rtc_init,
-    .qdev.name  = "pxa2xx_rtc",
-    .qdev.desc  = "PXA2xx RTC Controller",
-    .qdev.size  = sizeof(PXA2xxRTCState),
-    .qdev.vmsd  = &vmstate_pxa2xx_rtc_regs,
+static void pxa2xx_rtc_sysbus_class_init(ObjectClass *klass, void *data)
+{
+    SysBusDeviceClass *k = SYS_BUS_DEVICE_CLASS(klass);
+
+    k->init = pxa2xx_rtc_init;
+}
+
+static DeviceInfo pxa2xx_rtc_sysbus_info = {
+    .name = "pxa2xx_rtc",
+    .desc = "PXA2xx RTC Controller",
+    .size = sizeof(PXA2xxRTCState),
+    .vmsd = &vmstate_pxa2xx_rtc_regs,
+    .class_init = pxa2xx_rtc_sysbus_class_init,
 };
 
 /* I2C Interface */
@@ -1533,17 +1540,26 @@ i2c_bus *pxa2xx_i2c_bus(PXA2xxI2CState *s)
     return s->bus;
 }
 
-static SysBusDeviceInfo pxa2xx_i2c_info = {
-    .init       = pxa2xx_i2c_initfn,
-    .qdev.name  = "pxa2xx_i2c",
-    .qdev.desc  = "PXA2xx I2C Bus Controller",
-    .qdev.size  = sizeof(PXA2xxI2CState),
-    .qdev.vmsd  = &vmstate_pxa2xx_i2c,
-    .qdev.props = (Property[]) {
-        DEFINE_PROP_UINT32("size", PXA2xxI2CState, region_size, 0x10000),
-        DEFINE_PROP_UINT32("offset", PXA2xxI2CState, offset, 0),
-        DEFINE_PROP_END_OF_LIST(),
-    },
+static Property pxa2xx_i2c_properties[] = {
+    DEFINE_PROP_UINT32("size", PXA2xxI2CState, region_size, 0x10000),
+    DEFINE_PROP_UINT32("offset", PXA2xxI2CState, offset, 0),
+    DEFINE_PROP_END_OF_LIST(),
+};
+
+static void pxa2xx_i2c_class_init(ObjectClass *klass, void *data)
+{
+    SysBusDeviceClass *k = SYS_BUS_DEVICE_CLASS(klass);
+
+    k->init = pxa2xx_i2c_initfn;
+}
+
+static DeviceInfo pxa2xx_i2c_info = {
+    .name = "pxa2xx_i2c",
+    .desc = "PXA2xx I2C Bus Controller",
+    .size = sizeof(PXA2xxI2CState),
+    .vmsd = &vmstate_pxa2xx_i2c,
+    .props = pxa2xx_i2c_properties,
+    .class_init = pxa2xx_i2c_class_init,
 };
 
 /* PXA Inter-IC Sound Controller */

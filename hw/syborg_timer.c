@@ -213,14 +213,23 @@ static int syborg_timer_init(SysBusDevice *dev)
     return 0;
 }
 
-static SysBusDeviceInfo syborg_timer_info = {
-    .init = syborg_timer_init,
-    .qdev.name  = "syborg,timer",
-    .qdev.size  = sizeof(SyborgTimerState),
-    .qdev.props = (Property[]) {
-        DEFINE_PROP_UINT32("frequency",SyborgTimerState, freq, 0),
-        DEFINE_PROP_END_OF_LIST(),
-    }
+static Property syborg_timer_properties[] = {
+    DEFINE_PROP_UINT32("frequency",SyborgTimerState, freq, 0),
+    DEFINE_PROP_END_OF_LIST(),
+};
+
+static void syborg_timer_class_init(ObjectClass *klass, void *data)
+{
+    SysBusDeviceClass *k = SYS_BUS_DEVICE_CLASS(klass);
+
+    k->init = syborg_timer_init;
+}
+
+static DeviceInfo syborg_timer_info = {
+    .name = "syborg,timer",
+    .size = sizeof(SyborgTimerState),
+    .props = syborg_timer_properties,
+    .class_init = syborg_timer_class_init,
 };
 
 static void syborg_timer_register_devices(void)
