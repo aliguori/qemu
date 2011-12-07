@@ -345,23 +345,19 @@ PCIBus *i440fx_init(PCII440FXState **pi440fx_state, int *piix3_devfn,
     return b;
 }
 
-static PCIDeviceInfo i440fx_info[] = {
-    {
-        .qdev.name    = "i440FX",
-        .qdev.desc    = "Host bridge",
-        .qdev.size    = sizeof(PCII440FXState),
-        .qdev.vmsd    = &vmstate_i440fx,
-        .qdev.no_user = 1,
-        .no_hotplug   = 1,
-        .init         = i440fx_initfn,
-        .config_write = i440fx_write_config,
-        .vendor_id    = PCI_VENDOR_ID_INTEL,
-        .device_id    = PCI_DEVICE_ID_INTEL_82441,
-        .revision     = 0x02,
-        .class_id     = PCI_CLASS_BRIDGE_HOST,
-    },{
-        /* end of list */
-    }
+static PCIDeviceInfo i440fx_info = {
+    .qdev.name    = "i440FX",
+    .qdev.desc    = "Host bridge",
+    .qdev.size    = sizeof(PCII440FXState),
+    .qdev.vmsd    = &vmstate_i440fx,
+    .qdev.no_user = 1,
+    .no_hotplug   = 1,
+    .init         = i440fx_initfn,
+    .config_write = i440fx_write_config,
+    .vendor_id    = PCI_VENDOR_ID_INTEL,
+    .device_id    = PCI_DEVICE_ID_INTEL_82441,
+    .revision     = 0x02,
+    .class_id     = PCI_CLASS_BRIDGE_HOST,
 };
 
 static SysBusDeviceInfo i440fx_pcihost_info = {
@@ -375,7 +371,7 @@ static SysBusDeviceInfo i440fx_pcihost_info = {
 static void i440fx_register(void)
 {
     sysbus_register_withprop(&i440fx_pcihost_info);
-    pci_qdev_register_many(i440fx_info);
+    pci_qdev_register(i440fx_info);
 }
 
 device_init(i440fx_register);
