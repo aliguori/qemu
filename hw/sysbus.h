@@ -13,6 +13,18 @@
 typedef struct SysBusDevice SysBusDevice;
 typedef void (*mmio_mapfunc)(SysBusDevice *dev, target_phys_addr_t addr);
 
+#define TYPE_SYS_BUS_DEVICE "sys-bus-device"
+#define SYS_BUS_DEVICE(obj) \
+     OBJECT_CHECK(SysBusDevice, (obj), TYPE_SYS_BUS_DEVICE)
+#define SYS_BUS_DEVICE_CLASS(klass) \
+     OBJECT_CLASS_CHECK(SysBusDeviceClass, (klass), TYPE_SYS_BUS_DEVICE)
+#define SYS_BUS_DEVICE_GET_CLASS(obj) \
+     OBJECT_GET_CLASS(SysBusDeviceClass, (obj), TYPE_SYS_BUS_DEVICE)
+
+typedef struct SysBusDeviceClass {
+    DeviceClass parent_class;
+} SysBusDeviceClass;
+
 struct SysBusDevice {
     DeviceState qdev;
     int num_irq;
