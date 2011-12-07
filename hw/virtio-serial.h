@@ -70,6 +70,11 @@ struct virtio_serial_conf {
 #define VIRTIO_SERIAL_PORT_GET_CLASS(obj) \
      OBJECT_GET_CLASS(VirtIOSerialPortClass, (obj), TYPE_VIRTIO_SERIAL_PORT)
 
+typedef struct VirtIOSerial VirtIOSerial;
+typedef struct VirtIOSerialBus VirtIOSerialBus;
+typedef struct VirtIOSerialPort VirtIOSerialPort;
+typedef struct VirtIOSerialPortInfo VirtIOSerialPortInfo;
+
 typedef struct VirtIOSerialPortClass {
     DeviceClass parent_class;
 
@@ -104,11 +109,6 @@ typedef struct VirtIOSerialPortClass {
     ssize_t (*have_data)(VirtIOSerialPort *port, const uint8_t *buf,
                          size_t len);
 } VirtIOSerialPortClass;
-
-typedef struct VirtIOSerial VirtIOSerial;
-typedef struct VirtIOSerialBus VirtIOSerialBus;
-typedef struct VirtIOSerialPort VirtIOSerialPort;
-typedef struct VirtIOSerialPortInfo VirtIOSerialPortInfo;
 
 /*
  * This is the state that's shared between all the ports.  Some of the
