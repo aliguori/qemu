@@ -33,7 +33,6 @@ typedef struct SSISlaveClass {
 
 struct SSISlave {
     DeviceState qdev;
-    SSISlaveInfo *info;
 };
 
 #define SSI_SLAVE_FROM_QDEV(dev) DO_UPCAST(SSISlave, qdev, dev)
