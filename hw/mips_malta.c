@@ -783,6 +783,7 @@ void mips_malta_init (ram_addr_t ram_size,
     DriveInfo *dinfo;
     DriveInfo *hd[MAX_IDE_BUS * MAX_IDE_DEVS];
     DriveInfo *fd[MAX_FD];
+    DeviceState *dummy;
     int fl_idx = 0;
     int fl_sectors = 0;
     int be;
@@ -950,7 +951,7 @@ void mips_malta_init (ram_addr_t ram_size,
     isa_bus_irqs(i8259);
     pci_piix4_ide_init(pci_bus, hd, piix4_devfn + 1);
     usb_uhci_piix4_init(pci_bus, piix4_devfn + 2);
-    smbus = piix4_pm_init(pci_bus, piix4_devfn + 3, 0x1100, isa_get_irq(9),
+    smbus = piix4_pm_init(pci_bus, &dummy, piix4_devfn + 3, 0x1100, isa_get_irq(9),
                           NULL, NULL, 0);
     /* TODO: Populate SPD eeprom data.  */
     smbus_eeprom_init(smbus, 8, NULL, 0);
