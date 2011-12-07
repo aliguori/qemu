@@ -3508,7 +3508,7 @@ static void rtl8139_class_init(ObjectClass *klass, void *data)
     k->romfile = "pxe-rtl8139.rom";
     k->vendor_id = PCI_VENDOR_ID_REALTEK;
     k->device_id = PCI_DEVICE_ID_REALTEK_8139;
-    k->revision = RTL8139_PCI_REVID, /* >=0x20 is for 8139C+ */;
+    k->revision = RTL8139_PCI_REVID; /* >=0x20 is for 8139C+ */
     k->class_id = PCI_CLASS_NETWORK_ETHERNET;
 }
 
