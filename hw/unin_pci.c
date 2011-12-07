@@ -301,16 +301,64 @@ PCIBus *pci_pmac_u3_init(qemu_irq *pic,
     return d->host_state.bus;
 }
 
+static void pci_unin_main_class_init(ObjectClass *klass, void *data)
+{
+    SysBusDeviceClass *sbc = SYS_BUS_DEVICE_CLASS(klass);
+
+    sbc->init = pci_unin_main_init_device;
+}
+
+static DeviceInfo pci_unin_main_info = {
+    .name = "uni-north",
+    .size = sizeof(UNINState),
+    .class_init = pci_unin_main_class_init,
+};
+
+static void pci_u3_agp_class_init(ObjectClass *klass, void *data)
+{
+    SysBusDeviceClass *sbc = SYS_BUS_DEVICE_CLASS(klass);
+
+    sbc->init = pci_u3_agp_init_device;
+}
+
+static DeviceInfo pci_u3_agp_info = {
+    .name = "u3-agp",
+    .size = sizeof(UNINState),
+    .class_init = pci_u3_agp_class_init,
+};
+
+static void pci_unin_agp_class_init(ObjectClass *klass, void *data)
+{
+    SysBusDeviceClass *sbc = SYS_BUS_DEVICE_CLASS(klass);
+
+    sbc->init = pci_unin_agp_init_device;
+}
+
+static DeviceInfo pci_unin_agp_info = {
+    .name = "uni-north-agp",
+    .size = sizeof(UNINState),
+    .class_init = pci_unin_agp_class_init,
+};
+
+static void pci_unin_internal_class_init(ObjectClass *klass, void *data)
+{
+    SysBusDeviceClass *sbc = SYS_BUS_DEVICE_CLASS(klass);
+
+    sbc->init = pci_unin_internal_init_device;
+}
+
+static DeviceInfo pci_unin_internal_info = {
+    .name = "uni-north-pci",
+    .size = sizeof(UNINState),
+    .class_init = pci_unin_internal_class_init,
+};
+
 static void unin_register_devices(void)
 {
-    sysbus_register_dev("uni-north", sizeof(UNINState),
-                        pci_unin_main_init_device);
-    sysbus_register_dev("u3-agp", sizeof(UNINState),
-                        pci_u3_agp_init_device);
-    sysbus_register_dev("uni-north-agp", sizeof(UNINState),
-                        pci_unin_agp_init_device);
-    sysbus_register_dev("uni-north-pci", sizeof(UNINState),
-                        pci_unin_internal_init_device);
+    sysbus_register_withprop(&pci_unin_main_info);
+    sysbus_register_withprop(&pci_u3_agp_info);
+    sysbus_register_withprop(&pci_unin_agp_info);
+    sysbus_register_withprop(&pci_unin_internal_info);
 }
 
 device_init(unin_register_devices)
