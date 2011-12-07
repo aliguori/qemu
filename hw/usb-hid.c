@@ -574,11 +574,11 @@ static void usb_tablet_class_initfn(ObjectClass *klass, void *data)
     uc->handle_destroy = usb_hid_handle_destroy;
 }
 
-static struct USBDeviceInfo usb_tablet_info = {
-    .qdev.name      = "usb-tablet",
-    .qdev.size      = sizeof(USBHIDState),
-    .qdev.vmsd      = &vmstate_usb_ptr,
-    .qdev.class_init= usb_tablet_class_initfn,
+static struct DeviceInfo usb_tablet_info = {
+    .name      = "usb-tablet",
+    .size      = sizeof(USBHIDState),
+    .vmsd      = &vmstate_usb_ptr,
+    .class_init= usb_tablet_class_initfn,
 };
 
 static void usb_mouse_class_initfn(ObjectClass *klass, void *data)
@@ -595,11 +595,11 @@ static void usb_mouse_class_initfn(ObjectClass *klass, void *data)
     uc->handle_destroy = usb_hid_handle_destroy;
 }
 
-static struct USBDeviceInfo usb_mouse_info = {
-    .qdev.name      = "usb-mouse",
-    .qdev.size      = sizeof(USBHIDState),
-    .qdev.vmsd      = &vmstate_usb_ptr,
-    .qdev.class_init= usb_mouse_class_initfn,
+static struct DeviceInfo usb_mouse_info = {
+    .name      = "usb-mouse",
+    .size      = sizeof(USBHIDState),
+    .vmsd      = &vmstate_usb_ptr,
+    .class_init= usb_mouse_class_initfn,
 };
 
 static void usb_keyboard_class_initfn(ObjectClass *klass, void *data)
@@ -616,11 +616,11 @@ static void usb_keyboard_class_initfn(ObjectClass *klass, void *data)
     uc->handle_destroy = usb_hid_handle_destroy;
 }
 
-static struct USBDeviceInfo usb_keyboard_info = {
-    .qdev.name      = "usb-kbd",
-    .qdev.size      = sizeof(USBHIDState),
-    .qdev.vmsd      = &vmstate_usb_kbd,
-    .qdev.class_init= usb_keyboard_class_initfn,
+static struct DeviceInfo usb_keyboard_info = {
+    .name      = "usb-kbd",
+    .size      = sizeof(USBHIDState),
+    .vmsd      = &vmstate_usb_kbd,
+    .class_init= usb_keyboard_class_initfn,
 };
 
 static void usb_hid_register_devices(void)

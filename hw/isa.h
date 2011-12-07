@@ -11,7 +11,6 @@
 
 typedef struct ISABus ISABus;
 typedef struct ISADevice ISADevice;
-typedef struct ISADeviceInfo ISADeviceInfo;
 
 #define TYPE_ISA_DEVICE "isa-device"
 #define ISA_DEVICE(obj) \
@@ -33,15 +32,11 @@ struct ISADevice {
     int ioport_id;
 };
 
-struct ISADeviceInfo {
-    DeviceInfo qdev;
-};
-
 ISABus *isa_bus_new(DeviceState *dev, MemoryRegion *address_space_io);
 void isa_bus_irqs(qemu_irq *irqs);
 qemu_irq isa_get_irq(int isairq);
 void isa_init_irq(ISADevice *dev, qemu_irq *p, int isairq);
-void isa_qdev_register(ISADeviceInfo *info);
+void isa_qdev_register(DeviceInfo *info);
 MemoryRegion *isa_address_space(ISADevice *dev);
 ISADevice *isa_create(const char *name);
 ISADevice *isa_try_create(const char *name);

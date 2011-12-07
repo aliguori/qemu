@@ -150,11 +150,11 @@ static void vmport_class_initfn(ObjectClass *klass, void *data)
     ic->init = vmport_initfn;
 }
 
-static ISADeviceInfo vmport_info = {
-    .qdev.name     = "vmport",
-    .qdev.size     = sizeof(VMPortState),
-    .qdev.no_user  = 1,
-    .qdev.class_init          = vmport_class_initfn,
+static DeviceInfo vmport_info = {
+    .name     = "vmport",
+    .size     = sizeof(VMPortState),
+    .no_user  = 1,
+    .class_init          = vmport_class_initfn,
 };
 
 static void vmport_dev_register(void)
