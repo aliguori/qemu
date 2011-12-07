@@ -296,7 +296,7 @@ static int ssd0303_init(I2CSlave *i2c)
 
 static void ssd0303_class_init(ObjectClass *klass, void *data)
 {
-    I2CSlaveClass *k = I2C_SLAVE_INFO(klass);
+    I2CSlaveClass *k = I2C_SLAVE_CLASS(klass);
 
     k->init = ssd0303_init;
     k->event = ssd0303_event;
