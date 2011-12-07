@@ -238,6 +238,7 @@ obj-i386-y += debugcon.o multiboot.o
 obj-i386-y += pc_piix.o
 obj-i386-$(CONFIG_KVM) += kvmclock.o
 obj-i386-$(CONFIG_SPICE) += qxl.o qxl-logger.o qxl-render.o
+obj-i386-y += i440fx.o piix3.o
 
 # shared objects
 obj-ppc-y = ppc.o ppc_booke.o
