@@ -205,24 +205,42 @@ static int realview_mpcore_init(SysBusDevice *dev)
     return 0;
 }
 
-static SysBusDeviceInfo mpcore_rirq_info = {
-    .init = realview_mpcore_init,
-    .qdev.name  = "realview_mpcore",
-    .qdev.size  = sizeof(mpcore_rirq_state),
-    .qdev.props = (Property[]) {
-        DEFINE_PROP_UINT32("num-cpu", mpcore_rirq_state, num_cpu, 1),
-        DEFINE_PROP_END_OF_LIST(),
-    }
+static Property mpcore_rirq_properties[] = {
+    DEFINE_PROP_UINT32("num-cpu", mpcore_rirq_state, num_cpu, 1),
+    DEFINE_PROP_END_OF_LIST(),
 };
 
-static SysBusDeviceInfo mpcore_priv_info = {
-    .init = mpcore_priv_init,
-    .qdev.name  = "arm11mpcore_priv",
-    .qdev.size  = sizeof(mpcore_priv_state),
-    .qdev.props = (Property[]) {
-        DEFINE_PROP_UINT32("num-cpu", mpcore_priv_state, num_cpu, 1),
-        DEFINE_PROP_END_OF_LIST(),
-    }
+static void mpcore_rirq_class_init(ObjectClass *klass, void *data)
+{
+    SysBusDeviceClass *k = SYS_BUS_DEVICE_CLASS(klass);
+
+    k->init = realview_mpcore_init;
+}
+
+static DeviceInfo mpcore_rirq_info = {
+    .name = "realview_mpcore",
+    .size = sizeof(mpcore_rirq_state),
+    .props = mpcore_rirq_properties,
+    .class_init = mpcore_rirq_class_init,
+};
+
+static Property mpcore_priv_properties[] = {
+    DEFINE_PROP_UINT32("num-cpu", mpcore_priv_state, num_cpu, 1),
+    DEFINE_PROP_END_OF_LIST(),
+};
+
+static void mpcore_priv_class_init(ObjectClass *klass, void *data)
+{
+    SysBusDeviceClass *k = SYS_BUS_DEVICE_CLASS(klass);
+
+    k->init = mpcore_priv_init;
+}
+
+static DeviceInfo mpcore_priv_info = {
+    .name = "arm11mpcore_priv",
+    .size = sizeof(mpcore_priv_state),
+    .props = mpcore_priv_properties,
+    .class_init = mpcore_priv_class_init,
 };
 
 static void arm11mpcore_register_devices(void)
