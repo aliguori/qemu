@@ -187,8 +187,8 @@ static DeviceInfo piix3_xen_info = {
 
 static void piix3_register(void)
 {
-    pci_qdev_register(piix3_info);
-    pci_qdev_register(piix3_xen_info);
+    pci_qdev_register(&piix3_info);
+    pci_qdev_register(&piix3_xen_info);
 }
 
 device_init(piix3_register);

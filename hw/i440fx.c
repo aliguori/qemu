@@ -378,7 +378,7 @@ static SysBusDeviceInfo i440fx_pcihost_info = {
 static void i440fx_register(void)
 {
     sysbus_register_withprop(&i440fx_pcihost_info);
-    pci_qdev_register(i440fx_info);
+    pci_qdev_register(&i440fx_info);
 }
 
 device_init(i440fx_register);
