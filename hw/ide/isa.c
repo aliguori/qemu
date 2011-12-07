@@ -100,13 +100,13 @@ static void isa_ide_class_initfn(ObjectClass *klass, void *data)
     ic->init = isa_ide_initfn;
 }
 
-static ISADeviceInfo isa_ide_info = {
-    .qdev.name  = "isa-ide",
-    .qdev.fw_name  = "ide",
-    .qdev.size  = sizeof(ISAIDEState),
-    .qdev.class_init       = isa_ide_class_initfn,
-    .qdev.reset = isa_ide_reset,
-    .qdev.props = (Property[]) {
+static DeviceInfo isa_ide_info = {
+    .name  = "isa-ide",
+    .fw_name  = "ide",
+    .size  = sizeof(ISAIDEState),
+    .class_init       = isa_ide_class_initfn,
+    .reset = isa_ide_reset,
+    .props = (Property[]) {
         DEFINE_PROP_HEX32("iobase",  ISAIDEState, iobase,  0x1f0),
         DEFINE_PROP_HEX32("iobase2", ISAIDEState, iobase2, 0x3f6),
         DEFINE_PROP_UINT32("irq",    ISAIDEState, isairq,  14),

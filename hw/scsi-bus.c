@@ -183,13 +183,13 @@ static int scsi_qdev_exit(DeviceState *qdev)
     return 0;
 }
 
-void scsi_qdev_register(SCSIDeviceInfo *info)
+void scsi_qdev_register(DeviceInfo *info)
 {
-    info->qdev.bus_info = &scsi_bus_info;
-    info->qdev.init     = scsi_qdev_init;
-    info->qdev.unplug   = qdev_simple_unplug_cb;
-    info->qdev.exit     = scsi_qdev_exit;
-    qdev_register_subclass(&info->qdev, TYPE_SCSI_DEVICE);
+    info->bus_info = &scsi_bus_info;
+    info->init     = scsi_qdev_init;
+    info->unplug   = qdev_simple_unplug_cb;
+    info->exit     = scsi_qdev_exit;
+    qdev_register_subclass(info, TYPE_SCSI_DEVICE);
 }
 
 /* handle legacy '-drive if=scsi,...' cmd line args */

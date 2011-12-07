@@ -126,12 +126,12 @@ static void wdt_ib700_class_init(ObjectClass *klass, void *data)
     ic->init = wdt_ib700_init;
 }
 
-static ISADeviceInfo wdt_ib700_info = {
-    .qdev.name  = "ib700",
-    .qdev.size  = sizeof(IB700State),
-    .qdev.vmsd  = &vmstate_ib700,
-    .qdev.reset = wdt_ib700_reset,
-    .qdev.class_init       = wdt_ib700_class_init,
+static DeviceInfo wdt_ib700_info = {
+    .name  = "ib700",
+    .size  = sizeof(IB700State),
+    .vmsd  = &vmstate_ib700,
+    .reset = wdt_ib700_reset,
+    .class_init       = wdt_ib700_class_init,
 };
 
 static void wdt_ib700_register_devices(void)

@@ -391,9 +391,22 @@ static int armv7m_nvic_init(SysBusDevice *dev)
     return 0;
 }
 
+static void armv7m_nvic_class_init(ObjectClass *klass, void *data)
+{
+    SysBusDeviceClass *sdc = SYS_BUS_DEVICE_CLASS(klass);
+
+    sdc->init = armv7m_nvic_init;
+}
+
+static DeviceInfo armv7m_nvic_info = {
+    .name = "armv7m_nvic",
+    .size = sizeof(nvic_state),
+    .class_init = armv7m_nvic_class_init,
+};
+
 static void armv7m_nvic_register_devices(void)
 {
-    sysbus_register_dev("armv7m_nvic", sizeof(nvic_state), armv7m_nvic_init);
+    sysbus_qdev_register(&armv7m_nvic_info);
 }
 
 device_init(armv7m_nvic_register_devices)

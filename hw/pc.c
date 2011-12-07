@@ -502,13 +502,13 @@ static void port92_class_initfn(ObjectClass *klass, void *data)
     ic->init = port92_initfn;
 }
 
-static ISADeviceInfo port92_info = {
-    .qdev.name     = "port92",
-    .qdev.size     = sizeof(Port92State),
-    .qdev.vmsd     = &vmstate_port92_isa,
-    .qdev.no_user  = 1,
-    .qdev.reset    = port92_reset,
-    .qdev.class_init          = port92_class_initfn,
+static DeviceInfo port92_info = {
+    .name     = "port92",
+    .size     = sizeof(Port92State),
+    .vmsd     = &vmstate_port92_isa,
+    .no_user  = 1,
+    .reset    = port92_reset,
+    .class_init          = port92_class_initfn,
 };
 
 static void port92_register(void)

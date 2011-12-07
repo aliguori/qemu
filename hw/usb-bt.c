@@ -563,11 +563,11 @@ static void usb_bt_class_initfn(ObjectClass *klass, void *data)
     uc->handle_destroy = usb_bt_handle_destroy;
 }
 
-static struct USBDeviceInfo bt_info = {
-    .qdev.name      = "usb-bt-dongle",
-    .qdev.size      = sizeof(struct USBBtState),
-    .qdev.vmsd      = &vmstate_usb_bt,
-    .qdev.class_init= usb_bt_class_initfn,
+static struct DeviceInfo bt_info = {
+    .name      = "usb-bt-dongle",
+    .size      = sizeof(struct USBBtState),
+    .vmsd      = &vmstate_usb_bt,
+    .class_init= usb_bt_class_initfn,
 };
 
 static void usb_bt_register_devices(void)

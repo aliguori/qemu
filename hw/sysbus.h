@@ -23,6 +23,8 @@ typedef void (*mmio_mapfunc)(SysBusDevice *dev, target_phys_addr_t addr);
 
 typedef struct SysBusDeviceClass {
     DeviceClass parent_class;
+
+    int (*init)(SysBusDevice *dev);
 } SysBusDeviceClass;
 
 struct SysBusDevice {
@@ -41,19 +43,13 @@ struct SysBusDevice {
     pio_addr_t pio[QDEV_MAX_PIO];
 };
 
-typedef int (*sysbus_initfn)(SysBusDevice *dev);
-
 /* Macros to compensate for lack of type inheritance in C.  */
 #define sysbus_from_qdev(dev) ((SysBusDevice *)(dev))
 #define FROM_SYSBUS(type, dev) DO_UPCAST(type, busdev, dev)
 
-typedef struct {
-    DeviceInfo qdev;
-    sysbus_initfn init;
-} SysBusDeviceInfo;
+#define sysbus_qdev_register(info) sysbus_register_withprop(info)
+void sysbus_register_withprop(DeviceInfo *info);
 
-void sysbus_register_dev(const char *name, size_t size, sysbus_initfn init);
-void sysbus_register_withprop(SysBusDeviceInfo *info);
 void *sysbus_new(void);
 void sysbus_init_mmio_cb2(SysBusDevice *dev,
                           mmio_mapfunc cb, mmio_mapfunc unmap);

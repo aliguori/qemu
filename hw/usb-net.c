@@ -1413,13 +1413,13 @@ static void usb_net_class_initfn(ObjectClass *klass, void *data)
     uc->handle_destroy = usb_net_handle_destroy;
 }
 
-static struct USBDeviceInfo net_info = {
-    .qdev.name      = "usb-net",
-    .qdev.fw_name   = "network",
-    .qdev.size      = sizeof(USBNetState),
-    .qdev.vmsd      = &vmstate_usb_net,
-    .qdev.class_init= usb_net_class_initfn,
-    .qdev.props     = (Property[]) {
+static struct DeviceInfo net_info = {
+    .name      = "usb-net",
+    .fw_name   = "network",
+    .size      = sizeof(USBNetState),
+    .vmsd      = &vmstate_usb_net,
+    .class_init= usb_net_class_initfn,
+    .props     = (Property[]) {
         DEFINE_NIC_PROPERTIES(USBNetState, conf),
         DEFINE_PROP_END_OF_LIST(),
     },

@@ -1241,11 +1241,11 @@ static void usbredir_class_initfn(ObjectClass *klass, void *data)
     uc->handle_control = usbredir_handle_control;
 }
 
-static struct USBDeviceInfo usbredir_dev_info = {
-    .qdev.name      = "usb-redir",
-    .qdev.size      = sizeof(USBRedirDevice),
-    .qdev.class_init= usbredir_class_initfn,
-    .qdev.props     = (Property[]) {
+static struct DeviceInfo usbredir_dev_info = {
+    .name      = "usb-redir",
+    .size      = sizeof(USBRedirDevice),
+    .class_init= usbredir_class_initfn,
+    .props     = (Property[]) {
         DEFINE_PROP_CHR("chardev", USBRedirDevice, cs),
         DEFINE_PROP_UINT8("debug", USBRedirDevice, debug, 0),
         DEFINE_PROP_END_OF_LIST(),

@@ -143,39 +143,52 @@ static int piix3_initfn(PCIDevice *dev)
     return 0;
 }
 
-static PCIDeviceInfo piix3_info[] = {
-    {
-        .qdev.name    = "PIIX3",
-        .qdev.desc    = "ISA bridge",
-        .qdev.size    = sizeof(PIIX3State),
-        .qdev.vmsd    = &vmstate_piix3,
-        .qdev.no_user = 1,
-        .no_hotplug   = 1,
-        .init         = piix3_initfn,
-        .config_write = piix3_write_config,
-        .vendor_id    = PCI_VENDOR_ID_INTEL,
-        .device_id    = PCI_DEVICE_ID_INTEL_82371SB_0, // 82371SB PIIX3 PCI-to-ISA bridge (Step A1)
-        .class_id     = PCI_CLASS_BRIDGE_ISA,
-    },{
-        .qdev.name    = "PIIX3-xen",
-        .qdev.desc    = "ISA bridge",
-        .qdev.size    = sizeof(PIIX3State),
-        .qdev.vmsd    = &vmstate_piix3,
-        .qdev.no_user = 1,
-        .no_hotplug   = 1,
-        .init         = piix3_initfn,
-        .config_write = piix3_write_config_xen,
-        .vendor_id    = PCI_VENDOR_ID_INTEL,
-        .device_id    = PCI_DEVICE_ID_INTEL_82371SB_0, // 82371SB PIIX3 PCI-to-ISA bridge (Step A1)
-        .class_id     = PCI_CLASS_BRIDGE_ISA,
-    },{
-        /* end of list */
-    }
+static void piix3_class_init(ObjectClass *klass, void *data)
+{
+    PCIDeviceClass *k = PCI_DEVICE_CLASS(klass);
+
+    k->no_hotplug = 1;
+    k->init = piix3_initfn;
+    k->config_write = piix3_write_config;
+    k->vendor_id = PCI_VENDOR_ID_INTEL;
+    k->device_id = PCI_DEVICE_ID_INTEL_82371SB_0;
+    k->class_id = PCI_CLASS_BRIDGE_ISA;
+}
+
+static DeviceInfo piix3_info = {
+    .name = "PIIX3",
+    .desc = "ISA bridge",
+    .size = sizeof(PIIX3State),
+    .vmsd = &vmstate_piix3,
+    .no_user = 1,
+    .class_init = piix3_class_init,
+};
+
+static void piix3_xen_class_init(ObjectClass *klass, void *data)
+{
+    PCIDeviceClass *k = PCI_DEVICE_CLASS(klass);
+
+    k->no_hotplug = 1;
+    k->init = piix3_initfn;
+    k->config_write = piix3_write_config_xen;
+    k->vendor_id = PCI_VENDOR_ID_INTEL;
+    k->device_id = PCI_DEVICE_ID_INTEL_82371SB_0;
+    k->class_id = PCI_CLASS_BRIDGE_ISA;
+}
+
+static DeviceInfo piix3_xen_info = {
+    .name = "PIIX3-xen",
+    .desc = "ISA bridge",
+    .size = sizeof(PIIX3State),
+    .vmsd = &vmstate_piix3,
+    .no_user = 1,
+    .class_init = piix3_xen_class_init,
 };
 
 static void piix3_register(void)
 {
-    pci_qdev_register_many(piix3_info);
+    pci_qdev_register(piix3_info);
+    pci_qdev_register(piix3_xen_info);
 }
 
 device_init(piix3_register);
