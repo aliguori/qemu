@@ -296,18 +296,10 @@ static const VMStateDescription vmstate_milkymist_softusb = {
 };
 
 static Property milkymist_softusb_properties[] = {
-    DEFINE_PROP_UINT32(,
-    "pmem_base", MilkymistSoftUsbState, pmem_base, 0xa0000000,
-    ),
-    DEFINE_PROP_UINT32(,
-    "pmem_size", MilkymistSoftUsbState, pmem_size, 0x00001000,
-    ),
-    DEFINE_PROP_UINT32(,
-    "dmem_base", MilkymistSoftUsbState, dmem_base, 0xa0020000,
-    ),
-    DEFINE_PROP_UINT32(,
-    "dmem_size", MilkymistSoftUsbState, dmem_size, 0x00002000,
-    ),
+    DEFINE_PROP_UINT32("pmem_base", MilkymistSoftUsbState, pmem_base, 0xa0000000),
+    DEFINE_PROP_UINT32("pmem_size", MilkymistSoftUsbState, pmem_size, 0x00001000),
+    DEFINE_PROP_UINT32("dmem_base", MilkymistSoftUsbState, dmem_base, 0xa0020000),
+    DEFINE_PROP_UINT32("dmem_size", MilkymistSoftUsbState, dmem_size, 0x00002000),
     DEFINE_PROP_END_OF_LIST(),
 };
 
