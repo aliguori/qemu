@@ -2268,7 +2268,7 @@ static void ehci_class_init(ObjectClass *klass, void *data)
 
     k->init = usb_ehci_initfn;
     k->vendor_id = PCI_VENDOR_ID_INTEL;
-    k->device_id = PCI_DEVICE_ID_INTEL_82801D, /* ich4 */;
+    k->device_id = PCI_DEVICE_ID_INTEL_82801D; /* ich4 */
     k->revision = 0x10;
     k->class_id = PCI_CLASS_SERIAL_USB;
 }
@@ -2373,8 +2373,8 @@ static int usb_ehci_initfn(PCIDevice *dev)
 
 static void ehci_register(void)
 {
-    pci_qdev_register(ehci_info);
-    pci_qdev_register(ich9_ehci_info);
+    pci_qdev_register(&ehci_info);
+    pci_qdev_register(&ich9_ehci_info);
 }
 device_init(ehci_register);
 
