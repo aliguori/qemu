@@ -145,7 +145,6 @@ typedef struct USBBus USBBus;
 typedef struct USBBusOps USBBusOps;
 typedef struct USBPort USBPort;
 typedef struct USBDevice USBDevice;
-typedef struct USBDeviceInfo USBDeviceInfo;
 typedef struct USBPacket USBPacket;
 
 typedef struct USBDesc USBDesc;
@@ -254,10 +253,6 @@ struct USBDevice {
     QLIST_HEAD(, USBDescString) strings;
     const USBDescDevice *device;
     const USBDescConfig *config;
-};
-
-struct USBDeviceInfo {
-    DeviceInfo qdev;
 };
 
 typedef struct USBPortOps {
@@ -381,7 +376,7 @@ struct USBBusOps {
 
 void usb_bus_new(USBBus *bus, USBBusOps *ops, DeviceState *host);
 USBBus *usb_bus_find(int busnr);
-void usb_qdev_register(USBDeviceInfo *info,
+void usb_qdev_register(DeviceInfo *info,
                        const char *usbdevice_name,
                        USBDevice *(*usbdevice_init)(const char *params));
 USBDevice *usb_create(USBBus *bus, const char *name);

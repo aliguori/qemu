@@ -132,16 +132,25 @@ static int virtconsole_exitfn(VirtIOSerialPort *port)
     return 0;
 }
 
-static VirtIOSerialPortInfo virtconsole_info = {
-    .qdev.name     = "virtconsole",
-    .qdev.size     = sizeof(VirtConsole),
-    .is_console    = true,
-    .init          = virtconsole_initfn,
-    .exit          = virtconsole_exitfn,
-    .qdev.props = (Property[]) {
-        DEFINE_PROP_CHR("chardev", VirtConsole, chr),
-        DEFINE_PROP_END_OF_LIST(),
-    },
+static Property virtconsole_properties[] = {
+    DEFINE_PROP_CHR("chardev", VirtConsole, chr),
+    DEFINE_PROP_END_OF_LIST(),
+};
+
+static void virtconsole_class_init(ObjectClass *klass, void *data)
+{
+    VirtIOSerialPortClass *k = VIRTIO_SERIAL_PORT_CLASS(klass);
+
+    k->is_console = true;
+    k->init = virtconsole_initfn;
+    k->exit = virtconsole_exitfn;
+}
+
+static DeviceInfo virtconsole_info = {
+    .name = "virtconsole",
+    .size = sizeof(VirtConsole),
+    .props = virtconsole_properties,
+    .class_init = virtconsole_class_init,
 };
 
 static void virtconsole_register(void)
@@ -150,15 +159,24 @@ static void virtconsole_register(void)
 }
 device_init(virtconsole_register)
 
-static VirtIOSerialPortInfo virtserialport_info = {
-    .qdev.name     = "virtserialport",
-    .qdev.size     = sizeof(VirtConsole),
-    .init          = virtconsole_initfn,
-    .exit          = virtconsole_exitfn,
-    .qdev.props = (Property[]) {
-        DEFINE_PROP_CHR("chardev", VirtConsole, chr),
-        DEFINE_PROP_END_OF_LIST(),
-    },
+static Property virtserialport_properties[] = {
+    DEFINE_PROP_CHR("chardev", VirtConsole, chr),
+    DEFINE_PROP_END_OF_LIST(),
+};
+
+static void virtserialport_class_init(ObjectClass *klass, void *data)
+{
+    VirtIOSerialPortClass *k = VIRTIO_SERIAL_PORT_CLASS(klass);
+
+    k->init = virtconsole_initfn;
+    k->exit = virtconsole_exitfn;
+}
+
+static DeviceInfo virtserialport_info = {
+    .name = "virtserialport",
+    .size = sizeof(VirtConsole),
+    .props = virtserialport_properties,
+    .class_init = virtserialport_class_init,
 };
 
 static void virtserialport_register(void)

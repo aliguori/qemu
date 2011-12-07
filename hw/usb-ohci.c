@@ -1834,32 +1834,50 @@ static int ohci_init_pxa(SysBusDevice *dev)
     return 0;
 }
 
-static PCIDeviceInfo ohci_pci_info = {
-    .qdev.name    = "pci-ohci",
-    .qdev.desc    = "Apple USB Controller",
-    .qdev.size    = sizeof(OHCIPCIState),
-    .init         = usb_ohci_initfn_pci,
-    .vendor_id    = PCI_VENDOR_ID_APPLE,
-    .device_id    = PCI_DEVICE_ID_APPLE_IPID_USB,
-    .class_id     = PCI_CLASS_SERIAL_USB,
-    .qdev.props   = (Property[]) {
-        DEFINE_PROP_STRING("masterbus", OHCIPCIState, masterbus),
-        DEFINE_PROP_UINT32("num-ports", OHCIPCIState, num_ports, 3),
-        DEFINE_PROP_UINT32("firstport", OHCIPCIState, firstport, 0),
-        DEFINE_PROP_END_OF_LIST(),
-    },
+static Property ohci_pci_properties[] = {
+    DEFINE_PROP_STRING("masterbus", OHCIPCIState, masterbus),
+    DEFINE_PROP_UINT32("num-ports", OHCIPCIState, num_ports, 3),
+    DEFINE_PROP_UINT32("firstport", OHCIPCIState, firstport, 0),
+    DEFINE_PROP_END_OF_LIST(),
 };
 
-static SysBusDeviceInfo ohci_sysbus_info = {
-    .init         = ohci_init_pxa,
-    .qdev.name    = "sysbus-ohci",
-    .qdev.desc    = "OHCI USB Controller",
-    .qdev.size    = sizeof(OHCISysBusState),
-    .qdev.props = (Property[]) {
-        DEFINE_PROP_UINT32("num-ports", OHCISysBusState, num_ports, 3),
-        DEFINE_PROP_TADDR("dma-offset", OHCISysBusState, dma_offset, 3),
-        DEFINE_PROP_END_OF_LIST(),
-    }
+static void ohci_pci_class_init(ObjectClass *klass, void *data)
+{
+    PCIDeviceClass *k = PCI_DEVICE_CLASS(klass);
+
+    k->init = usb_ohci_initfn_pci;
+    k->vendor_id = PCI_VENDOR_ID_APPLE;
+    k->device_id = PCI_DEVICE_ID_APPLE_IPID_USB;
+    k->class_id = PCI_CLASS_SERIAL_USB;
+}
+
+static DeviceInfo ohci_pci_info = {
+    .name = "pci-ohci",
+    .desc = "Apple USB Controller",
+    .size = sizeof(OHCIPCIState),
+    .props = ohci_pci_properties,
+    .class_init = ohci_pci_class_init,
+};
+
+static Property ohci_sysbus_properties[] = {
+    DEFINE_PROP_UINT32("num-ports", OHCISysBusState, num_ports, 3),
+    DEFINE_PROP_TADDR("dma-offset", OHCISysBusState, dma_offset, 3),
+    DEFINE_PROP_END_OF_LIST(),
+};
+
+static void ohci_sysbus_class_init(ObjectClass *klass, void *data)
+{
+    SysBusDeviceClass *k = SYS_BUS_DEVICE_CLASS(klass);
+
+    k->init = ohci_init_pxa;
+}
+
+static DeviceInfo ohci_sysbus_info = {
+    .name = "sysbus-ohci",
+    .desc = "OHCI USB Controller",
+    .size = sizeof(OHCISysBusState),
+    .props = ohci_sysbus_properties,
+    .class_init = ohci_sysbus_class_init,
 };
 
 static void ohci_register(void)

@@ -535,15 +535,24 @@ static int syborg_fb_init(SysBusDevice *dev)
     return 0;
 }
 
-static SysBusDeviceInfo syborg_fb_info = {
-    .init = syborg_fb_init,
-    .qdev.name  = "syborg,framebuffer",
-    .qdev.size  = sizeof(SyborgFBState),
-    .qdev.props = (Property[]) {
-        DEFINE_PROP_UINT32("width",  SyborgFBState, cols, 0),
-        DEFINE_PROP_UINT32("height", SyborgFBState, rows, 0),
-        DEFINE_PROP_END_OF_LIST(),
-    }
+static Property syborg_fb_properties[] = {
+    DEFINE_PROP_UINT32("width",  SyborgFBState, cols, 0),
+    DEFINE_PROP_UINT32("height", SyborgFBState, rows, 0),
+    DEFINE_PROP_END_OF_LIST(),
+};
+
+static void syborg_fb_class_init(ObjectClass *klass, void *data)
+{
+    SysBusDeviceClass *k = SYS_BUS_DEVICE_CLASS(klass);
+
+    k->init = syborg_fb_init;
+}
+
+static DeviceInfo syborg_fb_info = {
+    .name = "syborg,framebuffer",
+    .size = sizeof(SyborgFBState),
+    .props = syborg_fb_properties,
+    .class_init = syborg_fb_class_init,
 };
 
 static void syborg_fb_register_devices(void)

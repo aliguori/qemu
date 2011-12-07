@@ -589,11 +589,11 @@ static void parallel_isa_class_initfn(ObjectClass *klass, void *data)
     ic->init = parallel_isa_initfn;
 }
 
-static ISADeviceInfo parallel_isa_info = {
-    .qdev.name  = "isa-parallel",
-    .qdev.size  = sizeof(ISAParallelState),
-    .qdev.class_init       = parallel_isa_class_initfn,
-    .qdev.props = (Property[]) {
+static DeviceInfo parallel_isa_info = {
+    .name  = "isa-parallel",
+    .size  = sizeof(ISAParallelState),
+    .class_init       = parallel_isa_class_initfn,
+    .props = (Property[]) {
         DEFINE_PROP_UINT32("index", ISAParallelState, index,   -1),
         DEFINE_PROP_HEX32("iobase", ISAParallelState, iobase,  -1),
         DEFINE_PROP_UINT32("irq",   ISAParallelState, isairq,  7),
