@@ -255,7 +255,7 @@ machine_init(tosapda_machine_init);
 
 static void tosa_dac_class_init(ObjectClass *klass, void *data)
 {
-    I2CSlaveClass *k = I2C_SLAVE_INFO(klass);
+    I2CSlaveClass *k = I2C_SLAVE_CLASS(klass);
 
     k->init = tosa_dac_init;
     k->event = tosa_dac_event;
