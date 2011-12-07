@@ -55,6 +55,9 @@ typedef struct VIOsPAPR_CRQ {
     int(*SendFunc)(struct VIOsPAPRDevice *vdev, uint8_t *crq);
 } VIOsPAPR_CRQ;
 
+typedef struct VIOsPAPRDevice VIOsPAPRDevice;
+typedef struct VIOsPAPRBus VIOsPAPRBus;
+
 typedef struct VIOsPAPRDeviceClass {
     DeviceClass parent_class;
 
@@ -65,7 +68,7 @@ typedef struct VIOsPAPRDeviceClass {
     int (*devnode)(VIOsPAPRDevice *dev, void *fdt, int node_off);
 } VIOsPAPRDeviceClass;
 
-typedef struct VIOsPAPRDevice {
+struct VIOsPAPRDevice {
     DeviceState qdev;
     uint32_t reg;
     uint32_t flags;
@@ -77,16 +80,16 @@ typedef struct VIOsPAPRDevice {
     VIOsPAPR_RTCE *rtce_table;
     int kvmtce_fd;
     VIOsPAPR_CRQ crq;
-} VIOsPAPRDevice;
+};
 
 #define DEFINE_SPAPR_PROPERTIES(type, field, default_reg, default_dma_window) \
         DEFINE_PROP_UINT32("reg", type, field.reg, default_reg), \
         DEFINE_PROP_UINT32("dma-window", type, field.rtce_window_size, \
                            default_dma_window)
 
-typedef struct VIOsPAPRBus {
+struct VIOsPAPRBus {
     BusState bus;
-} VIOsPAPRBus;
+};
 
 extern VIOsPAPRBus *spapr_vio_bus_init(void);
 extern VIOsPAPRDevice *spapr_vio_find_by_reg(VIOsPAPRBus *bus, uint32_t reg);
