@@ -282,11 +282,7 @@ static SysBusDeviceInfo mv88w8618_audio_info = {
     .qdev.reset = mv88w8618_audio_reset,
     .qdev.vmsd  = &mv88w8618_audio_vmsd,
     .qdev.props = (Property[]) {
-        {
-            .name   = "wm8750",
-            .info   = &qdev_prop_ptr,
-            .offset = offsetof(mv88w8618_audio_state, wm),
-        },
+        DEFINE_PROP_PTR("wm8750", mv88w8618_audio_state, wm),
         {/* end of list */}
     }
 };
