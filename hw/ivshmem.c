@@ -792,7 +792,7 @@ static DeviceInfo ivshmem_info = {
 
 static void ivshmem_register_devices(void)
 {
-    pci_qdev_register(&ivshmem_info);
+    pci_qdev_register(&ivshmem_info, TYPE_PCI_DEVICE);
 }
 
 device_init(ivshmem_register_devices)

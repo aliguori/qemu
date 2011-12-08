@@ -513,6 +513,6 @@ static DeviceInfo i8042_info = {
 
 static void i8042_register(void)
 {
-    isa_qdev_register(&i8042_info);
+    isa_qdev_register(&i8042_info, TYPE_ISA_DEVICE);
 }
 device_init(i8042_register)

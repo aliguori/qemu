@@ -96,7 +96,7 @@ static DeviceInfo realview_i2c_info = {
 
 static void realview_register_devices(void)
 {
-    sysbus_register_withprop(&realview_i2c_info);
+    sysbus_register_withprop(&realview_i2c_info, TYPE_SYS_BUS_DEVICE);
 }
 
 /* Board init.  */

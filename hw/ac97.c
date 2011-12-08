@@ -1369,7 +1369,7 @@ static DeviceInfo ac97_info = {
 
 static void ac97_register (void)
 {
-    pci_qdev_register (&ac97_info);
+    pci_qdev_register(&ac97_info, TYPE_PCI_DEVICE);
 }
 device_init (ac97_register);
 

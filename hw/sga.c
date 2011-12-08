@@ -56,7 +56,7 @@ static DeviceInfo sga_info = {
 
 static void sga_register(void)
 {
-      isa_qdev_register(&sga_info);
+      isa_qdev_register(&sga_info, TYPE_ISA_DEVICE);
 }
 
 device_init(sga_register);

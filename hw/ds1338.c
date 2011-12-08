@@ -133,7 +133,7 @@ static DeviceInfo ds1338_info = {
 
 static void ds1338_register_devices(void)
 {
-    i2c_register_slave(&ds1338_info);
+    i2c_register_slave_subclass(&ds1338_info, TYPE_I2C_SLAVE);
 }
 
 device_init(ds1338_register_devices)

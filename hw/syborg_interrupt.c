@@ -241,7 +241,7 @@ static DeviceInfo syborg_int_info = {
 
 static void syborg_interrupt_register_devices(void)
 {
-    sysbus_register_withprop(&syborg_int_info);
+    sysbus_register_withprop(&syborg_int_info, TYPE_SYS_BUS_DEVICE);
 }
 
 device_init(syborg_interrupt_register_devices)

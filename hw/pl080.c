@@ -414,8 +414,8 @@ static DeviceInfo pl081_info = {
    they implement (8 and 2 respectively).  */
 static void pl080_register_devices(void)
 {
-    sysbus_register_withprop(&pl080_info);
-    sysbus_register_withprop(&pl081_info);
+    sysbus_register_withprop(&pl080_info, TYPE_SYS_BUS_DEVICE);
+    sysbus_register_withprop(&pl081_info, TYPE_SYS_BUS_DEVICE);
 }
 
 device_init(pl080_register_devices)

@@ -180,7 +180,7 @@ struct VirtIOSerialPort {
  * Individual ports/apps should call this function to register the port
  * with the virtio-serial bus
  */
-void virtio_serial_port_qdev_register(DeviceInfo *info);
+void virtio_serial_port_qdev_register(DeviceInfo *info, const char *parent);
 
 /*
  * Open a connection to the port

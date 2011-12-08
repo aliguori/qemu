@@ -512,9 +512,9 @@ static DeviceInfo pl111_info = {
 
 static void pl110_register_devices(void)
 {
-    sysbus_register_withprop(&pl110_info);
-    sysbus_register_withprop(&pl110_versatile_info);
-    sysbus_register_withprop(&pl111_info);
+    sysbus_register_withprop(&pl110_info, TYPE_SYS_BUS_DEVICE);
+    sysbus_register_withprop(&pl110_versatile_info, TYPE_SYS_BUS_DEVICE);
+    sysbus_register_withprop(&pl111_info, TYPE_SYS_BUS_DEVICE);
 }
 
 device_init(pl110_register_devices)

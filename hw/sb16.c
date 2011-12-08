@@ -1415,6 +1415,6 @@ static DeviceInfo sb16_info = {
 
 static void sb16_register (void)
 {
-    isa_qdev_register (&sb16_info);
+    isa_qdev_register(&sb16_info, TYPE_ISA_DEVICE);
 }
 device_init (sb16_register)

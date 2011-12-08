@@ -240,7 +240,7 @@ static DeviceInfo xilinx_timer_info = {
 
 static void xilinx_timer_register(void)
 {
-    sysbus_register_withprop(&xilinx_timer_info);
+    sysbus_register_withprop(&xilinx_timer_info, TYPE_SYS_BUS_DEVICE);
 }
 
 device_init(xilinx_timer_register)

@@ -336,7 +336,7 @@ static DeviceInfo milkymist_ac97_info = {
 
 static void milkymist_ac97_register(void)
 {
-    sysbus_register_withprop(&milkymist_ac97_info);
+    sysbus_register_withprop(&milkymist_ac97_info, TYPE_SYS_BUS_DEVICE);
 }
 
 device_init(milkymist_ac97_register)

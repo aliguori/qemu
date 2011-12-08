@@ -822,13 +822,13 @@ static int virtser_port_qdev_exit(DeviceState *qdev)
     return 0;
 }
 
-void virtio_serial_port_qdev_register(DeviceInfo *info)
+void virtio_serial_port_qdev_register(DeviceInfo *info, const char *parent)
 {
     info->init = virtser_port_qdev_init;
     info->bus_info = &virtser_bus_info;
     info->exit = virtser_port_qdev_exit;
     info->unplug = qdev_simple_unplug_cb;
-    qdev_register_subclass(info, TYPE_VIRTIO_SERIAL_PORT);
+    qdev_register_subclass(info, parent);
 }
 
 VirtIODevice *virtio_serial_init(DeviceState *dev, virtio_serial_conf *conf)

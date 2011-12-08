@@ -321,7 +321,7 @@ static DeviceInfo milkymist_softusb_info = {
 
 static void milkymist_softusb_register(void)
 {
-    sysbus_register_withprop(&milkymist_softusb_info);
+    sysbus_register_withprop(&milkymist_softusb_info, TYPE_SYS_BUS_DEVICE);
 }
 
 device_init(milkymist_softusb_register)

@@ -1130,8 +1130,8 @@ static void spitz_register_devices(void)
 {
     ssi_register_slave(&corgi_ssp_info);
     ssi_register_slave(&spitz_lcdtg_info);
-    sysbus_register_withprop(&spitz_keyboard_info);
-    sysbus_register_withprop(&sl_nand_info);
+    sysbus_register_withprop(&spitz_keyboard_info, TYPE_SYS_BUS_DEVICE);
+    sysbus_register_withprop(&sl_nand_info, TYPE_SYS_BUS_DEVICE);
 }
 
 device_init(spitz_register_devices)

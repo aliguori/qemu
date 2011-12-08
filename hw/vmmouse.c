@@ -290,6 +290,6 @@ static DeviceInfo vmmouse_info = {
 
 static void vmmouse_dev_register(void)
 {
-    isa_qdev_register(&vmmouse_info);
+    isa_qdev_register(&vmmouse_info, TYPE_ISA_DEVICE);
 }
 device_init(vmmouse_dev_register)
