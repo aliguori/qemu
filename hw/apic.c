@@ -1014,24 +1014,26 @@ static Property apic_properties[] = {
 
 static void apic_class_init(ObjectClass *klass, void *data)
 {
+    DeviceClass *dc = DEVICE_CLASS(klass);
     SysBusDeviceClass *k = SYS_BUS_DEVICE_CLASS(klass);
 
     k->init = apic_init1;
+    dc->no_user = 1;
+    dc->reset = apic_reset;
+    dc->vmsd = &vmstate_apic;
+    dc->props = apic_properties;
 }
 
-static DeviceInfo apic_info = {
-    .name = "apic",
-    .size = sizeof(APICState),
-    .vmsd = &vmstate_apic,
-    .reset = apic_reset,
-    .no_user = 1,
-    .props = apic_properties,
-    .class_init = apic_class_init,
+static TypeInfo apic_info = {
+    .name          = "apic",
+    .parent        = TYPE_SYS_BUS_DEVICE,
+    .instance_size = sizeof(APICState),
+    .class_init    = apic_class_init,
 };
 
 static void apic_register_devices(void)
 {
-    sysbus_register_withprop(&apic_info);
+    type_register_static(&apic_info);
 }
 
 device_init(apic_register_devices)

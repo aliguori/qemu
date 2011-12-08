@@ -556,30 +556,34 @@ qemu_irq *i8259_init(ISABus *bus, qemu_irq parent_irq)
     return irq_set;
 }
 
+static Property i8259_properties[] = {
+    DEFINE_PROP_HEX32("iobase", PicState, iobase,  -1),
+    DEFINE_PROP_HEX32("elcr_addr", PicState, elcr_addr,  -1),
+    DEFINE_PROP_HEX8("elcr_mask", PicState, elcr_mask,  -1),
+    DEFINE_PROP_BIT("master", PicState, master,  0, false),
+    DEFINE_PROP_END_OF_LIST(),
+};
+
 static void pic_class_initfn(ObjectClass *klass, void *data)
 {
+    DeviceClass *dc = DEVICE_CLASS(klass);
     ISADeviceClass *ic = ISA_DEVICE_CLASS(klass);
     ic->init = pic_initfn;
+    dc->no_user = 1;
+    dc->reset = pic_reset;
+    dc->vmsd = &vmstate_pic;
+    dc->props = i8259_properties;
 }
 
-static DeviceInfo i8259_info = {
-    .name     = "isa-i8259",
-    .size     = sizeof(PicState),
-    .vmsd     = &vmstate_pic,
-    .reset    = pic_reset,
-    .no_user  = 1,
-    .class_init          = pic_class_initfn,
-    .props = (Property[]) {
-        DEFINE_PROP_HEX32("iobase", PicState, iobase,  -1),
-        DEFINE_PROP_HEX32("elcr_addr", PicState, elcr_addr,  -1),
-        DEFINE_PROP_HEX8("elcr_mask", PicState, elcr_mask,  -1),
-        DEFINE_PROP_BIT("master", PicState, master,  0, false),
-        DEFINE_PROP_END_OF_LIST(),
-    },
+static TypeInfo i8259_info = {
+    .name          = "isa-i8259",
+    .parent        = TYPE_ISA_DEVICE,
+    .instance_size = sizeof(PicState),
+    .class_init    = pic_class_initfn,
 };
 
 static void pic_register(void)
 {
-    isa_qdev_register(&i8259_info);
+    type_register_static(&i8259_info);
 }
 device_init(pic_register)
