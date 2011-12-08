@@ -1460,7 +1460,7 @@ static struct DeviceInfo usb_host_dev_info = {
 
 static void usb_host_register_devices(void)
 {
-    usb_qdev_register(&usb_host_dev_info);
+    usb_qdev_register(&usb_host_dev_info, TYPE_USB_DEVICE);
     usb_legacy_register("usb-host", "host", usb_host_device_open);
 }
 device_init(usb_host_register_devices)

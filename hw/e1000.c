@@ -1220,7 +1220,7 @@ static DeviceInfo e1000_info = {
 
 static void e1000_register_devices(void)
 {
-    pci_qdev_register(&e1000_info);
+    pci_qdev_register(&e1000_info, TYPE_PCI_DEVICE);
 }
 
 device_init(e1000_register_devices)

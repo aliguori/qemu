@@ -154,13 +154,13 @@ static int sysbus_device_init(DeviceState *dev, DeviceInfo *base)
     return sbc->init(sd);
 }
 
-void sysbus_register_withprop(DeviceInfo *info)
+void sysbus_register_withprop(DeviceInfo *info, const char *parent)
 {
     info->init = sysbus_device_init;
     info->bus_info = &system_bus_info;
 
     assert(info->size >= sizeof(SysBusDevice));
-    qdev_register_subclass(info, TYPE_SYS_BUS_DEVICE);
+    qdev_register_subclass(info, parent);
 }
 
 DeviceState *sysbus_create_varargs(const char *name,

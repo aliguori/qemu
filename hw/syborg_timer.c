@@ -234,7 +234,7 @@ static DeviceInfo syborg_timer_info = {
 
 static void syborg_timer_register_devices(void)
 {
-    sysbus_register_withprop(&syborg_timer_info);
+    sysbus_register_withprop(&syborg_timer_info, TYPE_SYS_BUS_DEVICE);
 }
 
 device_init(syborg_timer_register_devices)

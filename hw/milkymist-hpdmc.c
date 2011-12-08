@@ -162,7 +162,7 @@ static DeviceInfo milkymist_hpdmc_info = {
 
 static void milkymist_hpdmc_register(void)
 {
-    sysbus_register_withprop(&milkymist_hpdmc_info);
+    sysbus_register_withprop(&milkymist_hpdmc_info, TYPE_SYS_BUS_DEVICE);
 }
 
 device_init(milkymist_hpdmc_register)

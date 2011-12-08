@@ -318,6 +318,6 @@ static DeviceInfo pxa2xx_pic_info = {
 
 static void pxa2xx_pic_register(void)
 {
-    sysbus_register_withprop(&pxa2xx_pic_info);
+    sysbus_register_withprop(&pxa2xx_pic_info, TYPE_SYS_BUS_DEVICE);
 }
 device_init(pxa2xx_pic_register);

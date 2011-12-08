@@ -123,6 +123,6 @@ static DeviceInfo piix4_info = {
 
 static void piix4_register(void)
 {
-    pci_qdev_register(&piix4_info);
+    pci_qdev_register(&piix4_info, TYPE_PCI_DEVICE);
 }
 device_init(piix4_register);

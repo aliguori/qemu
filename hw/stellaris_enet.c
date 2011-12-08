@@ -441,7 +441,7 @@ static DeviceInfo stellaris_enet_info = {
 
 static void stellaris_enet_register_devices(void)
 {
-    sysbus_register_withprop(&stellaris_enet_info);
+    sysbus_register_withprop(&stellaris_enet_info, TYPE_SYS_BUS_DEVICE);
 }
 
 device_init(stellaris_enet_register_devices)

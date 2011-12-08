@@ -513,7 +513,7 @@ static DeviceInfo lm8323_info = {
 
 static void lm832x_register_devices(void)
 {
-    i2c_register_slave(&lm8323_info);
+    i2c_register_slave_subclass(&lm8323_info, TYPE_I2C_SLAVE);
 }
 
 device_init(lm832x_register_devices)

@@ -596,7 +596,7 @@ static DeviceInfo emulated_card_info = {
 
 static void ccid_card_emulated_register_devices(void)
 {
-    ccid_card_qdev_register(&emulated_card_info);
+    ccid_card_qdev_register(&emulated_card_info, TYPE_CCID_CARD);
 }
 
 device_init(ccid_card_emulated_register_devices)

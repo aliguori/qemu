@@ -194,8 +194,8 @@ static DeviceInfo pl050_mouse_info = {
 
 static void pl050_register_devices(void)
 {
-    sysbus_register_withprop(&pl050_kbd_info);
-    sysbus_register_withprop(&pl050_mouse_info);
+    sysbus_register_withprop(&pl050_kbd_info, TYPE_SYS_BUS_DEVICE);
+    sysbus_register_withprop(&pl050_mouse_info, TYPE_SYS_BUS_DEVICE);
 }
 
 device_init(pl050_register_devices)

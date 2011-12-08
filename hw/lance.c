@@ -162,6 +162,6 @@ static DeviceInfo lance_info = {
 
 static void lance_register_devices(void)
 {
-    sysbus_register_withprop(&lance_info);
+    sysbus_register_withprop(&lance_info, TYPE_SYS_BUS_DEVICE);
 }
 device_init(lance_register_devices)

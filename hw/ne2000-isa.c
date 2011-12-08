@@ -102,7 +102,7 @@ static DeviceInfo ne2000_isa_info = {
 
 static void ne2000_isa_register_devices(void)
 {
-    isa_qdev_register(&ne2000_isa_info);
+    isa_qdev_register(&ne2000_isa_info, TYPE_ISA_DEVICE);
 }
 
 device_init(ne2000_isa_register_devices)

@@ -624,11 +624,11 @@ static struct DeviceInfo usb_keyboard_info = {
 
 static void usb_hid_register_devices(void)
 {
-    usb_qdev_register(&usb_tablet_info);
+    usb_qdev_register(&usb_tablet_info, TYPE_USB_DEVICE);
     usb_legacy_register("usb-tablet", "tablet", NULL);
-    usb_qdev_register(&usb_mouse_info);
+    usb_qdev_register(&usb_mouse_info, TYPE_USB_DEVICE);
     usb_legacy_register("usb-mouse", "mouse", NULL);
-    usb_qdev_register(&usb_keyboard_info);
+    usb_qdev_register(&usb_keyboard_info, TYPE_USB_DEVICE);
     usb_legacy_register("usb-kbd", "keyboard", NULL);
 }
 device_init(usb_hid_register_devices)

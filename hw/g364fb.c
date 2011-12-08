@@ -577,7 +577,7 @@ static DeviceInfo g364fb_sysbus_info = {
 
 static void g364fb_register(void)
 {
-    sysbus_register_withprop(&g364fb_sysbus_info);
+    sysbus_register_withprop(&g364fb_sysbus_info, TYPE_SYS_BUS_DEVICE);
 }
 
 device_init(g364fb_register);

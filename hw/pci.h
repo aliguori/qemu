@@ -464,7 +464,7 @@ pci_quad_test_and_set_mask(uint8_t *config, uint64_t mask)
     return val & mask;
 }
 
-void pci_qdev_register(DeviceInfo *info);
+void pci_qdev_register(DeviceInfo *info, const char *parent);
 
 PCIDevice *pci_create_multifunction(PCIBus *bus, int devfn, bool multifunction,
                                     const char *name);

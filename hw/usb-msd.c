@@ -665,7 +665,7 @@ static struct DeviceInfo msd_info = {
 
 static void usb_msd_register_devices(void)
 {
-    usb_qdev_register(&msd_info);
+    usb_qdev_register(&msd_info, TYPE_USB_DEVICE);
     usb_legacy_register("usb-storage", "disk", usb_msd_init);
 }
 device_init(usb_msd_register_devices)

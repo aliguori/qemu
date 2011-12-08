@@ -482,7 +482,7 @@ static DeviceInfo milkymist_tmu2_info = {
 
 static void milkymist_tmu2_register(void)
 {
-    sysbus_register_withprop(&milkymist_tmu2_info);
+    sysbus_register_withprop(&milkymist_tmu2_info, TYPE_SYS_BUS_DEVICE);
 }
 
 device_init(milkymist_tmu2_register)
