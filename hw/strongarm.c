@@ -1595,11 +1595,11 @@ StrongARMState *sa1110_init(MemoryRegion *sysmem,
 
 static void strongarm_register_devices(void)
 {
-    sysbus_register_withprop(&strongarm_pic_info);
-    sysbus_register_withprop(&strongarm_rtc_sysbus_info);
-    sysbus_register_withprop(&strongarm_gpio_info);
-    sysbus_register_withprop(&strongarm_ppc_info);
-    sysbus_register_withprop(&strongarm_uart_info);
-    sysbus_register_withprop(&strongarm_ssp_info);
+    sysbus_register_withprop(&strongarm_pic_info, TYPE_SYS_BUS_DEVICE);
+    sysbus_register_withprop(&strongarm_rtc_sysbus_info, TYPE_SYS_BUS_DEVICE);
+    sysbus_register_withprop(&strongarm_gpio_info, TYPE_SYS_BUS_DEVICE);
+    sysbus_register_withprop(&strongarm_ppc_info, TYPE_SYS_BUS_DEVICE);
+    sysbus_register_withprop(&strongarm_uart_info, TYPE_SYS_BUS_DEVICE);
+    sysbus_register_withprop(&strongarm_ssp_info, TYPE_SYS_BUS_DEVICE);
 }
 device_init(strongarm_register_devices)

@@ -338,7 +338,7 @@ static void z2_init(ram_addr_t ram_size,
         qdev_get_gpio_in(cpu->gpio, Z2_GPIO_SD_DETECT));
 
     ssi_register_slave(&zipit_lcd_info);
-    i2c_register_slave(&aer915_info);
+    i2c_register_slave_subclass(&aer915_info, TYPE_I2C_SLAVE);
     z2_lcd = ssi_create_slave(cpu->ssp[1], "zipit-lcd");
     bus = pxa2xx_i2c_bus(cpu->i2c[0]);
     i2c_create_slave(bus, "aer915", 0x55);

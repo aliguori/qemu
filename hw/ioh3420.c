@@ -237,7 +237,7 @@ static DeviceInfo ioh3420_info = {
 
 static void ioh3420_register(void)
 {
-    pci_qdev_register(&ioh3420_info);
+    pci_qdev_register(&ioh3420_info, TYPE_PCI_DEVICE);
 }
 
 device_init(ioh3420_register);

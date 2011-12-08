@@ -97,7 +97,7 @@ static DeviceInfo empty_slot_info = {
 
 static void empty_slot_register_devices(void)
 {
-    sysbus_register_withprop(&empty_slot_info);
+    sysbus_register_withprop(&empty_slot_info, TYPE_SYS_BUS_DEVICE);
 }
 
 device_init(empty_slot_register_devices);

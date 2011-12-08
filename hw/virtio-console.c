@@ -156,7 +156,7 @@ static DeviceInfo virtconsole_info = {
 
 static void virtconsole_register(void)
 {
-    virtio_serial_port_qdev_register(&virtconsole_info);
+    virtio_serial_port_qdev_register(&virtconsole_info, TYPE_VIRTIO_SERIAL_PORT);
 }
 device_init(virtconsole_register)
 
@@ -182,6 +182,6 @@ static DeviceInfo virtserialport_info = {
 
 static void virtserialport_register(void)
 {
-    virtio_serial_port_qdev_register(&virtserialport_info);
+    virtio_serial_port_qdev_register(&virtserialport_info, TYPE_VIRTIO_SERIAL_PORT);
 }
 device_init(virtserialport_register)

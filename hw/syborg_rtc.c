@@ -147,7 +147,7 @@ static DeviceInfo syborg_rtc_info = {
 
 static void syborg_rtc_register_devices(void)
 {
-    sysbus_qdev_register(&syborg_rtc_info);
+    sysbus_register_withprop(&syborg_rtc_info, TYPE_SYS_BUS_DEVICE);
 }
 
 device_init(syborg_rtc_register_devices)

@@ -137,7 +137,7 @@ static DeviceInfo wdt_ib700_info = {
 static void wdt_ib700_register_devices(void)
 {
     watchdog_add_model(&model);
-    isa_qdev_register(&wdt_ib700_info);
+    isa_qdev_register(&wdt_ib700_info, TYPE_ISA_DEVICE);
 }
 
 device_init(wdt_ib700_register_devices);

@@ -212,13 +212,13 @@ void usb_legacy_register(const char *typename, const char *usbdevice_name,
     }
 }
 
-void usb_qdev_register(DeviceInfo *info)
+void usb_qdev_register(DeviceInfo *info, const char *parent)
 {
     info->bus_info = &usb_bus_info;
     info->init     = usb_qdev_init;
     info->unplug   = qdev_simple_unplug_cb;
     info->exit     = usb_qdev_exit;
-    qdev_register_subclass(info, TYPE_USB_DEVICE);
+    qdev_register_subclass(info, parent);
 }
 
 USBDevice *usb_create(USBBus *bus, const char *name)

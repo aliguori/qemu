@@ -425,7 +425,7 @@ static DeviceInfo arm_sysctl_info = {
 
 static void arm_sysctl_register_devices(void)
 {
-    sysbus_register_withprop(&arm_sysctl_info);
+    sysbus_register_withprop(&arm_sysctl_info, TYPE_SYS_BUS_DEVICE);
 }
 
 device_init(arm_sysctl_register_devices)

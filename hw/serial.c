@@ -901,7 +901,7 @@ static DeviceInfo serial_isa_info = {
 
 static void serial_register_devices(void)
 {
-    isa_qdev_register(&serial_isa_info);
+    isa_qdev_register(&serial_isa_info, TYPE_ISA_DEVICE);
 }
 
 device_init(serial_register_devices)

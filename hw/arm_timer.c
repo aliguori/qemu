@@ -345,8 +345,8 @@ static DeviceInfo sp804_info = {
 
 static void arm_timer_register_devices(void)
 {
-    sysbus_qdev_register(&icp_pit_info);
-    sysbus_qdev_register(&sp804_info);
+    sysbus_register_withprop(&icp_pit_info, TYPE_SYS_BUS_DEVICE);
+    sysbus_register_withprop(&sp804_info, TYPE_SYS_BUS_DEVICE);
 }
 
 device_init(arm_timer_register_devices)

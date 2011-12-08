@@ -285,7 +285,7 @@ static DeviceInfo tosa_ssp_info = {
 
 static void tosa_register_devices(void)
 {
-    i2c_register_slave(&tosa_dac_info);
+    i2c_register_slave_subclass(&tosa_dac_info, TYPE_I2C_SLAVE);
     ssi_register_slave(&tosa_ssp_info);
 }
 

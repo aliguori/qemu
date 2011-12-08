@@ -212,11 +212,6 @@ void i2c_register_slave_subclass(DeviceInfo *info, const char *parent)
     qdev_register_subclass(info, parent);
 }
 
-void i2c_register_slave(DeviceInfo *info)
-{
-    i2c_register_slave_subclass(info, TYPE_I2C_SLAVE);
-}
-
 DeviceState *i2c_create_slave(i2c_bus *bus, const char *name, uint8_t addr)
 {
     DeviceState *dev;

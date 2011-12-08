@@ -205,7 +205,7 @@ static DeviceInfo max7310_info = {
 
 static void max7310_register_devices(void)
 {
-    i2c_register_slave(&max7310_info);
+    i2c_register_slave_subclass(&max7310_info, TYPE_I2C_SLAVE);
 }
 
 device_init(max7310_register_devices)

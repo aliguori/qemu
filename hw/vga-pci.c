@@ -96,6 +96,6 @@ static DeviceInfo vga_info = {
 
 static void vga_register(void)
 {
-    pci_qdev_register(&vga_info);
+    pci_qdev_register(&vga_info, TYPE_PCI_DEVICE);
 }
 device_init(vga_register);
