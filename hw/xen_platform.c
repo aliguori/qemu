@@ -396,7 +396,7 @@ static DeviceInfo xen_platform_info = {
 
 static void xen_platform_register(void)
 {
-    pci_qdev_register(&xen_platform_info);
+    pci_qdev_register(&xen_platform_info, TYPE_PCI_DEVICE);
 }
 
 device_init(xen_platform_register);

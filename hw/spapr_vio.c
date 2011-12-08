@@ -646,13 +646,13 @@ static int spapr_vio_busdev_init(DeviceState *qdev, DeviceInfo *qinfo)
     return pc->init(dev);
 }
 
-void spapr_vio_bus_register_withprop(DeviceInfo *info)
+void spapr_vio_bus_register_withprop(DeviceInfo *info, const char *parent)
 {
     info->init = spapr_vio_busdev_init;
     info->bus_info = &spapr_vio_bus_info;
 
     assert(info->size >= sizeof(VIOsPAPRDevice));
-    qdev_register_subclass(info, TYPE_VIO_SPAPR_DEVICE);
+    qdev_register_subclass(info, parent);
 }
 
 static target_ulong h_vio_signal(CPUState *env, sPAPREnvironment *spapr,
@@ -762,7 +762,7 @@ static TypeInfo spapr_vio_type_info = {
 
 static void spapr_vio_register_devices(void)
 {
-    sysbus_register_withprop(&spapr_vio_bridge_info);
+    sysbus_register_withprop(&spapr_vio_bridge_info, TYPE_SYS_BUS_DEVICE);
     type_register_static(&spapr_vio_type_info);
 }
 

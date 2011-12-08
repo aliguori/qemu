@@ -36,7 +36,7 @@ ISABus *isa_bus_new(DeviceState *dev, MemoryRegion *address_space_io);
 void isa_bus_irqs(qemu_irq *irqs);
 qemu_irq isa_get_irq(int isairq);
 void isa_init_irq(ISADevice *dev, qemu_irq *p, int isairq);
-void isa_qdev_register(DeviceInfo *info);
+void isa_qdev_register(DeviceInfo *info, const char *parent);
 MemoryRegion *isa_address_space(ISADevice *dev);
 ISADevice *isa_create(const char *name);
 ISADevice *isa_try_create(const char *name);

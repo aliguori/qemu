@@ -1192,12 +1192,12 @@ static int ccid_card_init(DeviceState *qdev, DeviceInfo *base)
     return ret;
 }
 
-void ccid_card_qdev_register(DeviceInfo *info)
+void ccid_card_qdev_register(DeviceInfo *info, const char *parent)
 {
     info->bus_info = &ccid_bus_info;
     info->init = ccid_card_init;
     info->exit = ccid_card_exit;
-    qdev_register_subclass(info, TYPE_CCID_CARD);
+    qdev_register_subclass(info, parent);
 }
 
 static int ccid_initfn(USBDevice *dev)
@@ -1360,7 +1360,7 @@ static TypeInfo ccid_card_type_info = {
 static void ccid_register_devices(void)
 {
     type_register_static(&ccid_card_type_info);
-    usb_qdev_register(&ccid_info);
+    usb_qdev_register(&ccid_info, TYPE_USB_DEVICE);
     usb_legacy_register(CCID_DEV_NAME, "ccid", NULL);
 }
 device_init(ccid_register_devices)

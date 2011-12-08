@@ -332,7 +332,7 @@ static DeviceInfo syborg_serial_info = {
 
 static void syborg_serial_register_devices(void)
 {
-    sysbus_register_withprop(&syborg_serial_info);
+    sysbus_register_withprop(&syborg_serial_info, TYPE_SYS_BUS_DEVICE);
 }
 
 device_init(syborg_serial_register_devices)

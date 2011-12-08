@@ -566,6 +566,6 @@ static DeviceInfo pxa2xx_dma_info = {
 
 static void pxa2xx_dma_register(void)
 {
-    sysbus_register_withprop(&pxa2xx_dma_info);
+    sysbus_register_withprop(&pxa2xx_dma_info, TYPE_SYS_BUS_DEVICE);
 }
 device_init(pxa2xx_dma_register);

@@ -136,6 +136,6 @@ static DeviceInfo mpc8544_guts_info = {
 
 static void mpc8544_guts_register(void)
 {
-    sysbus_register_withprop(&mpc8544_guts_info);
+    sysbus_register_withprop(&mpc8544_guts_info, TYPE_SYS_BUS_DEVICE);
 }
 device_init(mpc8544_guts_register);

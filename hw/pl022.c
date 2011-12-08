@@ -300,7 +300,7 @@ static DeviceInfo pl022_info = {
 
 static void pl022_register_devices(void)
 {
-    sysbus_qdev_register(&pl022_info);
+    sysbus_register_withprop(&pl022_info, TYPE_SYS_BUS_DEVICE);
 }
 
 device_init(pl022_register_devices)

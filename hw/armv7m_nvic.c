@@ -406,7 +406,7 @@ static DeviceInfo armv7m_nvic_info = {
 
 static void armv7m_nvic_register_devices(void)
 {
-    sysbus_qdev_register(&armv7m_nvic_info);
+    sysbus_register_withprop(&armv7m_nvic_info, TYPE_SYS_BUS_DEVICE);
 }
 
 device_init(armv7m_nvic_register_devices)

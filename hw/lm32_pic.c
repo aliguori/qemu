@@ -191,7 +191,7 @@ static DeviceInfo lm32_pic_info = {
 
 static void lm32_pic_register(void)
 {
-    sysbus_register_withprop(&lm32_pic_info);
+    sysbus_register_withprop(&lm32_pic_info, TYPE_SYS_BUS_DEVICE);
 }
 
 device_init(lm32_pic_register)

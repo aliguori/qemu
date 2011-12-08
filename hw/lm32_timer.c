@@ -221,7 +221,7 @@ static DeviceInfo lm32_timer_info = {
 
 static void lm32_timer_register(void)
 {
-    sysbus_register_withprop(&lm32_timer_info);
+    sysbus_register_withprop(&lm32_timer_info, TYPE_SYS_BUS_DEVICE);
 }
 
 device_init(lm32_timer_register)

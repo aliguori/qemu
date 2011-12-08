@@ -323,8 +323,8 @@ static DeviceInfo pl061_luminary_info = {
 
 static void pl061_register_devices(void)
 {
-    sysbus_register_withprop(&pl061_info);
-    sysbus_register_withprop(&pl061_luminary_info);
+    sysbus_register_withprop(&pl061_info, TYPE_SYS_BUS_DEVICE);
+    sysbus_register_withprop(&pl061_luminary_info, TYPE_SYS_BUS_DEVICE);
 }
 
 device_init(pl061_register_devices)

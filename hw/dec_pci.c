@@ -138,9 +138,9 @@ static DeviceInfo pci_dec_21154_device_info = {
 
 static void dec_register_devices(void)
 {
-    sysbus_qdev_register(&pci_dec_21154_device_info);
-    pci_qdev_register(&dec_21154_pci_host_info);
-    pci_qdev_register(&dec_21154_pci_bridge_info);
+    sysbus_register_withprop(&pci_dec_21154_device_info, TYPE_SYS_BUS_DEVICE);
+    pci_qdev_register(&dec_21154_pci_host_info, TYPE_PCI_DEVICE);
+    pci_qdev_register(&dec_21154_pci_bridge_info, TYPE_PCI_DEVICE);
 }
 
 device_init(dec_register_devices)

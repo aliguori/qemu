@@ -301,8 +301,8 @@ static DeviceInfo piix4_ide_info = {
 
 static void piix_ide_register(void)
 {
-    pci_qdev_register(&piix3_ide_info);
-    pci_qdev_register(&piix3_ide_xen_info);
-    pci_qdev_register(&piix4_ide_info);
+    pci_qdev_register(&piix3_ide_info, TYPE_PCI_DEVICE);
+    pci_qdev_register(&piix3_ide_xen_info, TYPE_PCI_DEVICE);
+    pci_qdev_register(&piix4_ide_info, TYPE_PCI_DEVICE);
 }
 device_init(piix_ide_register);

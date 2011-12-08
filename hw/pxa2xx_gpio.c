@@ -340,6 +340,6 @@ static DeviceInfo pxa2xx_gpio_info = {
 
 static void pxa2xx_gpio_register(void)
 {
-    sysbus_register_withprop(&pxa2xx_gpio_info);
+    sysbus_register_withprop(&pxa2xx_gpio_info, TYPE_SYS_BUS_DEVICE);
 }
 device_init(pxa2xx_gpio_register);

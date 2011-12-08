@@ -1522,13 +1522,13 @@ static int pci_unplug_device(DeviceState *qdev)
                              PCI_HOTPLUG_DISABLED);
 }
 
-void pci_qdev_register(DeviceInfo *info)
+void pci_qdev_register(DeviceInfo *info, const char *parent)
 {
     info->init = pci_qdev_init;
     info->unplug = pci_unplug_device;
     info->exit = pci_unregister_device;
     info->bus_info = &pci_bus_info;
-    qdev_register_subclass(info, TYPE_PCI_DEVICE);
+    qdev_register_subclass(info, parent);
 }
 
 PCIDevice *pci_create_multifunction(PCIBus *bus, int devfn, bool multifunction,

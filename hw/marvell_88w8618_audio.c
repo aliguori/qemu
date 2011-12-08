@@ -292,7 +292,7 @@ static DeviceInfo mv88w8618_audio_info = {
 
 static void mv88w8618_register_devices(void)
 {
-    sysbus_register_withprop(&mv88w8618_audio_info);
+    sysbus_register_withprop(&mv88w8618_audio_info, TYPE_SYS_BUS_DEVICE);
 }
 
 device_init(mv88w8618_register_devices)

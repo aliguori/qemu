@@ -507,7 +507,7 @@ static DeviceInfo axidma_info = {
 
 static void xilinx_axidma_register(void)
 {
-    sysbus_register_withprop(&axidma_info);
+    sysbus_register_withprop(&axidma_info, TYPE_SYS_BUS_DEVICE);
 }
 
 device_init(xilinx_axidma_register)

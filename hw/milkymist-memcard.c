@@ -295,7 +295,7 @@ static DeviceInfo milkymist_memcard_info = {
 
 static void milkymist_memcard_register(void)
 {
-    sysbus_register_withprop(&milkymist_memcard_info);
+    sysbus_register_withprop(&milkymist_memcard_info, TYPE_SYS_BUS_DEVICE);
 }
 
 device_init(milkymist_memcard_register)

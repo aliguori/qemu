@@ -1313,12 +1313,12 @@ static DeviceInfo ich9_uhci3_info = {
 
 static void uhci_register(void)
 {
-    pci_qdev_register(&piix3_uhci_info);
-    pci_qdev_register(&piix4_uhci_info);
-    pci_qdev_register(&vt82c686b_uhci_info);
-    pci_qdev_register(&ich9_uhci1_info);
-    pci_qdev_register(&ich9_uhci2_info);
-    pci_qdev_register(&ich9_uhci3_info);
+    pci_qdev_register(&piix3_uhci_info, TYPE_PCI_DEVICE);
+    pci_qdev_register(&piix4_uhci_info, TYPE_PCI_DEVICE);
+    pci_qdev_register(&vt82c686b_uhci_info, TYPE_PCI_DEVICE);
+    pci_qdev_register(&ich9_uhci1_info, TYPE_PCI_DEVICE);
+    pci_qdev_register(&ich9_uhci2_info, TYPE_PCI_DEVICE);
+    pci_qdev_register(&ich9_uhci3_info, TYPE_PCI_DEVICE);
 }
 device_init(uhci_register);
 

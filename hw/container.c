@@ -21,7 +21,7 @@ static DeviceInfo container_info = {
 
 static void container_init(void)
 {
-    sysbus_register_withprop(&container_info);
+    sysbus_register_withprop(&container_info, TYPE_SYS_BUS_DEVICE);
 }
 
 device_init(container_init);
