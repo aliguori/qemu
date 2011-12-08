@@ -506,8 +506,8 @@ static DeviceInfo apc_info = {
 
 static void slavio_misc_register_devices(void)
 {
-    sysbus_register_withprop(&slavio_misc_info);
-    sysbus_register_withprop(&apc_info);
+    sysbus_register_withprop(&slavio_misc_info, TYPE_SYS_BUS_DEVICE);
+    sysbus_register_withprop(&apc_info, TYPE_SYS_BUS_DEVICE);
 }
 
 device_init(slavio_misc_register_devices)

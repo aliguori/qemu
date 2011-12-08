@@ -640,7 +640,7 @@ static DeviceInfo etraxfs_eth_info = {
 
 static void etraxfs_eth_register(void)
 {
-	sysbus_register_withprop(&etraxfs_eth_info);
+	sysbus_register_withprop(&etraxfs_eth_info, TYPE_SYS_BUS_DEVICE);
 }
 
 device_init(etraxfs_eth_register)

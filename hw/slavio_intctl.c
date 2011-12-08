@@ -464,7 +464,7 @@ static DeviceInfo slavio_intctl_info = {
 
 static void slavio_intctl_register_devices(void)
 {
-    sysbus_register_withprop(&slavio_intctl_info);
+    sysbus_register_withprop(&slavio_intctl_info, TYPE_SYS_BUS_DEVICE);
 }
 
 device_init(slavio_intctl_register_devices)

@@ -245,7 +245,7 @@ static DeviceInfo tmp105_info = {
 
 static void tmp105_register_devices(void)
 {
-    i2c_register_slave(&tmp105_info);
+    i2c_register_slave_subclass(&tmp105_info, TYPE_I2C_SLAVE);
 }
 
 device_init(tmp105_register_devices)

@@ -126,11 +126,11 @@ static int isa_qdev_init(DeviceState *qdev, DeviceInfo *base)
     return 0;
 }
 
-void isa_qdev_register(DeviceInfo *info)
+void isa_qdev_register(DeviceInfo *info, const char *parent)
 {
     info->init = isa_qdev_init;
     info->bus_info = &isa_bus_info;
-    qdev_register_subclass(info, TYPE_ISA_DEVICE);
+    qdev_register_subclass(info, parent);
 }
 
 ISADevice *isa_create(const char *name)
@@ -210,7 +210,7 @@ static TypeInfo isa_device_type_info = {
 
 static void isabus_register_devices(void)
 {
-    sysbus_register_withprop(&isabus_bridge_info);
+    sysbus_register_withprop(&isabus_bridge_info, TYPE_SYS_BUS_DEVICE);
     type_register_static(&isa_device_type_info);
 }
 

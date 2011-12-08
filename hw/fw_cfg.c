@@ -536,7 +536,7 @@ static DeviceInfo fw_cfg_info = {
 
 static void fw_cfg_register_devices(void)
 {
-    sysbus_register_withprop(&fw_cfg_info);
+    sysbus_register_withprop(&fw_cfg_info, TYPE_SYS_BUS_DEVICE);
 }
 
 device_init(fw_cfg_register_devices)

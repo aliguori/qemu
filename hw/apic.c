@@ -1031,7 +1031,7 @@ static DeviceInfo apic_info = {
 
 static void apic_register_devices(void)
 {
-    sysbus_register_withprop(&apic_info);
+    sysbus_register_withprop(&apic_info, TYPE_SYS_BUS_DEVICE);
 }
 
 device_init(apic_register_devices)

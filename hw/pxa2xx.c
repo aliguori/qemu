@@ -2322,10 +2322,10 @@ static DeviceInfo pxa2xx_ssp_info = {
 
 static void pxa2xx_register_devices(void)
 {
-    i2c_register_slave(&pxa2xx_i2c_slave_info);
-    sysbus_qdev_register(&pxa2xx_ssp_info);
-    sysbus_register_withprop(&pxa2xx_i2c_info);
-    sysbus_register_withprop(&pxa2xx_rtc_sysbus_info);
+    i2c_register_slave_subclass(&pxa2xx_i2c_slave_info, TYPE_I2C_SLAVE);
+    sysbus_register_withprop(&pxa2xx_ssp_info, TYPE_SYS_BUS_DEVICE);
+    sysbus_register_withprop(&pxa2xx_i2c_info, TYPE_SYS_BUS_DEVICE);
+    sysbus_register_withprop(&pxa2xx_rtc_sysbus_info, TYPE_SYS_BUS_DEVICE);
 }
 
 device_init(pxa2xx_register_devices)

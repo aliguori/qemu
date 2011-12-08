@@ -2984,6 +2984,6 @@ static DeviceInfo cirrus_vga_info = {
 
 static void cirrus_vga_register(void)
 {
-    pci_qdev_register(&cirrus_vga_info);
+    pci_qdev_register(&cirrus_vga_info, TYPE_PCI_DEVICE);
 }
 device_init(cirrus_vga_register);

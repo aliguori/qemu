@@ -421,7 +421,7 @@ static DeviceInfo s390_virtio_bridge_info = {
 
 static void s390_virtio_register_devices(void)
 {
-    sysbus_register_withprop(&s390_virtio_bridge_info);
+    sysbus_register_withprop(&s390_virtio_bridge_info, TYPE_SYS_BUS_DEVICE);
 }
 
 device_init(s390_virtio_register_devices)
