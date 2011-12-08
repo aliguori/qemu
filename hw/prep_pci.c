@@ -126,15 +126,16 @@ static void prep_hb_class_init(ObjectClass *klass, void *data)
     k->class_id = PCI_CLASS_BRIDGE_HOST;
 }
 
-static DeviceInfo prep_hb_info = {
-    .name = "PREP Host Bridge - Motorola Raven",
-    .size = sizeof(PCIDevice),
-    .class_init = prep_hb_class_init,
+static TypeInfo prep_hb_info = {
+    .name          = "PREP Host Bridge - Motorola Raven",
+    .parent        = TYPE_PCI_DEVICE,
+    .instance_size = sizeof(PCIDevice),
+    .class_init    = prep_hb_class_init,
 };
 
 static void prep_register(void)
 {
-    pci_qdev_register(&prep_hb_info);
+    type_register_static(&prep_hb_info);
 }
 
 device_init(prep_register);

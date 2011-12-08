@@ -472,15 +472,16 @@ static void pl181_class_init(ObjectClass *klass, void *data)
     sdc->init = pl181_init;
 }
 
-static DeviceInfo pl181_info = {
-    .name = "pl181",
-    .size = sizeof(pl181_state),
-    .class_init = pl181_class_init,
+static TypeInfo pl181_info = {
+    .name          = "pl181",
+    .parent        = TYPE_SYS_BUS_DEVICE,
+    .instance_size = sizeof(pl181_state),
+    .class_init    = pl181_class_init,
 };
 
 static void pl181_register_devices(void)
 {
-    sysbus_qdev_register(&pl181_info);
+    type_register_static(&pl181_info);
 }
 
 device_init(pl181_register_devices)

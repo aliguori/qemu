@@ -35,7 +35,22 @@
 #define VIRTIO_RING_LEN			(TARGET_PAGE_SIZE * 3)
 #define S390_DEVICE_PAGES		512
 
-typedef struct VirtIOS390Device {
+#define TYPE_VIRTIO_S390_DEVICE "virtio-s390-device"
+#define VIRTIO_S390_DEVICE(obj) \
+     OBJECT_CHECK(VirtIOS390Device, (obj), TYPE_VIRTIO_S390_DEVICE)
+#define VIRTIO_S390_DEVICE_CLASS(klass) \
+     OBJECT_CLASS_CHECK(VirtIOS390DeviceClass, (klass), TYPE_VIRTIO_S390_DEVICE)
+#define VIRTIO_S390_DEVICE_GET_CLASS(obj) \
+     OBJECT_GET_CLASS(VirtIOS390DeviceClass, (obj), TYPE_VIRTIO_S390_DEVICE)
+
+typedef struct VirtIOS390Device VirtIOS390Device;
+
+typedef struct VirtIOS390DeviceClass {
+    DeviceClass qdev;
+    int (*init)(VirtIOS390Device *dev);
+} VirtIOS390DeviceClass;
+
+struct VirtIOS390Device {
     DeviceState qdev;
     ram_addr_t dev_offs;
     ram_addr_t feat_offs;
@@ -47,7 +62,7 @@ typedef struct VirtIOS390Device {
     uint32_t host_features;
     virtio_serial_conf serial;
     virtio_net_conf net;
-} VirtIOS390Device;
+};
 
 typedef struct VirtIOS390Bus {
     BusState bus;

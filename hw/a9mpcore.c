@@ -185,23 +185,25 @@ static Property a9mp_priv_properties[] = {
 
 static void a9mp_priv_class_init(ObjectClass *klass, void *data)
 {
+    DeviceClass *dc = DEVICE_CLASS(klass);
     SysBusDeviceClass *k = SYS_BUS_DEVICE_CLASS(klass);
 
     k->init = a9mp_priv_init;
+    dc->props = a9mp_priv_properties;
+    dc->vmsd = &vmstate_a9mp_priv;
+    dc->reset = a9mp_priv_reset;
 }
 
-static DeviceInfo a9mp_priv_info = {
-    .name = "a9mpcore_priv",
-    .size = sizeof(a9mp_priv_state),
-    .props = a9mp_priv_properties,
-    .vmsd = &vmstate_a9mp_priv,
-    .reset = a9mp_priv_reset,
-    .class_init = a9mp_priv_class_init,
+static TypeInfo a9mp_priv_info = {
+    .name          = "a9mpcore_priv",
+    .parent        = TYPE_SYS_BUS_DEVICE,
+    .instance_size = sizeof(a9mp_priv_state),
+    .class_init    = a9mp_priv_class_init,
 };
 
 static void a9mp_register_devices(void)
 {
-    sysbus_register_withprop(&a9mp_priv_info);
+    type_register_static(&a9mp_priv_info);
 }
 
 device_init(a9mp_register_devices)
