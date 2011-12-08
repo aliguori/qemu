@@ -151,7 +151,7 @@ static DeviceInfo lm32_juart_info = {
 
 static void lm32_juart_register(void)
 {
-    sysbus_register_withprop(&lm32_juart_info);
+    sysbus_register_withprop(&lm32_juart_info, TYPE_SYS_BUS_DEVICE);
 }
 
 device_init(lm32_juart_register)

@@ -159,6 +159,6 @@ static DeviceInfo vmport_info = {
 
 static void vmport_dev_register(void)
 {
-    isa_qdev_register(&vmport_info);
+    isa_qdev_register(&vmport_info, TYPE_ISA_DEVICE);
 }
 device_init(vmport_dev_register)

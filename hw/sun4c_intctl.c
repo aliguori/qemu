@@ -223,7 +223,7 @@ static DeviceInfo sun4c_intctl_info = {
 
 static void sun4c_intctl_register_devices(void)
 {
-    sysbus_register_withprop(&sun4c_intctl_info);
+    sysbus_register_withprop(&sun4c_intctl_info, TYPE_SYS_BUS_DEVICE);
 }
 
 device_init(sun4c_intctl_register_devices)

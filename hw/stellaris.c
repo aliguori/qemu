@@ -1448,9 +1448,9 @@ static DeviceInfo stellaris_adc_info = {
 
 static void stellaris_register_devices(void)
 {
-    sysbus_qdev_register(&stellaris_i2c_info);
-    sysbus_qdev_register(&stellaris_gptm_info);
-    sysbus_qdev_register(&stellaris_adc_info);
+    sysbus_register_withprop(&stellaris_i2c_info, TYPE_SYS_BUS_DEVICE);
+    sysbus_register_withprop(&stellaris_gptm_info, TYPE_SYS_BUS_DEVICE);
+    sysbus_register_withprop(&stellaris_adc_info, TYPE_SYS_BUS_DEVICE);
     ssi_register_slave(&stellaris_ssi_bus_info);
 }
 

@@ -490,9 +490,9 @@ static DeviceInfo pbm_pci_bridge_info = {
 
 static void pbm_register_devices(void)
 {
-    sysbus_register_withprop(&pbm_host_info);
-    pci_qdev_register(&pbm_pci_host_info);
-    pci_qdev_register(&pbm_pci_bridge_info);
+    sysbus_register_withprop(&pbm_host_info, TYPE_SYS_BUS_DEVICE);
+    pci_qdev_register(&pbm_pci_host_info, TYPE_PCI_DEVICE);
+    pci_qdev_register(&pbm_pci_bridge_info, TYPE_PCI_DEVICE);
 }
 
 device_init(pbm_register_devices)

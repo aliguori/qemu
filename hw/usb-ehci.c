@@ -2373,8 +2373,8 @@ static int usb_ehci_initfn(PCIDevice *dev)
 
 static void ehci_register(void)
 {
-    pci_qdev_register(&ehci_info);
-    pci_qdev_register(&ich9_ehci_info);
+    pci_qdev_register(&ehci_info, TYPE_PCI_DEVICE);
+    pci_qdev_register(&ich9_ehci_info, TYPE_PCI_DEVICE);
 }
 device_init(ehci_register);
 

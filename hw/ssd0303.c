@@ -313,7 +313,7 @@ static DeviceInfo ssd0303_info = {
 
 static void ssd0303_register_devices(void)
 {
-    i2c_register_slave(&ssd0303_info);
+    i2c_register_slave_subclass(&ssd0303_info, TYPE_I2C_SLAVE);
 }
 
 device_init(ssd0303_register_devices)

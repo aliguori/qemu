@@ -557,6 +557,6 @@ static DeviceInfo pit_info = {
 
 static void pit_register(void)
 {
-    isa_qdev_register(&pit_info);
+    isa_qdev_register(&pit_info, TYPE_ISA_DEVICE);
 }
 device_init(pit_register)

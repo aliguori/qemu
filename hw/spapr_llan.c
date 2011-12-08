@@ -512,6 +512,6 @@ static DeviceInfo spapr_vlan_info = {
 
 static void spapr_vlan_register(void)
 {
-    spapr_vio_bus_register_withprop(&spapr_vlan_info);
+    spapr_vio_bus_register_withprop(&spapr_vlan_info, TYPE_VIO_SPAPR_DEVICE);
 }
 device_init(spapr_vlan_register);

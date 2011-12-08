@@ -781,8 +781,8 @@ static DeviceInfo omap2_gpio_info = {
 
 static void omap_gpio_register_device(void)
 {
-    sysbus_register_withprop(&omap_gpio_info);
-    sysbus_register_withprop(&omap2_gpio_info);
+    sysbus_register_withprop(&omap_gpio_info, TYPE_SYS_BUS_DEVICE);
+    sysbus_register_withprop(&omap2_gpio_info, TYPE_SYS_BUS_DEVICE);
 }
 
 device_init(omap_gpio_register_device)

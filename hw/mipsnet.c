@@ -276,7 +276,7 @@ static DeviceInfo mipsnet_info = {
 
 static void mipsnet_register_devices(void)
 {
-    sysbus_register_withprop(&mipsnet_info);
+    sysbus_register_withprop(&mipsnet_info, TYPE_SYS_BUS_DEVICE);
 }
 
 device_init(mipsnet_register_devices)

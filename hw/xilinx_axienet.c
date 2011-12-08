@@ -894,7 +894,7 @@ static DeviceInfo xilinx_enet_info = {
 };
 static void xilinx_enet_register(void)
 {
-    sysbus_register_withprop(&xilinx_enet_info);
+    sysbus_register_withprop(&xilinx_enet_info, TYPE_SYS_BUS_DEVICE);
 }
 
 device_init(xilinx_enet_register)

@@ -1054,7 +1054,7 @@ static DeviceInfo es1370_info = {
 
 static void es1370_register (void)
 {
-    pci_qdev_register (&es1370_info);
+    pci_qdev_register(&es1370_info, TYPE_PCI_DEVICE);
 }
 device_init (es1370_register);
 

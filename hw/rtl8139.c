@@ -3523,7 +3523,7 @@ static DeviceInfo rtl8139_info = {
 
 static void rtl8139_register_devices(void)
 {
-    pci_qdev_register(&rtl8139_info);
+    pci_qdev_register(&rtl8139_info, TYPE_PCI_DEVICE);
 }
 
 device_init(rtl8139_register_devices)

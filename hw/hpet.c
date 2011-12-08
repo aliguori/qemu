@@ -720,7 +720,7 @@ static DeviceInfo hpet_device_info = {
 
 static void hpet_register_device(void)
 {
-    sysbus_register_withprop(&hpet_device_info);
+    sysbus_register_withprop(&hpet_device_info, TYPE_SYS_BUS_DEVICE);
 }
 
 device_init(hpet_register_device)

@@ -201,7 +201,7 @@ static DeviceInfo a9mp_priv_info = {
 
 static void a9mp_register_devices(void)
 {
-    sysbus_register_withprop(&a9mp_priv_info);
+    sysbus_register_withprop(&a9mp_priv_info, TYPE_SYS_BUS_DEVICE);
 }
 
 device_init(a9mp_register_devices)

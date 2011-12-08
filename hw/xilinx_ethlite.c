@@ -249,7 +249,7 @@ static DeviceInfo xilinx_ethlite_info = {
 
 static void xilinx_ethlite_register(void)
 {
-    sysbus_register_withprop(&xilinx_ethlite_info);
+    sysbus_register_withprop(&xilinx_ethlite_info, TYPE_SYS_BUS_DEVICE);
 }
 
 device_init(xilinx_ethlite_register)

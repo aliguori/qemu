@@ -217,6 +217,6 @@ static DeviceInfo ppce500_spin_info = {
 
 static void ppce500_spin_register(void)
 {
-    sysbus_register_withprop(&ppce500_spin_info);
+    sysbus_register_withprop(&ppce500_spin_info, TYPE_SYS_BUS_DEVICE);
 }
 device_init(ppce500_spin_register);

@@ -1871,8 +1871,8 @@ static DeviceInfo qxl_secondary_info = {
 
 static void qxl_register(void)
 {
-    pci_qdev_register(&qxl_primary_info);
-    pci_qdev_register(&qxl_secondary_info);
+    pci_qdev_register(&qxl_primary_info, TYPE_PCI_DEVICE);
+    pci_qdev_register(&qxl_secondary_info, TYPE_PCI_DEVICE);
 }
 
 device_init(qxl_register);

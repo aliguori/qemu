@@ -361,7 +361,7 @@ static DeviceInfo ioapic_info = {
 
 static void ioapic_register_devices(void)
 {
-    sysbus_register_withprop(&ioapic_info);
+    sysbus_register_withprop(&ioapic_info, TYPE_SYS_BUS_DEVICE);
 }
 
 device_init(ioapic_register_devices)

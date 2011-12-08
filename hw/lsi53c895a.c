@@ -2143,7 +2143,7 @@ static DeviceInfo lsi_info = {
 
 static void lsi53c895a_register_devices(void)
 {
-    pci_qdev_register(&lsi_info);
+    pci_qdev_register(&lsi_info, TYPE_PCI_DEVICE);
 }
 
 device_init(lsi53c895a_register_devices);

@@ -116,7 +116,7 @@ static DeviceInfo isa_ide_info = {
 
 static void isa_ide_register_devices(void)
 {
-    isa_qdev_register(&isa_ide_info);
+    isa_qdev_register(&isa_ide_info, TYPE_ISA_DEVICE);
 }
 
 device_init(isa_ide_register_devices)

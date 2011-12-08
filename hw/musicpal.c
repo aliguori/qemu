@@ -1662,14 +1662,14 @@ static DeviceInfo mv88w8618_wlan_info = {
 
 static void musicpal_register_devices(void)
 {
-    sysbus_register_withprop(&mv88w8618_pic_info);
-    sysbus_register_withprop(&mv88w8618_pit_info);
-    sysbus_register_withprop(&mv88w8618_flashcfg_info);
-    sysbus_register_withprop(&mv88w8618_eth_info);
-    sysbus_qdev_register(&mv88w8618_wlan_info);
-    sysbus_register_withprop(&musicpal_lcd_info);
-    sysbus_register_withprop(&musicpal_gpio_info);
-    sysbus_register_withprop(&musicpal_key_info);
+    sysbus_register_withprop(&mv88w8618_pic_info, TYPE_SYS_BUS_DEVICE);
+    sysbus_register_withprop(&mv88w8618_pit_info, TYPE_SYS_BUS_DEVICE);
+    sysbus_register_withprop(&mv88w8618_flashcfg_info, TYPE_SYS_BUS_DEVICE);
+    sysbus_register_withprop(&mv88w8618_eth_info, TYPE_SYS_BUS_DEVICE);
+    sysbus_register_withprop(&mv88w8618_wlan_info, TYPE_SYS_BUS_DEVICE);
+    sysbus_register_withprop(&musicpal_lcd_info, TYPE_SYS_BUS_DEVICE);
+    sysbus_register_withprop(&musicpal_gpio_info, TYPE_SYS_BUS_DEVICE);
+    sysbus_register_withprop(&musicpal_key_info, TYPE_SYS_BUS_DEVICE);
 }
 
 device_init(musicpal_register_devices)

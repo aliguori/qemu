@@ -273,7 +273,7 @@ static DeviceInfo pl190_info = {
 
 static void pl190_register_devices(void)
 {
-    sysbus_register_withprop(&pl190_info);
+    sysbus_register_withprop(&pl190_info, TYPE_SYS_BUS_DEVICE);
 }
 
 device_init(pl190_register_devices)

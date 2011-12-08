@@ -708,7 +708,7 @@ static DeviceInfo wm8750_info = {
 
 static void wm8750_register_devices(void)
 {
-    i2c_register_slave(&wm8750_info);
+    i2c_register_slave_subclass(&wm8750_info, TYPE_I2C_SLAVE);
 }
 
 device_init(wm8750_register_devices)

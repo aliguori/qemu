@@ -2037,9 +2037,9 @@ static DeviceInfo sun4m_fdc_info = {
 
 static void fdc_register_devices(void)
 {
-    isa_qdev_register(&isa_fdc_info);
-    sysbus_register_withprop(&sysbus_fdc_info);
-    sysbus_register_withprop(&sun4m_fdc_info);
+    isa_qdev_register(&isa_fdc_info, TYPE_ISA_DEVICE);
+    sysbus_register_withprop(&sysbus_fdc_info, TYPE_SYS_BUS_DEVICE);
+    sysbus_register_withprop(&sun4m_fdc_info, TYPE_SYS_BUS_DEVICE);
 }
 
 device_init(fdc_register_devices)

@@ -580,6 +580,6 @@ static DeviceInfo i8259_info = {
 
 static void pic_register(void)
 {
-    isa_qdev_register(&i8259_info);
+    isa_qdev_register(&i8259_info, TYPE_ISA_DEVICE);
 }
 device_init(pic_register)

@@ -241,7 +241,7 @@ static DeviceInfo applesmc_isa_info = {
 
 static void applesmc_register_devices(void)
 {
-    isa_qdev_register(&applesmc_isa_info);
+    isa_qdev_register(&applesmc_isa_info, TYPE_ISA_DEVICE);
 }
 
 device_init(applesmc_register_devices)
