@@ -249,7 +249,7 @@ struct TypeInfo
  * by each type to perform type safe casts of a class to a specific class type.
  */
 #define OBJECT_CLASS_CHECK(class, obj, name) \
-    ((class *)object_check_class((ObjectClass *)(obj), (name)))
+    ((class *)object_class_dynamic_cast_assert((ObjectClass *)(obj), (name)))
 
 /**
  * @OBJECT_GET_CLASS
@@ -458,7 +458,9 @@ Type type_register_static(const TypeInfo *info);
  *
  * Returns:
  */
-ObjectClass *object_check_class(ObjectClass *obj, const char *typename);
+ObjectClass *object_class_dynamic_cast_assert(ObjectClass *obj, const char *typename);
+
+ObjectClass *object_class_dynamic_cast(ObjectClass *obj, const char *typename);
 
 /**
  * @type_get_by_name:
@@ -486,5 +488,10 @@ const char *type_get_name(Type type);
  * Returns:
  */
 ObjectClass *object_class_by_name(const char *typename);
+
+const char *object_class_get_name(ObjectClass *klass);
+
+void object_class_foreach(void (*fn)(ObjectClass *klass, void *data),
+                          void *data);
 
 #endif
