@@ -398,15 +398,16 @@ static void armv7m_nvic_class_init(ObjectClass *klass, void *data)
     sdc->init = armv7m_nvic_init;
 }
 
-static DeviceInfo armv7m_nvic_info = {
-    .name = "armv7m_nvic",
-    .size = sizeof(nvic_state),
-    .class_init = armv7m_nvic_class_init,
+static TypeInfo armv7m_nvic_info = {
+    .name          = "armv7m_nvic",
+    .parent        = TYPE_SYS_BUS_DEVICE,
+    .instance_size = sizeof(nvic_state),
+    .class_init    = armv7m_nvic_class_init,
 };
 
 static void armv7m_nvic_register_devices(void)
 {
-    qdev_register_subclass(&armv7m_nvic_info, TYPE_SYS_BUS_DEVICE);
+    type_register_static(&armv7m_nvic_info);
 }
 
 device_init(armv7m_nvic_register_devices)

@@ -1027,17 +1027,19 @@ static Property sl_nand_properties[] = {
 
 static void sl_nand_class_init(ObjectClass *klass, void *data)
 {
+    DeviceClass *dc = DEVICE_CLASS(klass);
     SysBusDeviceClass *k = SYS_BUS_DEVICE_CLASS(klass);
 
     k->init = sl_nand_init;
+    dc->vmsd = &vmstate_sl_nand_info;
+    dc->props = sl_nand_properties;
 }
 
-static DeviceInfo sl_nand_info = {
-    .name = "sl-nand",
-    .size = sizeof(SLNANDState),
-    .vmsd = &vmstate_sl_nand_info,
-    .props = sl_nand_properties,
-    .class_init = sl_nand_class_init,
+static TypeInfo sl_nand_info = {
+    .name          = "sl-nand",
+    .parent        = TYPE_SYS_BUS_DEVICE,
+    .instance_size = sizeof(SLNANDState),
+    .class_init    = sl_nand_class_init,
 };
 
 static VMStateDescription vmstate_spitz_kbd = {
@@ -1060,17 +1062,19 @@ static Property spitz_keyboard_properties[] = {
 
 static void spitz_keyboard_class_init(ObjectClass *klass, void *data)
 {
+    DeviceClass *dc = DEVICE_CLASS(klass);
     SysBusDeviceClass *k = SYS_BUS_DEVICE_CLASS(klass);
 
     k->init = spitz_keyboard_init;
+    dc->vmsd = &vmstate_spitz_kbd;
+    dc->props = spitz_keyboard_properties;
 }
 
-static DeviceInfo spitz_keyboard_info = {
-    .name = "spitz-keyboard",
-    .size = sizeof(SpitzKeyboardState),
-    .vmsd = &vmstate_spitz_kbd,
-    .props = spitz_keyboard_properties,
-    .class_init = spitz_keyboard_class_init,
+static TypeInfo spitz_keyboard_info = {
+    .name          = "spitz-keyboard",
+    .parent        = TYPE_SYS_BUS_DEVICE,
+    .instance_size = sizeof(SpitzKeyboardState),
+    .class_init    = spitz_keyboard_class_init,
 };
 
 static const VMStateDescription vmstate_corgi_ssp_regs = {
@@ -1086,17 +1090,19 @@ static const VMStateDescription vmstate_corgi_ssp_regs = {
 
 static void corgi_ssp_class_init(ObjectClass *klass, void *data)
 {
+    DeviceClass *dc = DEVICE_CLASS(klass);
     SSISlaveClass *k = SSI_SLAVE_CLASS(klass);
 
     k->init = corgi_ssp_init;
     k->transfer = corgi_ssp_transfer;
+    dc->vmsd = &vmstate_corgi_ssp_regs;
 }
 
-static DeviceInfo corgi_ssp_info = {
-    .name = "corgi-ssp",
-    .size = sizeof(CorgiSSPState),
-    .vmsd = &vmstate_corgi_ssp_regs,
-    .class_init = corgi_ssp_class_init,
+static TypeInfo corgi_ssp_info = {
+    .name          = "corgi-ssp",
+    .parent        = TYPE_SSI_SLAVE,
+    .instance_size = sizeof(CorgiSSPState),
+    .class_init    = corgi_ssp_class_init,
 };
 
 static const VMStateDescription vmstate_spitz_lcdtg_regs = {
@@ -1113,25 +1119,27 @@ static const VMStateDescription vmstate_spitz_lcdtg_regs = {
 
 static void spitz_lcdtg_class_init(ObjectClass *klass, void *data)
 {
+    DeviceClass *dc = DEVICE_CLASS(klass);
     SSISlaveClass *k = SSI_SLAVE_CLASS(klass);
 
     k->init = spitz_lcdtg_init;
     k->transfer = spitz_lcdtg_transfer;
+    dc->vmsd = &vmstate_spitz_lcdtg_regs;
 }
 
-static DeviceInfo spitz_lcdtg_info = {
-    .name = "spitz-lcdtg",
-    .size = sizeof(SpitzLCDTG),
-    .vmsd = &vmstate_spitz_lcdtg_regs,
-    .class_init = spitz_lcdtg_class_init,
+static TypeInfo spitz_lcdtg_info = {
+    .name          = "spitz-lcdtg",
+    .parent        = TYPE_SSI_SLAVE,
+    .instance_size = sizeof(SpitzLCDTG),
+    .class_init    = spitz_lcdtg_class_init,
 };
 
 static void spitz_register_devices(void)
 {
-    qdev_register_subclass(&corgi_ssp_info, TYPE_SSI_SLAVE);
-    qdev_register_subclass(&spitz_lcdtg_info, TYPE_SSI_SLAVE);
-    qdev_register_subclass(&spitz_keyboard_info, TYPE_SYS_BUS_DEVICE);
-    qdev_register_subclass(&sl_nand_info, TYPE_SYS_BUS_DEVICE);
+    type_register_static(&corgi_ssp_info);
+    type_register_static(&spitz_lcdtg_info);
+    type_register_static(&spitz_keyboard_info);
+    type_register_static(&sl_nand_info);
 }
 
 device_init(spitz_register_devices)

@@ -353,10 +353,11 @@ static void icp_pit_class_init(ObjectClass *klass, void *data)
     sdc->init = icp_pit_init;
 }
 
-static DeviceInfo icp_pit_info = {
-    .name = "integrator_pit",
-    .size = sizeof(icp_pit_state),
-    .class_init = icp_pit_class_init,
+static TypeInfo icp_pit_info = {
+    .name          = "integrator_pit",
+    .parent        = TYPE_SYS_BUS_DEVICE,
+    .instance_size = sizeof(icp_pit_state),
+    .class_init    = icp_pit_class_init,
 };
 
 static void sp804_class_init(ObjectClass *klass, void *data)
@@ -366,16 +367,17 @@ static void sp804_class_init(ObjectClass *klass, void *data)
     sdc->init = sp804_init;
 }
 
-static DeviceInfo sp804_info = {
-    .name = "sp804",
-    .size = sizeof(sp804_state),
-    .class_init = sp804_class_init,
+static TypeInfo sp804_info = {
+    .name          = "sp804",
+    .parent        = TYPE_SYS_BUS_DEVICE,
+    .instance_size = sizeof(sp804_state),
+    .class_init    = sp804_class_init,
 };
 
 static void arm_timer_register_devices(void)
 {
-    qdev_register_subclass(&icp_pit_info, TYPE_SYS_BUS_DEVICE);
-    qdev_register_subclass(&sp804_info, TYPE_SYS_BUS_DEVICE);
+    type_register_static(&icp_pit_info);
+    type_register_static(&sp804_info);
 }
 
 device_init(arm_timer_register_devices)
