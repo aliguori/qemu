@@ -128,8 +128,6 @@ static int isa_qdev_init(DeviceState *qdev, DeviceInfo *base)
 
 void isa_qdev_register(DeviceInfo *info, const char *parent)
 {
-    info->init = isa_qdev_init;
-    info->bus_info = &isa_bus_info;
     qdev_register_subclass(info, parent);
 }
 
@@ -200,12 +198,20 @@ static DeviceInfo isabus_bridge_info = {
     .class_init = isabus_bridge_class_init,
 };
 
+static void isa_device_class_init(ObjectClass *klass, void *data)
+{
+    DeviceClass *k = DEVICE_CLASS(klass);
+    k->init = isa_qdev_init;
+    k->bus_info = &isa_bus_info;
+}
+
 static TypeInfo isa_device_type_info = {
     .name = TYPE_ISA_DEVICE,
     .parent = TYPE_DEVICE,
     .instance_size = sizeof(ISADevice),
     .abstract = true,
     .class_size = sizeof(ISADeviceClass),
+    .class_init = isa_device_class_init,
 };
 
 static void isabus_register_devices(void)
