@@ -147,7 +147,7 @@ const USBDesc *usb_device_get_usb_desc(USBDevice *dev)
     return klass->usb_desc;
 }
 
-static int usb_qdev_init(DeviceState *qdev, DeviceInfo *base)
+static int usb_qdev_init(DeviceState *qdev)
 {
     USBDevice *dev = USB_DEVICE(qdev);
     int rc;
