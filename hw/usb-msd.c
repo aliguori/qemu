@@ -649,7 +649,7 @@ static void usb_msd_class_initfn(ObjectClass *klass, void *data)
     uc->handle_data    = usb_msd_handle_data;
 }
 
-static struct DeviceInfo msd_info = {
+static DeviceInfo msd_info = {
     .name      = "usb-storage",
     .fw_name   = "storage",
     .size      = sizeof(MSDState),

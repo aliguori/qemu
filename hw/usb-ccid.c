@@ -1329,7 +1329,7 @@ static void ccid_class_initfn(ObjectClass *klass, void *data)
     uc->handle_destroy = ccid_handle_destroy;
 }
 
-static struct DeviceInfo ccid_info = {
+static DeviceInfo ccid_info = {
     .name      = CCID_DEV_NAME,
     .desc      = "CCID Rev 1.1 smartcard reader",
     .size      = sizeof(USBCCIDState),
