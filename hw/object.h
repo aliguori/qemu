@@ -478,4 +478,13 @@ Type type_get_by_name(const char *name);
  */
 const char *type_get_name(Type type);
 
+/**
+ * @object_class_by_name:
+ *
+ * @typename:
+ *
+ * Returns:
+ */
+ObjectClass *object_class_by_name(const char *typename);
+
 #endif
