@@ -146,7 +146,6 @@ struct BusInfo {
     bus_get_dev_path get_dev_path;
     bus_get_fw_dev_path get_fw_dev_path;
     qbus_resetfn *reset;
-    Property *props;
 };
 
 struct BusState {
@@ -616,5 +615,7 @@ const VMStateDescription *qdev_get_vmsd(DeviceState *dev);
 const char *qdev_fw_name(DeviceState *dev);
 
 BusInfo *qdev_get_bus_info(DeviceState *dev);
+
+void qdev_set_parent_bus(DeviceState *dev, BusState *bus);
 
 #endif
