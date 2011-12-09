@@ -154,15 +154,6 @@ static int sysbus_device_init(DeviceState *dev, DeviceInfo *base)
     return sbc->init(sd);
 }
 
-void sysbus_register_withprop(DeviceInfo *info, const char *parent)
-{
-    info->init = sysbus_device_init;
-    info->bus_info = &system_bus_info;
-
-    assert(info->size >= sizeof(SysBusDevice));
-    qdev_register_subclass(info, parent);
-}
-
 DeviceState *sysbus_create_varargs(const char *name,
                                    target_phys_addr_t addr, ...)
 {
@@ -283,12 +274,20 @@ void sysbus_del_io(SysBusDevice *dev, MemoryRegion *mem)
     memory_region_del_subregion(get_system_io(), mem);
 }
 
+static void sysbus_device_class_init(ObjectClass *klass, void *data)
+{
+    DeviceClass *k = DEVICE_CLASS(klass);
+    k->init = sysbus_device_init;
+    k->bus_info = &system_bus_info;
+}
+
 static TypeInfo sysbus_device_type_info = {
     .name = TYPE_SYS_BUS_DEVICE,
     .parent = TYPE_DEVICE,
     .instance_size = sizeof(SysBusDevice),
     .abstract = true,
     .class_size = sizeof(SysBusDeviceClass),
+    .class_init = sysbus_device_class_init,
 };
 
 static void sysbus_register(void)

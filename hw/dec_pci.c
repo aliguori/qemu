@@ -138,7 +138,7 @@ static DeviceInfo pci_dec_21154_device_info = {
 
 static void dec_register_devices(void)
 {
-    sysbus_register_withprop(&pci_dec_21154_device_info, TYPE_SYS_BUS_DEVICE);
+    qdev_register_subclass(&pci_dec_21154_device_info, TYPE_SYS_BUS_DEVICE);
     qdev_register_subclass(&dec_21154_pci_host_info, TYPE_PCI_DEVICE);
     qdev_register_subclass(&dec_21154_pci_bridge_info, TYPE_PCI_DEVICE);
 }

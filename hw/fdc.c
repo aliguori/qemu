@@ -2048,8 +2048,8 @@ static DeviceInfo sun4m_fdc_info = {
 static void fdc_register_devices(void)
 {
     qdev_register_subclass(&isa_fdc_info, TYPE_ISA_DEVICE);
-    sysbus_register_withprop(&sysbus_fdc_info, TYPE_SYS_BUS_DEVICE);
-    sysbus_register_withprop(&sun4m_fdc_info, TYPE_SYS_BUS_DEVICE);
+    qdev_register_subclass(&sysbus_fdc_info, TYPE_SYS_BUS_DEVICE);
+    qdev_register_subclass(&sun4m_fdc_info, TYPE_SYS_BUS_DEVICE);
 }
 
 device_init(fdc_register_devices)

@@ -198,7 +198,7 @@ static DeviceInfo sh_pci_device_info = {
 
 static void sh_pci_register_devices(void)
 {
-    sysbus_register_withprop(&sh_pci_device_info, TYPE_SYS_BUS_DEVICE);
+    qdev_register_subclass(&sh_pci_device_info, TYPE_SYS_BUS_DEVICE);
     qdev_register_subclass(&sh_pci_host_info, TYPE_PCI_DEVICE);
 }
 

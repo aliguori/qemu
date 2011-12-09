@@ -263,7 +263,7 @@ static DeviceInfo bitband_info = {
 
 static void armv7m_register_devices(void)
 {
-    sysbus_register_withprop(&bitband_info, TYPE_SYS_BUS_DEVICE);
+    qdev_register_subclass(&bitband_info, TYPE_SYS_BUS_DEVICE);
 }
 
 device_init(armv7m_register_devices)

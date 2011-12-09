@@ -218,7 +218,7 @@ static DeviceInfo spapr_phb_info = {
 
 static void spapr_register_devices(void)
 {
-    sysbus_register_withprop(&spapr_phb_info, TYPE_SYS_BUS_DEVICE);
+    qdev_register_subclass(&spapr_phb_info, TYPE_SYS_BUS_DEVICE);
     qdev_register_subclass(&spapr_main_pci_host_info, TYPE_PCI_DEVICE);
 }
 

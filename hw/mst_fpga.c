@@ -257,6 +257,6 @@ static DeviceInfo mst_fpga_info = {
 
 static void mst_fpga_register(void)
 {
-	sysbus_register_withprop(&mst_fpga_info, TYPE_SYS_BUS_DEVICE);
+	qdev_register_subclass(&mst_fpga_info, TYPE_SYS_BUS_DEVICE);
 }
 device_init(mst_fpga_register);

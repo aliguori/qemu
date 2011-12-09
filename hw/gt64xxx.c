@@ -1168,7 +1168,7 @@ static DeviceInfo gt64120_info = {
 
 static void gt64120_pci_register_devices(void)
 {
-    sysbus_register_withprop(&gt64120_info, TYPE_SYS_BUS_DEVICE);
+    qdev_register_subclass(&gt64120_info, TYPE_SYS_BUS_DEVICE);
     qdev_register_subclass(&gt64120_pci_info, TYPE_PCI_DEVICE);
 }
 

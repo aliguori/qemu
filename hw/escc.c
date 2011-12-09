@@ -931,7 +931,7 @@ static DeviceInfo escc_info = {
 
 static void escc_register_devices(void)
 {
-    sysbus_register_withprop(&escc_info, TYPE_SYS_BUS_DEVICE);
+    qdev_register_subclass(&escc_info, TYPE_SYS_BUS_DEVICE);
 }
 
 device_init(escc_register_devices)

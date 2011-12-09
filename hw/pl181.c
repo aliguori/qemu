@@ -486,7 +486,7 @@ static DeviceInfo pl181_info = {
 
 static void pl181_register_devices(void)
 {
-    sysbus_register_withprop(&pl181_info, TYPE_SYS_BUS_DEVICE);
+    qdev_register_subclass(&pl181_info, TYPE_SYS_BUS_DEVICE);
 }
 
 device_init(pl181_register_devices)

@@ -384,7 +384,7 @@ static void s390_virtio_bus_register_withprop(VirtIOS390DeviceInfo *info)
     info->qdev.bus_info = &s390_virtio_bus_info;
 
     assert(info->qdev.size >= sizeof(VirtIOS390Device));
-    qdev_register(&info->qdev);
+    qdev_register_subclass(&info->qdev, TYPE_DEVICE);
 }
 
 static void s390_virtio_register(void)
@@ -421,7 +421,7 @@ static DeviceInfo s390_virtio_bridge_info = {
 
 static void s390_virtio_register_devices(void)
 {
-    sysbus_register_withprop(&s390_virtio_bridge_info, TYPE_SYS_BUS_DEVICE);
+    qdev_register_subclass(&s390_virtio_bridge_info, TYPE_SYS_BUS_DEVICE);
 }
 
 device_init(s390_virtio_register_devices)
