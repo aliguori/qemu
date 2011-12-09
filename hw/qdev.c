@@ -68,30 +68,25 @@ const char *qdev_fw_name(DeviceState *dev)
     return object_get_type(OBJECT(dev));
 }
 
-/* FIXME: need to figure out somethign to do with bus.
- *
- * The general problem is that we don't want to take a bus argument on
- * create.  there's simply no way to pass it to instance init.
- */
-static DeviceState *qdev_create_from_info(BusState *bus, const char *typename)
+void qdev_set_parent_bus(DeviceState *dev, BusState *bus)
 {
-    DeviceState *dev;
-    Property *prop;
-
-    dev = DEVICE(object_new(typename));
     dev->parent_bus = bus;
-    qdev_prop_set_defaults(dev, dev->parent_bus->info->props);
-    qdev_prop_set_globals(dev);
     QTAILQ_INSERT_HEAD(&bus->children, dev, sibling);
     if (qdev_hotplug) {
         assert(bus->allow_hotplug);
         dev->hotplugged = 1;
         qdev_hot_added = true;
     }
+}
 
-    for (prop = qdev_get_bus_info(dev)->props; prop && prop->name; prop++) {
-        qdev_property_add_legacy(dev, prop, NULL);
-    }
+static DeviceState *qdev_create_from_info(BusState *bus, const char *typename)
+{
+    DeviceState *dev;
+
+    dev = DEVICE(object_new(typename));
+
+    qdev_set_parent_bus(dev, bus);
+    qdev_prop_set_globals(dev);
 
     return dev;
 }
@@ -170,12 +165,6 @@ int qdev_device_help(QemuOpts *opts)
          * for removal.  This conditional should be removed along with
          * it.
          */
-        if (!prop->info->parse) {
-            continue;           /* no way to set it, don't show */
-        }
-        error_printf("%s.%s=%s\n", driver, prop->name, prop->info->name);
-    }
-    for (prop = info->bus_info->props; prop && prop->name; prop++) {
         if (!prop->info->parse) {
             continue;           /* no way to set it, don't show */
         }
@@ -885,8 +874,10 @@ static void qdev_print(Monitor *mon, DeviceState *dev, int indent)
         }
         qdev_print_prop(mon, dev, dev_prop->opaque, "dev", indent);
     }
-    if (dev->parent_bus->info->print_dev)
+    if (dev->parent_bus && dev->parent_bus->info->print_dev) {
         dev->parent_bus->info->print_dev(mon, dev, indent);
+    }
+
     QLIST_FOREACH(child, &dev->child_bus, sibling) {
         qbus_print(mon, child, indent);
     }
