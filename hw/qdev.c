@@ -55,12 +55,6 @@ BusInfo *qdev_get_bus_info(DeviceState *dev)
     return dc->bus_info;
 }
 
-Property *qdev_get_props(DeviceState *dev)
-{
-    DeviceClass *dc = DEVICE_GET_CLASS(dev);
-    return dc->props;
-}
-
 const char *qdev_fw_name(DeviceState *dev)
 {
     DeviceClass *dc = DEVICE_GET_CLASS(dev);
@@ -419,7 +413,6 @@ static void qdev_property_del_all(DeviceState *dev)
 void qdev_free(DeviceState *dev)
 {
     BusState *bus;
-    Property *prop;
     DeviceClass *dc = DEVICE_GET_CLASS(dev);
 
     qdev_property_del_all(dev);
@@ -440,11 +433,6 @@ void qdev_free(DeviceState *dev)
         }
     }
     QTAILQ_REMOVE(&dev->parent_bus->children, dev, sibling);
-    for (prop = qdev_get_props(dev); prop && prop->name; prop++) {
-        if (prop->info->free) {
-            prop->info->free(dev, prop);
-        }
-    }
     object_delete(OBJECT(dev));
 }
 
@@ -861,30 +849,26 @@ void qbus_free(BusState *bus)
 #define qdev_printf(fmt, ...) monitor_printf(mon, "%*s" fmt, indent, "", ## __VA_ARGS__)
 static void qbus_print(Monitor *mon, BusState *bus, int indent);
 
-static void qdev_print_props(Monitor *mon, DeviceState *dev, Property *props,
-                             const char *prefix, int indent)
+static void qdev_print_prop(Monitor *mon, DeviceState *dev, Property *prop,
+                            const char *prefix, int indent)
 {
     char buf[64];
 
-    if (!props)
-        return;
-    while (props->name) {
-        /*
-         * TODO Properties without a print method are just for dirty
-         * hacks.  qdev_prop_ptr is the only such PropertyInfo.  It's
-         * marked for removal.  The test props->info->print should be
-         * removed along with it.
-         */
-        if (props->info->print) {
-            props->info->print(dev, props, buf, sizeof(buf));
-            qdev_printf("%s-prop: %s = %s\n", prefix, props->name, buf);
-        }
-        props++;
+    /*
+     * TODO Properties without a print method are just for dirty
+     * hacks.  qdev_prop_ptr is the only such PropertyInfo.  It's
+     * marked for removal.  The test props->info->print should be
+     * removed along with it.
+     */
+    if (prop->info->print) {
+        prop->info->print(dev, prop, buf, sizeof(buf));
+        qdev_printf("%s-prop: %s = %s\n", prefix, prop->name, buf);
     }
 }
 
 static void qdev_print(Monitor *mon, DeviceState *dev, int indent)
 {
+    DeviceProperty *dev_prop;
     BusState *child;
     qdev_printf("dev: %s, id \"%s\"\n", object_get_type(OBJECT(dev)),
                 dev->id ? dev->id : "");
@@ -895,8 +879,12 @@ static void qdev_print(Monitor *mon, DeviceState *dev, int indent)
     if (dev->num_gpio_out) {
         qdev_printf("gpio-out %d\n", dev->num_gpio_out);
     }
-    qdev_print_props(mon, dev, qdev_get_props(dev), "dev", indent);
-    qdev_print_props(mon, dev, dev->parent_bus->info->props, "bus", indent);
+    QTAILQ_FOREACH(dev_prop, &dev->properties, node) {
+        if (!strstart(dev_prop->type, "legacy<", NULL)) {
+            continue;
+        }
+        qdev_print_prop(mon, dev, dev_prop->opaque, "dev", indent);
+    }
     if (dev->parent_bus->info->print_dev)
         dev->parent_bus->info->print_dev(mon, dev, indent);
     QLIST_FOREACH(child, &dev->child_bus, sibling) {
@@ -1161,6 +1149,15 @@ static void qdev_set_legacy_property(DeviceState *dev, Visitor *v, void *opaque,
     }
 }
 
+static void qdev_release_legacy_property(DeviceState *dev, const char *name, void *opaque)
+{
+    Property *prop = opaque;
+
+    if (prop->info->free) {
+        prop->info->free(dev, prop);
+    }
+}
+
 /**
  * @qdev_add_legacy_property - adds a legacy property
  *
@@ -1180,7 +1177,7 @@ void qdev_property_add_legacy(DeviceState *dev, Property *prop,
     qdev_property_add(dev, prop->name, type,
                       qdev_get_legacy_property,
                       qdev_set_legacy_property,
-                      NULL,
+                      qdev_release_legacy_property,
                       prop, errp);
 
     g_free(type);
@@ -1509,19 +1506,26 @@ void device_reset(DeviceState *dev)
     }
 }
 
+void qdev_add_legacy_properties(DeviceState *dev, Property *props)
+{
+    Property *prop;
+
+    qdev_prop_set_defaults(dev, props);
+    for (prop = props; prop && prop->name; prop++) {
+        qdev_property_add_legacy(dev, prop, NULL);
+    }
+}
+
 static void device_initfn(Object *obj)
 {
     DeviceState *dev = DEVICE(obj);
-    Property *prop;
+    DeviceClass *dc = DEVICE_GET_CLASS(dev);
 
     dev->instance_id_alias = -1;
     dev->state = DEV_STATE_CREATED;
     QTAILQ_INIT(&dev->properties);
 
-    qdev_prop_set_defaults(dev, qdev_get_props(dev));
-    for (prop = qdev_get_props(dev); prop && prop->name; prop++) {
-        qdev_property_add_legacy(dev, prop, NULL);
-    }
+    qdev_add_legacy_properties(dev, dc->props);
 
     qdev_property_add_str(dev, "type", qdev_get_type, NULL, NULL);
 }
