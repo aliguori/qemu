@@ -791,6 +791,7 @@ static Property virtio_blk_properties[] = {
 
 static void virtio_blk_class_init(ObjectClass *klass, void *data)
 {
+    DeviceClass *dc = DEVICE_CLASS(klass);
     PCIDeviceClass *k = PCI_DEVICE_CLASS(klass);
 
     k->init = virtio_blk_init_pci;
@@ -799,15 +800,16 @@ static void virtio_blk_class_init(ObjectClass *klass, void *data)
     k->device_id = PCI_DEVICE_ID_VIRTIO_BLOCK;
     k->revision = VIRTIO_PCI_ABI_VERSION;
     k->class_id = PCI_CLASS_STORAGE_SCSI;
+    dc->alias = "virtio-blk";
+    dc->reset = virtio_pci_reset;
+    dc->props = virtio_blk_properties;
 }
 
-static DeviceInfo virtio_blk_info = {
-    .name = "virtio-blk-pci",
-    .alias = "virtio-blk",
-    .size = sizeof(VirtIOPCIProxy),
-    .props = virtio_blk_properties,
-    .reset = virtio_pci_reset,
-    .class_init = virtio_blk_class_init,
+static TypeInfo virtio_blk_info = {
+    .name          = "virtio-blk-pci",
+    .parent        = TYPE_PCI_DEVICE,
+    .instance_size = sizeof(VirtIOPCIProxy),
+    .class_init    = virtio_blk_class_init,
 };
 
 static Property virtio_net_properties[] = {
@@ -823,6 +825,7 @@ static Property virtio_net_properties[] = {
 
 static void virtio_net_class_init(ObjectClass *klass, void *data)
 {
+    DeviceClass *dc = DEVICE_CLASS(klass);
     PCIDeviceClass *k = PCI_DEVICE_CLASS(klass);
 
     k->init = virtio_net_init_pci;
@@ -832,15 +835,16 @@ static void virtio_net_class_init(ObjectClass *klass, void *data)
     k->device_id = PCI_DEVICE_ID_VIRTIO_NET;
     k->revision = VIRTIO_PCI_ABI_VERSION;
     k->class_id = PCI_CLASS_NETWORK_ETHERNET;
+    dc->alias = "virtio-net";
+    dc->reset = virtio_pci_reset;
+    dc->props = virtio_net_properties;
 }
 
-static DeviceInfo virtio_net_info = {
-    .name = "virtio-net-pci",
-    .alias = "virtio-net",
-    .size = sizeof(VirtIOPCIProxy),
-    .props = virtio_net_properties,
-    .reset = virtio_pci_reset,
-    .class_init = virtio_net_class_init,
+static TypeInfo virtio_net_info = {
+    .name          = "virtio-net-pci",
+    .parent        = TYPE_PCI_DEVICE,
+    .instance_size = sizeof(VirtIOPCIProxy),
+    .class_init    = virtio_net_class_init,
 };
 
 static Property virtio_serial_properties[] = {
@@ -854,6 +858,7 @@ static Property virtio_serial_properties[] = {
 
 static void virtio_serial_class_init(ObjectClass *klass, void *data)
 {
+    DeviceClass *dc = DEVICE_CLASS(klass);
     PCIDeviceClass *k = PCI_DEVICE_CLASS(klass);
 
     k->init = virtio_serial_init_pci;
@@ -862,15 +867,16 @@ static void virtio_serial_class_init(ObjectClass *klass, void *data)
     k->device_id = PCI_DEVICE_ID_VIRTIO_CONSOLE;
     k->revision = VIRTIO_PCI_ABI_VERSION;
     k->class_id = PCI_CLASS_COMMUNICATION_OTHER;
+    dc->alias = "virtio-serial";
+    dc->reset = virtio_pci_reset;
+    dc->props = virtio_serial_properties;
 }
 
-static DeviceInfo virtio_serial_info = {
-    .name = "virtio-serial-pci",
-    .alias = "virtio-serial",
-    .size = sizeof(VirtIOPCIProxy),
-    .props = virtio_serial_properties,
-    .reset = virtio_pci_reset,
-    .class_init = virtio_serial_class_init,
+static TypeInfo virtio_serial_info = {
+    .name          = "virtio-serial-pci",
+    .parent        = TYPE_PCI_DEVICE,
+    .instance_size = sizeof(VirtIOPCIProxy),
+    .class_init    = virtio_serial_class_init,
 };
 
 static Property virtio_balloon_properties[] = {
@@ -880,6 +886,7 @@ static Property virtio_balloon_properties[] = {
 
 static void virtio_balloon_class_init(ObjectClass *klass, void *data)
 {
+    DeviceClass *dc = DEVICE_CLASS(klass);
     PCIDeviceClass *k = PCI_DEVICE_CLASS(klass);
 
     k->init = virtio_balloon_init_pci;
@@ -888,23 +895,28 @@ static void virtio_balloon_class_init(ObjectClass *klass, void *data)
     k->device_id = PCI_DEVICE_ID_VIRTIO_BALLOON;
     k->revision = VIRTIO_PCI_ABI_VERSION;
     k->class_id = PCI_CLASS_MEMORY_RAM;
+    dc->alias = "virtio-balloon";
+    dc->reset = virtio_pci_reset;
+    dc->props = virtio_balloon_properties;
 }
 
-static DeviceInfo virtio_balloon_info = {
-    .name = "virtio-balloon-pci",
-    .alias = "virtio-balloon",
-    .size = sizeof(VirtIOPCIProxy),
-    .props = virtio_balloon_properties,
-    .reset = virtio_pci_reset,
-    .class_init = virtio_balloon_class_init,
+static TypeInfo virtio_balloon_info = {
+    .name          = "virtio-balloon-pci",
+    .parent        = TYPE_PCI_DEVICE,
+    .instance_size = sizeof(VirtIOPCIProxy),
+    .class_init    = virtio_balloon_class_init,
 };
 
 static void virtio_pci_register_devices(void)
 {
-    qdev_register_subclass(&virtio_blk_info, TYPE_PCI_DEVICE);
-    qdev_register_subclass(&virtio_net_info, TYPE_PCI_DEVICE);
-    qdev_register_subclass(&virtio_serial_info, TYPE_PCI_DEVICE);
-    qdev_register_subclass(&virtio_balloon_info, TYPE_PCI_DEVICE);
+    type_register_static(&virtio_blk_info);
+    type_register_static_alias(&virtio_blk_info, "virtio-blk");
+    type_register_static(&virtio_net_info);
+    type_register_static_alias(&virtio_net_info, "virtio-net");
+    type_register_static(&virtio_serial_info);
+    type_register_static_alias(&virtio_serial_info, "virtio-serial");
+    type_register_static(&virtio_balloon_info);
+    type_register_static_alias(&virtio_balloon_info, "virtio-balloon");
 }
 
 device_init(virtio_pci_register_devices)

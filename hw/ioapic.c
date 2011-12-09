@@ -345,23 +345,25 @@ static int ioapic_init1(SysBusDevice *dev)
 
 static void ioapic_class_init(ObjectClass *klass, void *data)
 {
+    DeviceClass *dc = DEVICE_CLASS(klass);
     SysBusDeviceClass *k = SYS_BUS_DEVICE_CLASS(klass);
 
     k->init = ioapic_init1;
+    dc->no_user = 1;
+    dc->reset = ioapic_reset;
+    dc->vmsd = &vmstate_ioapic;
 }
 
-static DeviceInfo ioapic_info = {
-    .name = "ioapic",
-    .size = sizeof(IOAPICState),
-    .vmsd = &vmstate_ioapic,
-    .reset = ioapic_reset,
-    .no_user = 1,
-    .class_init = ioapic_class_init,
+static TypeInfo ioapic_info = {
+    .name          = "ioapic",
+    .parent        = TYPE_SYS_BUS_DEVICE,
+    .instance_size = sizeof(IOAPICState),
+    .class_init    = ioapic_class_init,
 };
 
 static void ioapic_register_devices(void)
 {
-    qdev_register_subclass(&ioapic_info, TYPE_SYS_BUS_DEVICE);
+    type_register_static(&ioapic_info);
 }
 
 device_init(ioapic_register_devices)

@@ -296,21 +296,23 @@ static Property syborg_virtio_net_properties[] = {
 
 static void syborg_virtio_net_class_init(ObjectClass *klass, void *data)
 {
+    DeviceClass *dc = DEVICE_CLASS(klass);
     SysBusDeviceClass *k = SYS_BUS_DEVICE_CLASS(klass);
 
     k->init = syborg_virtio_net_init;
+    dc->props = syborg_virtio_net_properties;
 }
 
-static DeviceInfo syborg_virtio_net_info = {
-    .name = "syborg,virtio-net",
-    .size = sizeof(SyborgVirtIOProxy),
-    .props = syborg_virtio_net_properties,
-    .class_init = syborg_virtio_net_class_init,
+static TypeInfo syborg_virtio_net_info = {
+    .name          = "syborg,virtio-net",
+    .parent        = TYPE_SYS_BUS_DEVICE,
+    .instance_size = sizeof(SyborgVirtIOProxy),
+    .class_init    = syborg_virtio_net_class_init,
 };
 
 static void syborg_virtio_register_devices(void)
 {
-    qdev_register_subclass(&syborg_virtio_net_info, TYPE_SYS_BUS_DEVICE);
+    type_register_static(&syborg_virtio_net_info);
 }
 
 device_init(syborg_virtio_register_devices)

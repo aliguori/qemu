@@ -149,6 +149,7 @@ static Property spapr_vty_properties[] = {
 
 static void spapr_vty_class_init(ObjectClass *klass, void *data)
 {
+    DeviceClass *dc = DEVICE_CLASS(klass);
     VIOsPAPRDeviceClass *k = VIO_SPAPR_DEVICE_CLASS(klass);
 
     k->init = spapr_vty_init;
@@ -156,13 +157,14 @@ static void spapr_vty_class_init(ObjectClass *klass, void *data)
     k->dt_type = "serial";
     k->dt_compatible = "hvterm1";
     k->hcalls = vty_hcalls;
+    dc->props = spapr_vty_properties;
 }
 
-static DeviceInfo spapr_vty_info = {
-    .name = "spapr-vty",
-    .size = sizeof(VIOsPAPRVTYDevice),
-    .props = spapr_vty_properties,
-    .class_init = spapr_vty_class_init,
+static TypeInfo spapr_vty_info = {
+    .name          = "spapr-vty",
+    .parent        = TYPE_VIO_SPAPR_DEVICE,
+    .instance_size = sizeof(VIOsPAPRVTYDevice),
+    .class_init    = spapr_vty_class_init,
 };
 
 static VIOsPAPRDevice *vty_lookup(sPAPREnvironment *spapr, target_ulong reg)
@@ -192,6 +194,6 @@ static VIOsPAPRDevice *vty_lookup(sPAPREnvironment *spapr, target_ulong reg)
 
 static void spapr_vty_register(void)
 {
-    qdev_register_subclass(&spapr_vty_info, TYPE_VIO_SPAPR_DEVICE);
+    type_register_static(&spapr_vty_info);
 }
 device_init(spapr_vty_register);
