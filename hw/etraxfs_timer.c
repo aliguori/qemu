@@ -343,7 +343,7 @@ static DeviceInfo etraxfs_timer_info = {
 
 static void etraxfs_timer_register(void)
 {
-    sysbus_register_withprop(&etraxfs_timer_info, TYPE_SYS_BUS_DEVICE);
+    qdev_register_subclass(&etraxfs_timer_info, TYPE_SYS_BUS_DEVICE);
 }
 
 device_init(etraxfs_timer_register)

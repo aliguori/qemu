@@ -1826,11 +1826,11 @@ static DeviceInfo scsi_disk_info = {
 
 static void scsi_disk_register_devices(void)
 {
-    scsi_qdev_register(&scsi_hd_info, TYPE_SCSI_DEVICE);
-    scsi_qdev_register(&scsi_cd_info, TYPE_SCSI_DEVICE);
+    qdev_register_subclass(&scsi_hd_info, TYPE_SCSI_DEVICE);
+    qdev_register_subclass(&scsi_cd_info, TYPE_SCSI_DEVICE);
 #ifdef __linux__
-    scsi_qdev_register(&scsi_block_info, TYPE_SCSI_DEVICE);
+    qdev_register_subclass(&scsi_block_info, TYPE_SCSI_DEVICE);
 #endif
-    scsi_qdev_register(&scsi_disk_info, TYPE_SCSI_DEVICE);
+    qdev_register_subclass(&scsi_disk_info, TYPE_SCSI_DEVICE);
 }
 device_init(scsi_disk_register_devices)

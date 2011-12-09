@@ -772,7 +772,7 @@ static DeviceInfo esp_info = {
 
 static void esp_register_devices(void)
 {
-    sysbus_register_withprop(&esp_info, TYPE_SYS_BUS_DEVICE);
+    qdev_register_subclass(&esp_info, TYPE_SYS_BUS_DEVICE);
 }
 
 device_init(esp_register_devices)

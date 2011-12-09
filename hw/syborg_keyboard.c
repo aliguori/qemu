@@ -224,7 +224,7 @@ static DeviceInfo syborg_keyboard_info = {
 
 static void syborg_keyboard_register_devices(void)
 {
-    sysbus_register_withprop(&syborg_keyboard_info, TYPE_SYS_BUS_DEVICE);
+    qdev_register_subclass(&syborg_keyboard_info, TYPE_SYS_BUS_DEVICE);
 }
 
 device_init(syborg_keyboard_register_devices)

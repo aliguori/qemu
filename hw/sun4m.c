@@ -623,7 +623,7 @@ static DeviceInfo idreg_info = {
 
 static void idreg_register_devices(void)
 {
-    sysbus_register_withprop(&idreg_info, TYPE_SYS_BUS_DEVICE);
+    qdev_register_subclass(&idreg_info, TYPE_SYS_BUS_DEVICE);
 }
 
 device_init(idreg_register_devices);
@@ -670,7 +670,7 @@ static DeviceInfo afx_info = {
 
 static void afx_register_devices(void)
 {
-    sysbus_register_withprop(&afx_info, TYPE_SYS_BUS_DEVICE);
+    qdev_register_subclass(&afx_info, TYPE_SYS_BUS_DEVICE);
 }
 
 device_init(afx_register_devices);
@@ -751,7 +751,7 @@ static DeviceInfo prom_info = {
 
 static void prom_register_devices(void)
 {
-    sysbus_register_withprop(&prom_info, TYPE_SYS_BUS_DEVICE);
+    qdev_register_subclass(&prom_info, TYPE_SYS_BUS_DEVICE);
 }
 
 device_init(prom_register_devices);
@@ -819,7 +819,7 @@ static DeviceInfo ram_info = {
 
 static void ram_register_devices(void)
 {
-    sysbus_register_withprop(&ram_info, TYPE_SYS_BUS_DEVICE);
+    qdev_register_subclass(&ram_info, TYPE_SYS_BUS_DEVICE);
 }
 
 device_init(ram_register_devices);

@@ -321,7 +321,7 @@ static DeviceInfo milkymist_sysctl_info = {
 
 static void milkymist_sysctl_register(void)
 {
-    sysbus_register_withprop(&milkymist_sysctl_info, TYPE_SYS_BUS_DEVICE);
+    qdev_register_subclass(&milkymist_sysctl_info, TYPE_SYS_BUS_DEVICE);
 }
 
 device_init(milkymist_sysctl_register)

@@ -629,9 +629,9 @@ static struct DeviceInfo braille_info = {
 
 static void usb_serial_register_devices(void)
 {
-    usb_qdev_register(&serial_info, TYPE_USB_DEVICE);
+    qdev_register_subclass(&serial_info, TYPE_USB_DEVICE);
     usb_legacy_register("usb-serial", "serial", usb_serial_init);
-    usb_qdev_register(&braille_info, TYPE_USB_DEVICE);
+    qdev_register_subclass(&braille_info, TYPE_USB_DEVICE);
     usb_legacy_register("usb-braille", "braille", usb_braille_init);
 }
 device_init(usb_serial_register_devices)

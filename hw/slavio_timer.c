@@ -427,7 +427,7 @@ static DeviceInfo slavio_timer_info = {
 
 static void slavio_timer_register_devices(void)
 {
-    sysbus_register_withprop(&slavio_timer_info, TYPE_SYS_BUS_DEVICE);
+    qdev_register_subclass(&slavio_timer_info, TYPE_SYS_BUS_DEVICE);
 }
 
 device_init(slavio_timer_register_devices)

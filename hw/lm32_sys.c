@@ -164,7 +164,7 @@ static DeviceInfo lm32_sys_info = {
 
 static void lm32_sys_register(void)
 {
-    sysbus_register_withprop(&lm32_sys_info, TYPE_SYS_BUS_DEVICE);
+    qdev_register_subclass(&lm32_sys_info, TYPE_SYS_BUS_DEVICE);
 }
 
 device_init(lm32_sys_register)
