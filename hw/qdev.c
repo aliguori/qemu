@@ -874,8 +874,10 @@ static void qdev_print(Monitor *mon, DeviceState *dev, int indent)
         }
         qdev_print_prop(mon, dev, dev_prop->opaque, "dev", indent);
     }
-    if (dev->parent_bus->info->print_dev)
+    if (dev->parent_bus && dev->parent_bus->info->print_dev) {
         dev->parent_bus->info->print_dev(mon, dev, indent);
+    }
+
     QLIST_FOREACH(child, &dev->child_bus, sibling) {
         qbus_print(mon, child, indent);
     }
