@@ -346,6 +346,8 @@ extern PropertyInfo qdev_prop_pci_devfn;
 #define DEFINE_PROP_END_OF_LIST()               \
     {}
 
+extern int qdev_hotplug;
+
 /* Set properties between creation and init.  */
 void *qdev_get_prop_ptr(DeviceState *dev, Property *prop);
 int qdev_prop_exists(DeviceState *dev, const char *name);
