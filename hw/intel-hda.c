@@ -1246,6 +1246,7 @@ static Property intel_hda_properties[] = {
 
 static void intel_hda_class_init(ObjectClass *klass, void *data)
 {
+    DeviceClass *dc = DEVICE_CLASS(klass);
     PCIDeviceClass *k = PCI_DEVICE_CLASS(klass);
 
     k->init = intel_hda_init;
@@ -1255,16 +1256,17 @@ static void intel_hda_class_init(ObjectClass *klass, void *data)
     k->device_id = 0x2668;
     k->revision = 1;
     k->class_id = PCI_CLASS_MULTIMEDIA_HD_AUDIO;
+    dc->desc = "Intel HD Audio Controller";
+    dc->reset = intel_hda_reset;
+    dc->vmsd = &vmstate_intel_hda;
+    dc->props = intel_hda_properties;
 }
 
-static DeviceInfo intel_hda_info = {
-    .name = "intel-hda",
-    .desc = "Intel HD Audio Controller",
-    .size = sizeof(IntelHDAState),
-    .vmsd = &vmstate_intel_hda,
-    .reset = intel_hda_reset,
-    .props = intel_hda_properties,
-    .class_init = intel_hda_class_init,
+static TypeInfo intel_hda_info = {
+    .name          = "intel-hda",
+    .parent        = TYPE_PCI_DEVICE,
+    .instance_size = sizeof(IntelHDAState),
+    .class_init    = intel_hda_class_init,
 };
 
 static void hda_codec_device_class_init(ObjectClass *klass, void *data)
@@ -1286,7 +1288,7 @@ static TypeInfo hda_codec_device_type_info = {
 
 static void intel_hda_register(void)
 {
-    qdev_register_subclass(&intel_hda_info, TYPE_PCI_DEVICE);
+    type_register_static(&intel_hda_info);
     type_register_static(&hda_codec_device_type_info);
 }
 device_init(intel_hda_register);

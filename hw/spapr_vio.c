@@ -731,16 +731,18 @@ static int spapr_vio_bridge_init(SysBusDevice *dev)
 
 static void spapr_vio_bridge_class_init(ObjectClass *klass, void *data)
 {
+    DeviceClass *dc = DEVICE_CLASS(klass);
     SysBusDeviceClass *k = SYS_BUS_DEVICE_CLASS(klass);
 
     k->init = spapr_vio_bridge_init;
+    dc->no_user = 1;
 }
 
-static DeviceInfo spapr_vio_bridge_info = {
-    .name = "spapr-vio-bridge",
-    .size = sizeof(SysBusDevice),
-    .no_user = 1,
-    .class_init = spapr_vio_bridge_class_init,
+static TypeInfo spapr_vio_bridge_info = {
+    .name          = "spapr-vio-bridge",
+    .parent        = TYPE_SYS_BUS_DEVICE,
+    .instance_size = sizeof(SysBusDevice),
+    .class_init    = spapr_vio_bridge_class_init,
 };
 
 static void vio_spapr_device_class_init(ObjectClass *klass, void *data)
@@ -761,7 +763,7 @@ static TypeInfo spapr_vio_type_info = {
 
 static void spapr_vio_register_devices(void)
 {
-    qdev_register_subclass(&spapr_vio_bridge_info, TYPE_SYS_BUS_DEVICE);
+    type_register_static(&spapr_vio_bridge_info);
     type_register_static(&spapr_vio_type_info);
 }
 

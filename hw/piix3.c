@@ -145,6 +145,7 @@ static int piix3_initfn(PCIDevice *dev)
 
 static void piix3_class_init(ObjectClass *klass, void *data)
 {
+    DeviceClass *dc = DEVICE_CLASS(klass);
     PCIDeviceClass *k = PCI_DEVICE_CLASS(klass);
 
     k->no_hotplug = 1;
@@ -153,19 +154,21 @@ static void piix3_class_init(ObjectClass *klass, void *data)
     k->vendor_id = PCI_VENDOR_ID_INTEL;
     k->device_id = PCI_DEVICE_ID_INTEL_82371SB_0;
     k->class_id = PCI_CLASS_BRIDGE_ISA;
+    dc->desc = "ISA bridge";
+    dc->no_user = 1;
+    dc->vmsd = &vmstate_piix3;
 }
 
-static DeviceInfo piix3_info = {
-    .name = "PIIX3",
-    .desc = "ISA bridge",
-    .size = sizeof(PIIX3State),
-    .vmsd = &vmstate_piix3,
-    .no_user = 1,
-    .class_init = piix3_class_init,
+static TypeInfo piix3_info = {
+    .name          = "PIIX3",
+    .parent        = TYPE_PCI_DEVICE,
+    .instance_size = sizeof(PIIX3State),
+    .class_init    = piix3_class_init,
 };
 
 static void piix3_xen_class_init(ObjectClass *klass, void *data)
 {
+    DeviceClass *dc = DEVICE_CLASS(klass);
     PCIDeviceClass *k = PCI_DEVICE_CLASS(klass);
 
     k->no_hotplug = 1;
@@ -174,21 +177,22 @@ static void piix3_xen_class_init(ObjectClass *klass, void *data)
     k->vendor_id = PCI_VENDOR_ID_INTEL;
     k->device_id = PCI_DEVICE_ID_INTEL_82371SB_0;
     k->class_id = PCI_CLASS_BRIDGE_ISA;
+    dc->desc = "ISA bridge";
+    dc->no_user = 1;
+    dc->vmsd = &vmstate_piix3;
 }
 
-static DeviceInfo piix3_xen_info = {
-    .name = "PIIX3-xen",
-    .desc = "ISA bridge",
-    .size = sizeof(PIIX3State),
-    .vmsd = &vmstate_piix3,
-    .no_user = 1,
-    .class_init = piix3_xen_class_init,
+static TypeInfo piix3_xen_info = {
+    .name          = "PIIX3-xen",
+    .parent        = TYPE_PCI_DEVICE,
+    .instance_size = sizeof(PIIX3State),
+    .class_init    = piix3_xen_class_init,
 };
 
 static void piix3_register(void)
 {
-    qdev_register_subclass(&piix3_info, TYPE_PCI_DEVICE);
-    qdev_register_subclass(&piix3_xen_info, TYPE_PCI_DEVICE);
+    type_register_static(&piix3_info);
+    type_register_static(&piix3_xen_info);
 }
 
 device_init(piix3_register);
