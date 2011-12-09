@@ -621,7 +621,7 @@ static void rtas_quiesce(sPAPREnvironment *spapr, uint32_t token,
     rtas_st(rets, 0, 0);
 }
 
-static int spapr_vio_busdev_init(DeviceState *qdev, DeviceInfo *qinfo)
+static int spapr_vio_busdev_init(DeviceState *qdev)
 {
     VIOsPAPRDevice *dev = (VIOsPAPRDevice *)qdev;
     VIOsPAPRDeviceClass *pc = VIO_SPAPR_DEVICE_GET_CLASS(dev);
