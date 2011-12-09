@@ -51,19 +51,23 @@ typedef struct TypeImpl
     InterfaceImpl interfaces[MAX_INTERFACES];
 } TypeImpl;
 
+#define MAX_TYPES 1024
+
 static int num_types = 1;
-static TypeImpl type_table[1024];
+static TypeImpl type_table[MAX_TYPES];
 
 Type type_register_static(const TypeInfo *info)
 {
     Type type = num_types++;
     TypeImpl *ti;
 
+    assert(num_types < MAX_TYPES);
+
     ti = &type_table[type];
 
     assert(info->name != NULL);
 
-    printf("Added type %s -> %s\n", info->name, info->parent);
+    printf("Added type[%ld] %s -> %s\n", type, info->name, info->parent);
 
     ti->name = info->name;
     ti->parent = info->parent;
@@ -103,6 +107,8 @@ static Type type_register_anonymous(const TypeInfo *info)
     TypeImpl *ti;
     char buffer[32];
     static int count;
+
+    assert(num_types < MAX_TYPES);
 
     ti = &type_table[type];
 
@@ -431,7 +437,17 @@ Object *object_dynamic_cast_assert(Object *obj, const char *typename)
     return inst;
 }
 
-ObjectClass *object_check_class(ObjectClass *class, const char *typename)
+ObjectClass *object_class_dynamic_cast_assert(ObjectClass *class, const char *typename)
+{
+    if (!object_class_dynamic_cast(class, typename)) {
+        fprintf(stderr, "Object %p is not an instance of type %s\n", class, typename);
+        abort();
+    }
+
+    return class;
+}
+
+ObjectClass *object_class_dynamic_cast(ObjectClass *class, const char *typename)
 {
     Type target_type = type_get_by_name(typename);
     Type type = class->type;
@@ -445,9 +461,6 @@ ObjectClass *object_check_class(ObjectClass *class, const char *typename)
 
         type = type_get_by_name(ti->parent);
     }
-
-    fprintf(stderr, "Object %p is not an instance of type %d\n", class, (int)type);
-    abort();
 
     return NULL;
 }
@@ -472,4 +485,22 @@ ObjectClass *object_class_by_name(const char *typename)
     TypeImpl *ti = type_get_instance(type_get_by_name(typename));
     type_class_init(ti);
     return ti->class;
+}
+
+const char *object_class_get_name(ObjectClass *klass)
+{
+    return type_get_name(klass->type);
+}
+
+void object_class_foreach(void (*fn)(ObjectClass *klass, void *data),
+                          void *data)
+{
+    int i;
+
+    for (i = 1; i < num_types; i++) {
+        if (!type_table[i].abstract) {
+            type_class_init(&type_table[i]);
+            fn(type_table[i].class, data);
+        }
+    }
 }
