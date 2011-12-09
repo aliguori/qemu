@@ -56,6 +56,15 @@ typedef struct TypeImpl
 static int num_types = 1;
 static TypeImpl type_table[MAX_TYPES];
 
+Type type_register_static_alias(const TypeInfo *info, const char *alias)
+{
+    TypeInfo *new_info = g_malloc0(sizeof(*info));
+
+    memcpy(new_info, info, sizeof(*info));
+    new_info->name = alias;
+    return type_register_static(new_info);
+}
+
 Type type_register_static(const TypeInfo *info)
 {
     Type type = num_types++;
