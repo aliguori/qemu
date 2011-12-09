@@ -128,7 +128,7 @@ static DeviceInfo smbus_eeprom_info = {
 
 static void smbus_eeprom_register_devices(void)
 {
-    smbus_register_device(&smbus_eeprom_info);
+    qdev_register_subclass(&smbus_eeprom_info, TYPE_SMBUS_DEVICE);
 }
 
 device_init(smbus_eeprom_register_devices)
