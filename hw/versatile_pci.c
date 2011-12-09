@@ -155,7 +155,7 @@ static void versatile_pci_register_devices(void)
 {
     sysbus_register_withprop(&pci_vpb_info, TYPE_SYS_BUS_DEVICE);
     sysbus_register_withprop(&pci_realview_info, TYPE_SYS_BUS_DEVICE);
-    pci_qdev_register(&versatile_pci_host_info, TYPE_PCI_DEVICE);
+    qdev_register_subclass(&versatile_pci_host_info, TYPE_PCI_DEVICE);
 }
 
 device_init(versatile_pci_register_devices)

@@ -74,14 +74,6 @@ static int hda_codec_dev_exit(DeviceState *qdev)
     return 0;
 }
 
-void hda_codec_register(DeviceInfo *info, const char *parent)
-{
-    info->init = hda_codec_dev_init;
-    info->exit = hda_codec_dev_exit;
-    info->bus_info = &hda_codec_bus_info;
-    qdev_register_subclass(info, parent);
-}
-
 HDACodecDevice *hda_codec_find(HDACodecBus *bus, uint32_t cad)
 {
     DeviceState *qdev;
@@ -1275,17 +1267,26 @@ static DeviceInfo intel_hda_info = {
     .class_init = intel_hda_class_init,
 };
 
+static void hda_codec_device_class_init(ObjectClass *klass, void *data)
+{
+    DeviceClass *k = DEVICE_CLASS(klass);
+    k->init = hda_codec_dev_init;
+    k->exit = hda_codec_dev_exit;
+    k->bus_info = &hda_codec_bus_info;
+}
+
 static TypeInfo hda_codec_device_type_info = {
     .name = TYPE_HDA_CODEC_DEVICE,
     .parent = TYPE_DEVICE,
     .instance_size = sizeof(HDACodecDevice),
     .abstract = true,
     .class_size = sizeof(HDACodecDeviceClass),
+    .class_init = hda_codec_device_class_init,
 };
 
 static void intel_hda_register(void)
 {
-    pci_qdev_register(&intel_hda_info, TYPE_PCI_DEVICE);
+    qdev_register_subclass(&intel_hda_info, TYPE_PCI_DEVICE);
     type_register_static(&hda_codec_device_type_info);
 }
 device_init(intel_hda_register);

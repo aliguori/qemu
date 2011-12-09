@@ -946,7 +946,7 @@ static DeviceInfo hda_audio_duplex_info = {
 
 static void hda_audio_register(void)
 {
-    hda_codec_register(&hda_audio_output_info, TYPE_HDA_CODEC_DEVICE);
-    hda_codec_register(&hda_audio_duplex_info, TYPE_HDA_CODEC_DEVICE);
+    qdev_register_subclass(&hda_audio_output_info, TYPE_HDA_CODEC_DEVICE);
+    qdev_register_subclass(&hda_audio_duplex_info, TYPE_HDA_CODEC_DEVICE);
 }
 device_init(hda_audio_register);

@@ -607,7 +607,7 @@ static DeviceInfo parallel_isa_info = {
 
 static void parallel_register_devices(void)
 {
-    isa_qdev_register(&parallel_isa_info, TYPE_ISA_DEVICE);
+    qdev_register_subclass(&parallel_isa_info, TYPE_ISA_DEVICE);
 }
 
 device_init(parallel_register_devices)

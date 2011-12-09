@@ -424,7 +424,7 @@ static DeviceInfo piix4_pm_info = {
 
 static void piix4_pm_register(void)
 {
-    pci_qdev_register(&piix4_pm_info, TYPE_PCI_DEVICE);
+    qdev_register_subclass(&piix4_pm_info, TYPE_PCI_DEVICE);
 }
 
 device_init(piix4_pm_register);
