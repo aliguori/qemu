@@ -234,6 +234,6 @@ static DeviceInfo via_ide_info = {
 
 static void via_ide_register(void)
 {
-    pci_qdev_register(&via_ide_info, TYPE_PCI_DEVICE);
+    qdev_register_subclass(&via_ide_info, TYPE_PCI_DEVICE);
 }
 device_init(via_ide_register);

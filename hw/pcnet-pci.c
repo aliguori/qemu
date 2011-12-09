@@ -376,7 +376,7 @@ static DeviceInfo pcnet_info = {
 
 static void pci_pcnet_register_devices(void)
 {
-    pci_qdev_register(&pcnet_info, TYPE_PCI_DEVICE);
+    qdev_register_subclass(&pcnet_info, TYPE_PCI_DEVICE);
 }
 
 device_init(pci_pcnet_register_devices)

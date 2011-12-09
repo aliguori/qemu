@@ -513,7 +513,7 @@ static DeviceInfo port92_info = {
 
 static void port92_register(void)
 {
-    isa_qdev_register(&port92_info, TYPE_ISA_DEVICE);
+    qdev_register_subclass(&port92_info, TYPE_ISA_DEVICE);
 }
 device_init(port92_register)
 

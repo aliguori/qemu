@@ -714,6 +714,6 @@ static DeviceInfo mc146818rtc_info = {
 
 static void mc146818rtc_register(void)
 {
-    isa_qdev_register(&mc146818rtc_info, TYPE_ISA_DEVICE);
+    qdev_register_subclass(&mc146818rtc_info, TYPE_ISA_DEVICE);
 }
 device_init(mc146818rtc_register)

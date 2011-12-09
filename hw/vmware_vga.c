@@ -1222,6 +1222,6 @@ static DeviceInfo vmsvga_info = {
 
 static void vmsvga_register(void)
 {
-    pci_qdev_register(&vmsvga_info, TYPE_PCI_DEVICE);
+    qdev_register_subclass(&vmsvga_info, TYPE_PCI_DEVICE);
 }
 device_init(vmsvga_register);

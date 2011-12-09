@@ -363,7 +363,7 @@ static DeviceInfo via_ac97_info = {
 
 static void vt82c686b_ac97_register(void)
 {
-    pci_qdev_register(&via_ac97_info, TYPE_PCI_DEVICE);
+    qdev_register_subclass(&via_ac97_info, TYPE_PCI_DEVICE);
 }
 
 device_init(vt82c686b_ac97_register);
@@ -409,7 +409,7 @@ static DeviceInfo via_mc97_info = {
 
 static void vt82c686b_mc97_register(void)
 {
-    pci_qdev_register(&via_mc97_info, TYPE_PCI_DEVICE);
+    qdev_register_subclass(&via_mc97_info, TYPE_PCI_DEVICE);
 }
 
 device_init(vt82c686b_mc97_register);
@@ -490,7 +490,7 @@ static DeviceInfo via_pm_info = {
 
 static void vt82c686b_pm_register(void)
 {
-    pci_qdev_register(&via_pm_info, TYPE_PCI_DEVICE);
+    qdev_register_subclass(&via_pm_info, TYPE_PCI_DEVICE);
 }
 
 device_init(vt82c686b_pm_register);
@@ -562,6 +562,6 @@ static DeviceInfo via_info = {
 
 static void vt82c686b_register(void)
 {
-    pci_qdev_register(&via_info, TYPE_PCI_DEVICE);
+    qdev_register_subclass(&via_info, TYPE_PCI_DEVICE);
 }
 device_init(vt82c686b_register);
