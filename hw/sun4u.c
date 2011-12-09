@@ -576,7 +576,7 @@ static DeviceInfo ebus_info = {
 
 static void pci_ebus_register(void)
 {
-    pci_qdev_register(&ebus_info, TYPE_PCI_DEVICE);
+    qdev_register_subclass(&ebus_info, TYPE_PCI_DEVICE);
 }
 
 device_init(pci_ebus_register);

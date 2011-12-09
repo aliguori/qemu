@@ -457,13 +457,13 @@ static DeviceInfo pci_unin_internal_device_info = {
 static void unin_register_devices(void)
 {
     sysbus_register_withprop(&pci_unin_main_device_info, TYPE_SYS_BUS_DEVICE);
-    pci_qdev_register(&unin_main_pci_host_info, TYPE_PCI_DEVICE);
+    qdev_register_subclass(&unin_main_pci_host_info, TYPE_PCI_DEVICE);
     sysbus_register_withprop(&pci_u3_agp_device_info, TYPE_SYS_BUS_DEVICE);
-    pci_qdev_register(&u3_agp_pci_host_info, TYPE_PCI_DEVICE);
+    qdev_register_subclass(&u3_agp_pci_host_info, TYPE_PCI_DEVICE);
     sysbus_register_withprop(&pci_unin_agp_device_info, TYPE_SYS_BUS_DEVICE);
-    pci_qdev_register(&unin_agp_pci_host_info, TYPE_PCI_DEVICE);
+    qdev_register_subclass(&unin_agp_pci_host_info, TYPE_PCI_DEVICE);
     sysbus_register_withprop(&pci_unin_internal_device_info, TYPE_SYS_BUS_DEVICE);
-    pci_qdev_register(&unin_internal_pci_host_info, TYPE_PCI_DEVICE);
+    qdev_register_subclass(&unin_internal_pci_host_info, TYPE_PCI_DEVICE);
 }
 
 device_init(unin_register_devices)
