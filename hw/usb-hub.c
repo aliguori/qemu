@@ -564,6 +564,6 @@ static struct DeviceInfo hub_info = {
 
 static void usb_hub_register_devices(void)
 {
-    usb_qdev_register(&hub_info, TYPE_USB_DEVICE);
+    qdev_register_subclass(&hub_info, TYPE_USB_DEVICE);
 }
 device_init(usb_hub_register_devices)

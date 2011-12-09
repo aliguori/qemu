@@ -316,7 +316,7 @@ static DeviceInfo syborg_virtio_net_info = {
 
 static void syborg_virtio_register_devices(void)
 {
-    sysbus_register_withprop(&syborg_virtio_net_info, TYPE_SYS_BUS_DEVICE);
+    qdev_register_subclass(&syborg_virtio_net_info, TYPE_SYS_BUS_DEVICE);
 }
 
 device_init(syborg_virtio_register_devices)

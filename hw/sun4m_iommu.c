@@ -381,7 +381,7 @@ static DeviceInfo iommu_info = {
 
 static void iommu_register_devices(void)
 {
-    sysbus_register_withprop(&iommu_info, TYPE_SYS_BUS_DEVICE);
+    qdev_register_subclass(&iommu_info, TYPE_SYS_BUS_DEVICE);
 }
 
 device_init(iommu_register_devices)

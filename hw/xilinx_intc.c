@@ -182,7 +182,7 @@ static DeviceInfo xilinx_intc_info = {
 
 static void xilinx_intc_register(void)
 {
-    sysbus_register_withprop(&xilinx_intc_info, TYPE_SYS_BUS_DEVICE);
+    qdev_register_subclass(&xilinx_intc_info, TYPE_SYS_BUS_DEVICE);
 }
 
 device_init(xilinx_intc_register)

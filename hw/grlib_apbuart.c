@@ -190,7 +190,7 @@ static DeviceInfo grlib_gptimer_info = {
 
 static void grlib_gptimer_register(void)
 {
-    sysbus_register_withprop(&grlib_gptimer_info, TYPE_SYS_BUS_DEVICE);
+    qdev_register_subclass(&grlib_gptimer_info, TYPE_SYS_BUS_DEVICE);
 }
 
 device_init(grlib_gptimer_register)

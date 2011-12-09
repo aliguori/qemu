@@ -49,8 +49,6 @@ struct SysBusDevice {
 #define sysbus_from_qdev(dev) ((SysBusDevice *)(dev))
 #define FROM_SYSBUS(type, dev) DO_UPCAST(type, busdev, dev)
 
-void sysbus_register_withprop(DeviceInfo *info, const char *parent);
-
 void *sysbus_new(void);
 void sysbus_init_mmio(SysBusDevice *dev, target_phys_addr_t size,
                       ram_addr_t iofunc);

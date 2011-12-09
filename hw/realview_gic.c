@@ -81,7 +81,7 @@ static DeviceInfo realview_gic_info = {
 
 static void realview_gic_register_devices(void)
 {
-    sysbus_register_withprop(&realview_gic_info, TYPE_SYS_BUS_DEVICE);
+    qdev_register_subclass(&realview_gic_info, TYPE_SYS_BUS_DEVICE);
 }
 
 device_init(realview_gic_register_devices)

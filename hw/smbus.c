@@ -210,7 +210,7 @@ static int smbus_device_init(I2CSlave *i2c)
 void smbus_register_device(DeviceInfo *info)
 {
     assert(info->size >= sizeof(SMBusDevice));
-    i2c_register_slave_subclass(info, TYPE_SMBUS_DEVICE);
+    qdev_register_subclass(info, TYPE_SMBUS_DEVICE);
 }
 
 /* Master device commands.  */

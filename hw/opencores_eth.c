@@ -750,7 +750,7 @@ static DeviceInfo open_eth_info = {
 
 static void open_eth_register_devices(void)
 {
-    sysbus_register_withprop(&open_eth_info, TYPE_SYS_BUS_DEVICE);
+    qdev_register_subclass(&open_eth_info, TYPE_SYS_BUS_DEVICE);
 }
 
 device_init(open_eth_register_devices)

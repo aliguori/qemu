@@ -323,8 +323,8 @@ static DeviceInfo pl011_luminary_info = {
 
 static void pl011_register_devices(void)
 {
-    sysbus_register_withprop(&pl011_arm_info, TYPE_SYS_BUS_DEVICE);
-    sysbus_register_withprop(&pl011_luminary_info, TYPE_SYS_BUS_DEVICE);
+    qdev_register_subclass(&pl011_arm_info, TYPE_SYS_BUS_DEVICE);
+    qdev_register_subclass(&pl011_luminary_info, TYPE_SYS_BUS_DEVICE);
 }
 
 device_init(pl011_register_devices)

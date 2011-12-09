@@ -32,7 +32,7 @@ static DeviceInfo mpcore_priv_info = {
 
 static void a9mpcore_register_devices(void)
 {
-    sysbus_register_withprop(&mpcore_priv_info, TYPE_SYS_BUS_DEVICE);
+    qdev_register_subclass(&mpcore_priv_info, TYPE_SYS_BUS_DEVICE);
 }
 
 device_init(a9mpcore_register_devices)

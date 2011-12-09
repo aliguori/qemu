@@ -638,7 +638,7 @@ static DeviceInfo pl041_device_info = {
 
 static void pl041_register_device(void)
 {
-    sysbus_register_withprop(&pl041_device_info, TYPE_SYS_BUS_DEVICE);
+    qdev_register_subclass(&pl041_device_info, TYPE_SYS_BUS_DEVICE);
 }
 
 device_init(pl041_register_device)

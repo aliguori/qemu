@@ -322,6 +322,6 @@ static DeviceInfo gus_info = {
 
 static void gus_register (void)
 {
-    isa_qdev_register (&gus_info);
+    qdev_register_subclass(&gus_info, TYPE_ISA_DEVICE);
 }
 device_init (gus_register)

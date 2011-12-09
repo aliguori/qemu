@@ -153,7 +153,7 @@ static DeviceInfo pci_grackle_device_info = {
 
 static void grackle_register_devices(void)
 {
-    sysbus_register_withprop(&pci_grackle_device_info, TYPE_SYS_BUS_DEVICE);
+    qdev_register_subclass(&pci_grackle_device_info, TYPE_SYS_BUS_DEVICE);
     qdev_register_subclass(&grackle_pci_host_info, TYPE_PCI_DEVICE);
 }
 

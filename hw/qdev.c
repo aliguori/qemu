@@ -146,11 +146,6 @@ void qdev_register_subclass(DeviceInfo *info, const char *parent)
     device_info_list = info;
 }
 
-void qdev_register(DeviceInfo *info)
-{
-    qdev_register_subclass(info, TYPE_DEVICE);
-}
-
 static DeviceInfo *qdev_find_info(BusInfo *bus_info, const char *name)
 {
     DeviceInfo *info;

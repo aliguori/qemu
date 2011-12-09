@@ -192,6 +192,6 @@ static VIOsPAPRDevice *vty_lookup(sPAPREnvironment *spapr, target_ulong reg)
 
 static void spapr_vty_register(void)
 {
-    spapr_vio_bus_register_withprop(&spapr_vty_info, TYPE_VIO_SPAPR_DEVICE);
+    qdev_register_subclass(&spapr_vty_info, TYPE_VIO_SPAPR_DEVICE);
 }
 device_init(spapr_vty_register);

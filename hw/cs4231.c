@@ -178,7 +178,7 @@ static DeviceInfo cs4231_info = {
 
 static void cs4231_register_devices(void)
 {
-    sysbus_register_withprop(&cs4231_info, TYPE_SYS_BUS_DEVICE);
+    qdev_register_subclass(&cs4231_info, TYPE_SYS_BUS_DEVICE);
 }
 
 device_init(cs4231_register_devices)
