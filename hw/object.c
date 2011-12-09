@@ -467,3 +467,9 @@ ObjectClass *object_get_super(Object *obj)
     return type_get_instance(type_get_by_name(type_get_instance(obj->class->type)->parent))->class;
 }
 
+ObjectClass *object_class_by_name(const char *typename)
+{
+    TypeImpl *ti = type_get_instance(type_get_by_name(typename));
+    type_class_init(ti);
+    return ti->class;
+}
