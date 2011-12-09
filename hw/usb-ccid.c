@@ -1065,10 +1065,6 @@ static Answer *ccid_peek_next_answer(USBCCIDState *s)
 static struct BusInfo ccid_bus_info = {
     .name = "ccid-bus",
     .size = sizeof(CCIDBus),
-    .props = (Property[]) {
-        DEFINE_PROP_UINT32("slot", struct CCIDCardState, slot, 0),
-        DEFINE_PROP_END_OF_LIST(),
-    }
 };
 
 void ccid_card_send_apdu_to_guest(CCIDCardState *card,
@@ -1353,6 +1349,18 @@ static void ccid_card_class_init(ObjectClass *klass, void *data)
     k->exit = ccid_card_exit;
 }
 
+static Property ccid_card_properties[] = {
+    DEFINE_PROP_UINT32("slot", struct CCIDCardState, slot, 0),
+    DEFINE_PROP_END_OF_LIST(),
+};
+
+static void ccid_card_inst_init(Object *obj)
+{
+    DeviceState *dev = DEVICE(obj);
+
+    qdev_add_legacy_properties(dev, ccid_card_properties);
+}
+
 static TypeInfo ccid_card_type_info = {
     .name = TYPE_CCID_CARD,
     .parent = TYPE_DEVICE,
@@ -1360,6 +1368,7 @@ static TypeInfo ccid_card_type_info = {
     .abstract = true,
     .class_size = sizeof(CCIDCardClass),
     .class_init = ccid_card_class_init,
+    .instance_init = ccid_card_inst_init,
 };
 
 static void ccid_register_devices(void)

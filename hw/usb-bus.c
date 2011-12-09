@@ -17,10 +17,6 @@ static struct BusInfo usb_bus_info = {
     .print_dev = usb_bus_dev_print,
     .get_dev_path = usb_get_dev_path,
     .get_fw_dev_path = usb_get_fw_dev_path,
-    .props      = (Property[]) {
-        DEFINE_PROP_STRING("port", USBDevice, port_path),
-        DEFINE_PROP_END_OF_LIST()
-    },
 };
 static int next_usb_bus = 0;
 static QTAILQ_HEAD(, USBBus) busses = QTAILQ_HEAD_INITIALIZER(busses);
@@ -569,6 +565,18 @@ static void usb_device_class_init(ObjectClass *klass, void *data)
     k->exit     = usb_qdev_exit;
 }
 
+static Property usb_device_properties[] = {
+    DEFINE_PROP_STRING("port", USBDevice, port_path),
+    DEFINE_PROP_END_OF_LIST()
+};
+
+static void usb_device_initfn(Object *obj)
+{
+    DeviceState *dev = DEVICE(obj);
+
+    qdev_add_legacy_properties(dev, usb_device_properties);
+}
+
 static TypeInfo usb_device_type_info = {
     .name = TYPE_USB_DEVICE,
     .parent = TYPE_DEVICE,
@@ -576,6 +584,7 @@ static TypeInfo usb_device_type_info = {
     .abstract = true,
     .class_size = sizeof(USBDeviceClass),
     .class_init = usb_device_class_init,
+    .instance_init = usb_device_initfn,
 };
 
 static void usb_register_devices(void)
