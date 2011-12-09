@@ -370,7 +370,7 @@ static VirtIOS390DeviceInfo s390_virtio_serial = {
     },
 };
 
-static int s390_virtio_busdev_init(DeviceState *dev, DeviceInfo *info)
+static int s390_virtio_busdev_init(DeviceState *dev)
 {
     VirtIOS390DeviceInfo *_info = (VirtIOS390DeviceInfo *)info;
     VirtIOS390Device *_dev = (VirtIOS390Device *)dev;
