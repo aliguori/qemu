@@ -591,7 +591,7 @@ static void usb_serial_class_initfn(ObjectClass *klass, void *data)
     uc->handle_destroy = usb_serial_handle_destroy;
 }
 
-static struct DeviceInfo serial_info = {
+static DeviceInfo serial_info = {
     .name      = "usb-serial",
     .size      = sizeof(USBSerialState),
     .vmsd      = &vmstate_usb_serial,
@@ -616,7 +616,7 @@ static void usb_braille_class_initfn(ObjectClass *klass, void *data)
     uc->handle_destroy = usb_serial_handle_destroy;
 }
 
-static struct DeviceInfo braille_info = {
+static DeviceInfo braille_info = {
     .name      = "usb-braille",
     .size      = sizeof(USBSerialState),
     .vmsd      = &vmstate_usb_serial,

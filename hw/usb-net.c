@@ -1413,7 +1413,7 @@ static void usb_net_class_initfn(ObjectClass *klass, void *data)
     uc->handle_destroy = usb_net_handle_destroy;
 }
 
-static struct DeviceInfo net_info = {
+static DeviceInfo net_info = {
     .name      = "usb-net",
     .fw_name   = "network",
     .size      = sizeof(USBNetState),

@@ -540,7 +540,7 @@ static const VMStateDescription vmstate_usb_hub = {
     }
 };
 
-static void  usb_hub_class_initfn(ObjectClass *klass, void *data)
+static void usb_hub_class_initfn(ObjectClass *klass, void *data)
 {
     USBDeviceClass *uc = USB_DEVICE_CLASS(klass);
 
@@ -554,7 +554,7 @@ static void  usb_hub_class_initfn(ObjectClass *klass, void *data)
     uc->handle_destroy = usb_hub_handle_destroy;
 }
 
-static struct DeviceInfo hub_info = {
+static DeviceInfo hub_info = {
     .name      = "usb-hub",
     .fw_name   = "hub",
     .size      = sizeof(USBHubState),
