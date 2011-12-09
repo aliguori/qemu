@@ -235,22 +235,6 @@ DeviceState *qdev_try_create(BusState *bus, const char *name)
     return qdev_create_from_info(bus, name);
 }
 
-static void qdev_print_devinfo(DeviceInfo *info)
-{
-    error_printf("name \"%s\", bus %s",
-                 info->name, info->bus_info->name);
-    if (info->alias) {
-        error_printf(", alias \"%s\"", info->alias);
-    }
-    if (info->desc) {
-        error_printf(", desc \"%s\"", info->desc);
-    }
-    if (info->no_user) {
-        error_printf(", no-user");
-    }
-    error_printf("\n");
-}
-
 static int set_property(const char *name, const char *value, void *opaque)
 {
     DeviceState *dev = opaque;
@@ -274,12 +258,7 @@ int qdev_device_help(QemuOpts *opts)
 
     driver = qemu_opt_get(opts, "driver");
     if (driver && !strcmp(driver, "?")) {
-        for (info = device_info_list; info != NULL; info = info->next) {
-            if (info->no_user) {
-                continue;       /* not available, don't show */
-            }
-            qdev_print_devinfo(info);
-        }
+        do_info_qdm(NULL);
         return 1;
     }
 
@@ -1047,13 +1026,34 @@ void do_info_qtree(Monitor *mon)
         qbus_print(mon, main_system_bus, 0);
 }
 
+static void info_qdm_one(ObjectClass *klass, void *data)
+{
+    DeviceClass *info;
+
+    if (!object_class_dynamic_cast(klass, TYPE_DEVICE)) {
+        return;
+    }
+
+    info = DEVICE_CLASS(klass);
+
+    error_printf("name \"%s\", bus %s",
+                 object_class_get_name(klass),
+                 info->bus_info->name);
+    if (info->alias) {
+        error_printf(", alias \"%s\"", info->alias);
+    }
+    if (info->desc) {
+        error_printf(", desc \"%s\"", info->desc);
+    }
+    if (info->no_user) {
+        error_printf(", no-user");
+    }
+    error_printf("\n");
+}
+
 void do_info_qdm(Monitor *mon)
 {
-    DeviceInfo *info;
-
-    for (info = device_info_list; info != NULL; info = info->next) {
-        qdev_print_devinfo(info);
-    }
+    object_class_foreach(info_qdm_one, mon);
 }
 
 int do_device_add(Monitor *mon, const QDict *qdict, QObject **ret_data)
