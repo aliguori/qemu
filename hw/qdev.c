@@ -86,7 +86,6 @@ static DeviceState *qdev_create_from_info(BusState *bus, const char *typename)
 
     dev = DEVICE(object_new(typename));
     dev->parent_bus = bus;
-    qdev_prop_set_defaults(dev, qdev_get_props(dev));
     qdev_prop_set_defaults(dev, dev->parent_bus->info->props);
     qdev_prop_set_globals(dev);
     QTAILQ_INSERT_HEAD(&bus->children, dev, sibling);
@@ -95,19 +94,10 @@ static DeviceState *qdev_create_from_info(BusState *bus, const char *typename)
         dev->hotplugged = 1;
         qdev_hot_added = true;
     }
-    dev->instance_id_alias = -1;
-    QTAILQ_INIT(&dev->properties);
-    dev->state = DEV_STATE_CREATED;
-
-    for (prop = qdev_get_props(dev); prop && prop->name; prop++) {
-        qdev_property_add_legacy(dev, prop, NULL);
-    }
 
     for (prop = qdev_get_bus_info(dev)->props; prop && prop->name; prop++) {
         qdev_property_add_legacy(dev, prop, NULL);
     }
-
-    qdev_property_add_str(dev, "type", qdev_get_type, NULL, NULL);
 
     return dev;
 }
@@ -1519,12 +1509,30 @@ void device_reset(DeviceState *dev)
     }
 }
 
+static void device_initfn(Object *obj)
+{
+    DeviceState *dev = DEVICE(obj);
+    Property *prop;
+
+    dev->instance_id_alias = -1;
+    dev->state = DEV_STATE_CREATED;
+    QTAILQ_INIT(&dev->properties);
+
+    qdev_prop_set_defaults(dev, qdev_get_props(dev));
+    for (prop = qdev_get_props(dev); prop && prop->name; prop++) {
+        qdev_property_add_legacy(dev, prop, NULL);
+    }
+
+    qdev_property_add_str(dev, "type", qdev_get_type, NULL, NULL);
+}
+
 static TypeInfo device_type_info = {
     .name = TYPE_DEVICE,
     .parent = TYPE_OBJECT,
     .instance_size = sizeof(DeviceState),
     .abstract = true,
     .class_size = sizeof(DeviceClass),
+    .instance_init = device_initfn,
 };
 
 static void init_qdev(void)
