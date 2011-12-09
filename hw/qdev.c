@@ -38,8 +38,6 @@ static bool qdev_hot_removed = false;
 static BusState *main_system_bus;
 static void main_system_bus_create(void);
 
-static DeviceInfo *device_info_list;
-
 static BusState *qbus_find_recursive(BusState *bus, const char *name,
                                      const BusInfo *info);
 static BusState *qbus_find(const char *path);
@@ -125,7 +123,6 @@ static void qdev_do_register_subclass(DeviceInfo *info, const char *parent,
     TypeInfo type_info = {};
 
     assert(info->size >= sizeof(DeviceState));
-    assert(!info->next);
 
     type_info.name = name;
     type_info.parent = parent;
@@ -142,30 +139,6 @@ void qdev_register_subclass(DeviceInfo *info, const char *parent)
     if (info->alias) {
         qdev_do_register_subclass(info, parent, info->alias);
     }
-    info->next = device_info_list;
-    device_info_list = info;
-}
-
-static DeviceInfo *qdev_find_info(BusInfo *bus_info, const char *name)
-{
-    DeviceInfo *info;
-
-    /* first check device names */
-    for (info = device_info_list; info != NULL; info = info->next) {
-        if (strcmp(info->name, name) != 0)
-            continue;
-        return info;
-    }
-
-    /* failing that check the aliases */
-    for (info = device_info_list; info != NULL; info = info->next) {
-        if (!info->alias)
-            continue;
-        if (strcmp(info->alias, name) != 0)
-            continue;
-        return info;
-    }
-    return NULL;
 }
 
 /* FIXME: need to figure out somethign to do with bus.
@@ -253,8 +226,9 @@ static int set_property(const char *name, const char *value, void *opaque)
 int qdev_device_help(QemuOpts *opts)
 {
     const char *driver;
-    DeviceInfo *info;
     Property *prop;
+    ObjectClass *klass;
+    DeviceClass *info;
 
     driver = qemu_opt_get(opts, "driver");
     if (driver && !strcmp(driver, "?")) {
@@ -266,10 +240,11 @@ int qdev_device_help(QemuOpts *opts)
         return 0;
     }
 
-    info = qdev_find_info(NULL, driver);
-    if (!info) {
+    klass = object_class_by_name(driver);
+    if (!klass) {
         return 0;
     }
+    info = DEVICE_CLASS(klass);
 
     for (prop = info->props; prop && prop->name; prop++) {
         /*
@@ -281,13 +256,13 @@ int qdev_device_help(QemuOpts *opts)
         if (!prop->info->parse) {
             continue;           /* no way to set it, don't show */
         }
-        error_printf("%s.%s=%s\n", info->name, prop->name, prop->info->name);
+        error_printf("%s.%s=%s\n", driver, prop->name, prop->info->name);
     }
     for (prop = info->bus_info->props; prop && prop->name; prop++) {
         if (!prop->info->parse) {
             continue;           /* no way to set it, don't show */
         }
-        error_printf("%s.%s=%s\n", info->name, prop->name, prop->info->name);
+        error_printf("%s.%s=%s\n", driver, prop->name, prop->info->name);
     }
     return 1;
 }
