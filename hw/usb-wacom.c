@@ -370,7 +370,7 @@ static void usb_wacom_class_init(ObjectClass *class, void *data)
     uc->handle_destroy = usb_wacom_handle_destroy;
 }
 
-static struct DeviceInfo wacom_info = {
+static DeviceInfo wacom_info = {
     .name      = "usb-wacom-tablet",
     .desc      = "QEMU PenPartner Tablet",
     .size      = sizeof(USBWacomState),
