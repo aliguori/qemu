@@ -668,11 +668,6 @@ static struct BusInfo virtser_bus_info = {
     .name      = "virtio-serial-bus",
     .size      = sizeof(VirtIOSerialBus),
     .print_dev = virtser_bus_dev_print,
-    .props      = (Property[]) {
-        DEFINE_PROP_UINT32("nr", VirtIOSerialPort, id, VIRTIO_CONSOLE_BAD_ID),
-        DEFINE_PROP_STRING("name", VirtIOSerialPort, name),
-        DEFINE_PROP_END_OF_LIST()
-    }
 };
 
 static void virtser_bus_dev_print(Monitor *mon, DeviceState *qdev, int indent)
@@ -925,6 +920,19 @@ static void virtio_serial_port_class_init(ObjectClass *klass, void *data)
     k->unplug = qdev_simple_unplug_cb;
 }
 
+static Property virtio_serial_port_properties[] = {
+    DEFINE_PROP_UINT32("nr", VirtIOSerialPort, id, VIRTIO_CONSOLE_BAD_ID),
+    DEFINE_PROP_STRING("name", VirtIOSerialPort, name),
+    DEFINE_PROP_END_OF_LIST()
+};
+
+static void virtio_serial_port_inst_init(Object *obj)
+{
+    DeviceState *dev = DEVICE(obj);
+
+    qdev_add_legacy_properties(dev, virtio_serial_port_properties);
+}
+
 static TypeInfo virtio_serial_port_type_info = {
     .name = TYPE_VIRTIO_SERIAL_PORT,
     .parent = TYPE_DEVICE,
@@ -932,6 +940,7 @@ static TypeInfo virtio_serial_port_type_info = {
     .abstract = true,
     .class_size = sizeof(VirtIOSerialPortClass),
     .class_init = virtio_serial_port_class_init,
+    .instance_init = virtio_serial_port_inst_init,
 };
 
 static void virtio_serial_register_devices(void)
