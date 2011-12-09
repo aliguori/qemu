@@ -1811,7 +1811,8 @@ static void scsi_disk_class_initfn(ObjectClass *klass, void *data)
 }
 
 static DeviceInfo scsi_disk_info = {
-    .name    = "scsi-disk", /* legacy -device scsi-disk */
+    /* legacy -device scsi-disk */
+    .name    = "scsi-disk",
     .fw_name = "disk",
     .desc    = "virtual SCSI disk or CD-ROM (legacy)",
     .size    = sizeof(SCSIDiskState),
