@@ -549,21 +549,23 @@ static Property syborg_fb_properties[] = {
 
 static void syborg_fb_class_init(ObjectClass *klass, void *data)
 {
+    DeviceClass *dc = DEVICE_CLASS(klass);
     SysBusDeviceClass *k = SYS_BUS_DEVICE_CLASS(klass);
 
     k->init = syborg_fb_init;
+    dc->props = syborg_fb_properties;
 }
 
-static DeviceInfo syborg_fb_info = {
-    .name = "syborg,framebuffer",
-    .size = sizeof(SyborgFBState),
-    .props = syborg_fb_properties,
-    .class_init = syborg_fb_class_init,
+static TypeInfo syborg_fb_info = {
+    .name          = "syborg,framebuffer",
+    .parent        = TYPE_SYS_BUS_DEVICE,
+    .instance_size = sizeof(SyborgFBState),
+    .class_init    = syborg_fb_class_init,
 };
 
 static void syborg_fb_register_devices(void)
 {
-    qdev_register_subclass(&syborg_fb_info, TYPE_SYS_BUS_DEVICE);
+    type_register_static(&syborg_fb_info);
 }
 
 device_init(syborg_fb_register_devices)

@@ -220,21 +220,23 @@ static Property syborg_timer_properties[] = {
 
 static void syborg_timer_class_init(ObjectClass *klass, void *data)
 {
+    DeviceClass *dc = DEVICE_CLASS(klass);
     SysBusDeviceClass *k = SYS_BUS_DEVICE_CLASS(klass);
 
     k->init = syborg_timer_init;
+    dc->props = syborg_timer_properties;
 }
 
-static DeviceInfo syborg_timer_info = {
-    .name = "syborg,timer",
-    .size = sizeof(SyborgTimerState),
-    .props = syborg_timer_properties,
-    .class_init = syborg_timer_class_init,
+static TypeInfo syborg_timer_info = {
+    .name          = "syborg,timer",
+    .parent        = TYPE_SYS_BUS_DEVICE,
+    .instance_size = sizeof(SyborgTimerState),
+    .class_init    = syborg_timer_class_init,
 };
 
 static void syborg_timer_register_devices(void)
 {
-    qdev_register_subclass(&syborg_timer_info, TYPE_SYS_BUS_DEVICE);
+    type_register_static(&syborg_timer_info);
 }
 
 device_init(syborg_timer_register_devices)

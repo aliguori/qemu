@@ -235,21 +235,23 @@ static Property xilinx_ethlite_properties[] = {
 
 static void xilinx_ethlite_class_init(ObjectClass *klass, void *data)
 {
+    DeviceClass *dc = DEVICE_CLASS(klass);
     SysBusDeviceClass *k = SYS_BUS_DEVICE_CLASS(klass);
 
     k->init = xilinx_ethlite_init;
+    dc->props = xilinx_ethlite_properties;
 }
 
-static DeviceInfo xilinx_ethlite_info = {
-    .name = "xilinx,ethlite",
-    .size = sizeof(struct xlx_ethlite),
-    .props = xilinx_ethlite_properties,
-    .class_init = xilinx_ethlite_class_init,
+static TypeInfo xilinx_ethlite_info = {
+    .name          = "xilinx,ethlite",
+    .parent        = TYPE_SYS_BUS_DEVICE,
+    .instance_size = sizeof(struct xlx_ethlite),
+    .class_init    = xilinx_ethlite_class_init,
 };
 
 static void xilinx_ethlite_register(void)
 {
-    qdev_register_subclass(&xilinx_ethlite_info, TYPE_SYS_BUS_DEVICE);
+    type_register_static(&xilinx_ethlite_info);
 }
 
 device_init(xilinx_ethlite_register)

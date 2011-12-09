@@ -139,15 +139,16 @@ static void syborg_rtc_class_init(ObjectClass *klass, void *data)
     sdc->init = syborg_rtc_init;
 }
 
-static DeviceInfo syborg_rtc_info = {
-    .name = "syborg,rtc",
-    .size = sizeof(SyborgRTCState),
-    .class_init = syborg_rtc_class_init,
+static TypeInfo syborg_rtc_info = {
+    .name          = "syborg,rtc",
+    .parent        = TYPE_SYS_BUS_DEVICE,
+    .instance_size = sizeof(SyborgRTCState),
+    .class_init    = syborg_rtc_class_init,
 };
 
 static void syborg_rtc_register_devices(void)
 {
-    qdev_register_subclass(&syborg_rtc_info, TYPE_SYS_BUS_DEVICE);
+    type_register_static(&syborg_rtc_info);
 }
 
 device_init(syborg_rtc_register_devices)
