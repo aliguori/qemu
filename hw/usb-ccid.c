@@ -1315,8 +1315,14 @@ static VMStateDescription ccid_vmstate = {
     }
 };
 
+static Property ccid_properties[] = {
+    DEFINE_PROP_UINT8("debug", USBCCIDState, debug, 0),
+    DEFINE_PROP_END_OF_LIST(),
+};
+
 static void ccid_class_initfn(ObjectClass *klass, void *data)
 {
+    DeviceClass *dc = DEVICE_CLASS(klass);
     USBDeviceClass *uc = USB_DEVICE_CLASS(klass);
 
     uc->init           = ccid_initfn;
@@ -1327,18 +1333,16 @@ static void ccid_class_initfn(ObjectClass *klass, void *data)
     uc->handle_control = ccid_handle_control;
     uc->handle_data    = ccid_handle_data;
     uc->handle_destroy = ccid_handle_destroy;
+    dc->desc = "CCID Rev 1.1 smartcard reader";
+    dc->vmsd = &ccid_vmstate;
+    dc->props = ccid_properties;
 }
 
-static DeviceInfo ccid_info = {
-    .name      = CCID_DEV_NAME,
-    .desc      = "CCID Rev 1.1 smartcard reader",
-    .size      = sizeof(USBCCIDState),
-    .class_init= ccid_class_initfn,
-    .vmsd      = &ccid_vmstate,
-    .props     = (Property[]) {
-        DEFINE_PROP_UINT8("debug", USBCCIDState, debug, 0),
-        DEFINE_PROP_END_OF_LIST(),
-    },
+static TypeInfo ccid_info = {
+    .name          = CCID_DEV_NAME,
+    .parent        = TYPE_USB_DEVICE,
+    .instance_size = sizeof(USBCCIDState),
+    .class_init    = ccid_class_initfn,
 };
 
 static void ccid_card_class_init(ObjectClass *klass, void *data)
@@ -1361,7 +1365,7 @@ static TypeInfo ccid_card_type_info = {
 static void ccid_register_devices(void)
 {
     type_register_static(&ccid_card_type_info);
-    qdev_register_subclass(&ccid_info, TYPE_USB_DEVICE);
+    type_register_static(&ccid_info);
     usb_legacy_register(CCID_DEV_NAME, "ccid", NULL);
 }
 device_init(ccid_register_devices)

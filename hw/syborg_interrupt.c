@@ -227,21 +227,23 @@ static Property syborg_int_properties[] = {
 
 static void syborg_int_class_init(ObjectClass *klass, void *data)
 {
+    DeviceClass *dc = DEVICE_CLASS(klass);
     SysBusDeviceClass *k = SYS_BUS_DEVICE_CLASS(klass);
 
     k->init = syborg_int_init;
+    dc->props = syborg_int_properties;
 }
 
-static DeviceInfo syborg_int_info = {
-    .name = "syborg,interrupt",
-    .size = sizeof(SyborgIntState),
-    .props = syborg_int_properties,
-    .class_init = syborg_int_class_init,
+static TypeInfo syborg_int_info = {
+    .name          = "syborg,interrupt",
+    .parent        = TYPE_SYS_BUS_DEVICE,
+    .instance_size = sizeof(SyborgIntState),
+    .class_init    = syborg_int_class_init,
 };
 
 static void syborg_interrupt_register_devices(void)
 {
-    qdev_register_subclass(&syborg_int_info, TYPE_SYS_BUS_DEVICE);
+    type_register_static(&syborg_int_info);
 }
 
 device_init(syborg_interrupt_register_devices)

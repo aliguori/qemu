@@ -89,15 +89,16 @@ static void empty_slot_class_init(ObjectClass *klass, void *data)
     k->init = empty_slot_init1;
 }
 
-static DeviceInfo empty_slot_info = {
-    .name = "empty_slot",
-    .size = sizeof(EmptySlot),
-    .class_init = empty_slot_class_init,
+static TypeInfo empty_slot_info = {
+    .name          = "empty_slot",
+    .parent        = TYPE_SYS_BUS_DEVICE,
+    .instance_size = sizeof(EmptySlot),
+    .class_init    = empty_slot_class_init,
 };
 
 static void empty_slot_register_devices(void)
 {
-    qdev_register_subclass(&empty_slot_info, TYPE_SYS_BUS_DEVICE);
+    type_register_static(&empty_slot_info);
 }
 
 device_init(empty_slot_register_devices);

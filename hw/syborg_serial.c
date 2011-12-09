@@ -323,22 +323,24 @@ static Property syborg_serial_properties[] = {
 
 static void syborg_serial_class_init(ObjectClass *klass, void *data)
 {
+    DeviceClass *dc = DEVICE_CLASS(klass);
     SysBusDeviceClass *k = SYS_BUS_DEVICE_CLASS(klass);
 
     k->init = syborg_serial_init;
+    dc->vmsd = &vmstate_syborg_serial;
+    dc->props = syborg_serial_properties;
 }
 
-static DeviceInfo syborg_serial_info = {
-    .name = "syborg,serial",
-    .size = sizeof(SyborgSerialState),
-    .vmsd = &vmstate_syborg_serial,
-    .props = syborg_serial_properties,
-    .class_init = syborg_serial_class_init,
+static TypeInfo syborg_serial_info = {
+    .name          = "syborg,serial",
+    .parent        = TYPE_SYS_BUS_DEVICE,
+    .instance_size = sizeof(SyborgSerialState),
+    .class_init    = syborg_serial_class_init,
 };
 
 static void syborg_serial_register_devices(void)
 {
-    qdev_register_subclass(&syborg_serial_info, TYPE_SYS_BUS_DEVICE);
+    type_register_static(&syborg_serial_info);
 }
 
 device_init(syborg_serial_register_devices)

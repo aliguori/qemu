@@ -573,62 +573,68 @@ static void usb_hid_class_initfn(ObjectClass *klass, void *data)
 
 static void usb_tablet_class_initfn(ObjectClass *klass, void *data)
 {
+    DeviceClass *dc = DEVICE_CLASS(klass);
     USBDeviceClass *uc = USB_DEVICE_CLASS(klass);
 
     usb_hid_class_initfn(klass, data);
     uc->init           = usb_tablet_initfn;
     uc->product_desc   = "QEMU USB Tablet";
     uc->usb_desc       = &desc_tablet;
+    dc->vmsd = &vmstate_usb_ptr;
 }
 
-static DeviceInfo usb_tablet_info = {
-    .name      = "usb-tablet",
-    .size      = sizeof(USBHIDState),
-    .vmsd      = &vmstate_usb_ptr,
-    .class_init= usb_tablet_class_initfn,
+static TypeInfo usb_tablet_info = {
+    .name          = "usb-tablet",
+    .parent        = TYPE_USB_DEVICE,
+    .instance_size = sizeof(USBHIDState),
+    .class_init    = usb_tablet_class_initfn,
 };
 
 static void usb_mouse_class_initfn(ObjectClass *klass, void *data)
 {
+    DeviceClass *dc = DEVICE_CLASS(klass);
     USBDeviceClass *uc = USB_DEVICE_CLASS(klass);
 
     usb_hid_class_initfn(klass, data);
     uc->init           = usb_mouse_initfn;
     uc->product_desc   = "QEMU USB Mouse";
     uc->usb_desc       = &desc_mouse;
+    dc->vmsd = &vmstate_usb_ptr;
 }
 
-static DeviceInfo usb_mouse_info = {
-    .name      = "usb-mouse",
-    .size      = sizeof(USBHIDState),
-    .vmsd      = &vmstate_usb_ptr,
-    .class_init= usb_mouse_class_initfn,
+static TypeInfo usb_mouse_info = {
+    .name          = "usb-mouse",
+    .parent        = TYPE_USB_DEVICE,
+    .instance_size = sizeof(USBHIDState),
+    .class_init    = usb_mouse_class_initfn,
 };
 
 static void usb_keyboard_class_initfn(ObjectClass *klass, void *data)
 {
+    DeviceClass *dc = DEVICE_CLASS(klass);
     USBDeviceClass *uc = USB_DEVICE_CLASS(klass);
 
     usb_hid_class_initfn(klass, data);
     uc->init           = usb_keyboard_initfn;
     uc->product_desc   = "QEMU USB Keyboard";
     uc->usb_desc       = &desc_keyboard;
+    dc->vmsd = &vmstate_usb_kbd;
 }
 
-static DeviceInfo usb_keyboard_info = {
-    .name      = "usb-kbd",
-    .size      = sizeof(USBHIDState),
-    .vmsd      = &vmstate_usb_kbd,
-    .class_init= usb_keyboard_class_initfn,
+static TypeInfo usb_keyboard_info = {
+    .name          = "usb-kbd",
+    .parent        = TYPE_USB_DEVICE,
+    .instance_size = sizeof(USBHIDState),
+    .class_init    = usb_keyboard_class_initfn,
 };
 
 static void usb_hid_register_devices(void)
 {
-    qdev_register_subclass(&usb_tablet_info, TYPE_USB_DEVICE);
+    type_register_static(&usb_tablet_info);
     usb_legacy_register("usb-tablet", "tablet", NULL);
-    qdev_register_subclass(&usb_mouse_info, TYPE_USB_DEVICE);
+    type_register_static(&usb_mouse_info);
     usb_legacy_register("usb-mouse", "mouse", NULL);
-    qdev_register_subclass(&usb_keyboard_info, TYPE_USB_DEVICE);
+    type_register_static(&usb_keyboard_info);
     usb_legacy_register("usb-kbd", "keyboard", NULL);
 }
 device_init(usb_hid_register_devices)

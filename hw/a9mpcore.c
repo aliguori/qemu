@@ -18,21 +18,23 @@ static Property mpcore_priv_properties[] = {
 
 static void mpcore_priv_class_init(ObjectClass *klass, void *data)
 {
+    DeviceClass *dc = DEVICE_CLASS(klass);
     SysBusDeviceClass *k = SYS_BUS_DEVICE_CLASS(klass);
 
     k->init = mpcore_priv_init;
+    dc->props = mpcore_priv_properties;
 }
 
-static DeviceInfo mpcore_priv_info = {
-    .name = "a9mpcore_priv",
-    .size = sizeof(mpcore_priv_state),
-    .props = mpcore_priv_properties,
-    .class_init = mpcore_priv_class_init,
+static TypeInfo mpcore_priv_info = {
+    .name          = "a9mpcore_priv",
+    .parent        = TYPE_SYS_BUS_DEVICE,
+    .instance_size = sizeof(mpcore_priv_state),
+    .class_init    = mpcore_priv_class_init,
 };
 
 static void a9mpcore_register_devices(void)
 {
-    qdev_register_subclass(&mpcore_priv_info, TYPE_SYS_BUS_DEVICE);
+    type_register_static(&mpcore_priv_info);
 }
 
 device_init(a9mpcore_register_devices)
