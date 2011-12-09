@@ -356,7 +356,7 @@ static DeviceInfo ssd0323_info = {
 
 static void ssd03232_register_devices(void)
 {
-    ssi_register_slave(&ssd0323_info);
+    qdev_register_subclass(&ssd0323_info, TYPE_SSI_SLAVE);
 }
 
 device_init(ssd03232_register_devices)

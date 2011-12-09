@@ -687,6 +687,6 @@ static DeviceInfo cs4231a_info = {
 
 static void cs4231a_register (void)
 {
-    isa_qdev_register (&cs4231a_info);
+    qdev_register_subclass(&cs4231a_info, TYPE_ISA_DEVICE);
 }
 device_init (cs4231a_register)

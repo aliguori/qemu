@@ -2046,7 +2046,7 @@ static void eepro100_register_devices(void)
         pci_dev->exit = pci_nic_uninit;
         pci_dev->qdev.props = e100_properties;
         pci_dev->qdev.size = sizeof(EEPRO100State);
-        pci_qdev_register(pci_dev, TYPE_PCI_DEVICE);
+        qdev_register_subclass(pci_dev, TYPE_PCI_DEVICE);
     }
 }
 

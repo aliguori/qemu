@@ -536,7 +536,7 @@ static DeviceInfo milkymist_pfpu_info = {
 
 static void milkymist_pfpu_register(void)
 {
-    sysbus_register_withprop(&milkymist_pfpu_info, TYPE_SYS_BUS_DEVICE);
+    qdev_register_subclass(&milkymist_pfpu_info, TYPE_SYS_BUS_DEVICE);
 }
 
 device_init(milkymist_pfpu_register)

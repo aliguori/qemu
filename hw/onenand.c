@@ -827,7 +827,7 @@ static DeviceInfo onenand_info = {
 
 static void onenand_register_device(void)
 {
-    sysbus_register_withprop(&onenand_info, TYPE_SYS_BUS_DEVICE);
+    qdev_register_subclass(&onenand_info, TYPE_SYS_BUS_DEVICE);
 }
 
 void *onenand_raw_otp(DeviceState *onenand_device)

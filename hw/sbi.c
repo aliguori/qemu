@@ -148,7 +148,7 @@ static DeviceInfo sbi_info = {
 
 static void sbi_register_devices(void)
 {
-    sysbus_register_withprop(&sbi_info, TYPE_SYS_BUS_DEVICE);
+    qdev_register_subclass(&sbi_info, TYPE_SYS_BUS_DEVICE);
 }
 
 device_init(sbi_register_devices)

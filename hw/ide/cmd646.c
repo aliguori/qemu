@@ -351,6 +351,6 @@ static DeviceInfo cmd646_ide_info = {
 
 static void cmd646_ide_register(void)
 {
-    pci_qdev_register(&cmd646_ide_info, TYPE_PCI_DEVICE);
+    qdev_register_subclass(&cmd646_ide_info, TYPE_PCI_DEVICE);
 }
 device_init(cmd646_ide_register);

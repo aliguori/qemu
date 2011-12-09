@@ -781,7 +781,7 @@ static DeviceInfo smc91c111_info = {
 
 static void smc91c111_register_devices(void)
 {
-    sysbus_register_withprop(&smc91c111_info, TYPE_SYS_BUS_DEVICE);
+    qdev_register_subclass(&smc91c111_info, TYPE_SYS_BUS_DEVICE);
 }
 
 /* Legacy helper function.  Should go away when machine config files are

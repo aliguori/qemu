@@ -562,8 +562,8 @@ static DeviceInfo icp_pic_info = {
 
 static void integratorcp_register_devices(void)
 {
-    sysbus_register_withprop(&icp_pic_info, TYPE_SYS_BUS_DEVICE);
-    sysbus_register_withprop(&core_info, TYPE_SYS_BUS_DEVICE);
+    qdev_register_subclass(&icp_pic_info, TYPE_SYS_BUS_DEVICE);
+    qdev_register_subclass(&core_info, TYPE_SYS_BUS_DEVICE);
 }
 
 device_init(integratorcp_register_devices)

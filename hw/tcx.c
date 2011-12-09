@@ -672,7 +672,7 @@ static DeviceInfo tcx_info = {
 
 static void tcx_register_devices(void)
 {
-    sysbus_register_withprop(&tcx_info, TYPE_SYS_BUS_DEVICE);
+    qdev_register_subclass(&tcx_info, TYPE_SYS_BUS_DEVICE);
 }
 
 device_init(tcx_register_devices)

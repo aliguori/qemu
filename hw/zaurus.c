@@ -243,7 +243,7 @@ static DeviceInfo scoop_sysbus_info = {
 
 static void scoop_register(void)
 {
-    sysbus_register_withprop(&scoop_sysbus_info, TYPE_SYS_BUS_DEVICE);
+    qdev_register_subclass(&scoop_sysbus_info, TYPE_SYS_BUS_DEVICE);
 }
 device_init(scoop_register);
 

@@ -180,8 +180,8 @@ static DeviceInfo max1111_info = {
 
 static void max111x_register_devices(void)
 {
-    ssi_register_slave(&max1110_info);
-    ssi_register_slave(&max1111_info);
+    qdev_register_subclass(&max1110_info, TYPE_SSI_SLAVE);
+    qdev_register_subclass(&max1111_info, TYPE_SSI_SLAVE);
 }
 
 device_init(max111x_register_devices)

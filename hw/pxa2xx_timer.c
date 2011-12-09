@@ -525,7 +525,7 @@ static DeviceInfo pxa27x_timer_dev_info = {
 
 static void pxa2xx_timer_register(void)
 {
-    sysbus_register_withprop(&pxa25x_timer_dev_info, TYPE_SYS_BUS_DEVICE);
-    sysbus_register_withprop(&pxa27x_timer_dev_info, TYPE_SYS_BUS_DEVICE);
+    qdev_register_subclass(&pxa25x_timer_dev_info, TYPE_SYS_BUS_DEVICE);
+    qdev_register_subclass(&pxa27x_timer_dev_info, TYPE_SYS_BUS_DEVICE);
 };
 device_init(pxa2xx_timer_register);

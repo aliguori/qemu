@@ -439,7 +439,7 @@ static DeviceInfo nand_info = {
 
 static void nand_create_device(void)
 {
-    sysbus_register_withprop(&nand_info, TYPE_SYS_BUS_DEVICE);
+    qdev_register_subclass(&nand_info, TYPE_SYS_BUS_DEVICE);
 }
 
 /*

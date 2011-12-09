@@ -380,7 +380,7 @@ static struct DeviceInfo wacom_info = {
 
 static void usb_wacom_register_devices(void)
 {
-    usb_qdev_register(&wacom_info, TYPE_USB_DEVICE);
+    qdev_register_subclass(&wacom_info, TYPE_USB_DEVICE);
     usb_legacy_register("usb-wacom-tablet", "wacom-tablet", NULL);
 }
 device_init(usb_wacom_register_devices)

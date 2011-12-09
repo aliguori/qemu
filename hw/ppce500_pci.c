@@ -386,7 +386,7 @@ static DeviceInfo e500_pcihost_info = {
 
 static void e500_pci_register(void)
 {
-    sysbus_register_withprop(&e500_pcihost_info, TYPE_SYS_BUS_DEVICE);
-    pci_qdev_register(&e500_host_bridge_info, TYPE_PCI_DEVICE);
+    qdev_register_subclass(&e500_pcihost_info, TYPE_SYS_BUS_DEVICE);
+    qdev_register_subclass(&e500_host_bridge_info, TYPE_PCI_DEVICE);
 }
 device_init(e500_pci_register);

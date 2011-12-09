@@ -47,8 +47,6 @@ struct SysBusDevice {
 #define sysbus_from_qdev(dev) ((SysBusDevice *)(dev))
 #define FROM_SYSBUS(type, dev) DO_UPCAST(type, busdev, dev)
 
-void sysbus_register_withprop(DeviceInfo *info, const char *parent);
-
 void *sysbus_new(void);
 void sysbus_init_mmio_cb2(SysBusDevice *dev,
                           mmio_mapfunc cb, mmio_mapfunc unmap);
