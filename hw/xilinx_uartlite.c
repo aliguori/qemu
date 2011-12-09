@@ -226,7 +226,7 @@ static DeviceInfo xilinx_uartlite_info = {
 
 static void xilinx_uart_register(void)
 {
-    sysbus_register_withprop(&xilinx_uartlite_info, TYPE_SYS_BUS_DEVICE);
+    qdev_register_subclass(&xilinx_uartlite_info, TYPE_SYS_BUS_DEVICE);
 }
 
 device_init(xilinx_uart_register)

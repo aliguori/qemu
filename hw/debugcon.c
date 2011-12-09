@@ -107,7 +107,7 @@ static DeviceInfo debugcon_isa_info = {
 
 static void debugcon_register_devices(void)
 {
-    isa_qdev_register(&debugcon_isa_info, TYPE_ISA_DEVICE);
+    qdev_register_subclass(&debugcon_isa_info, TYPE_ISA_DEVICE);
 }
 
 device_init(debugcon_register_devices)

@@ -822,6 +822,6 @@ static DeviceInfo typhoon_pcihost_info = {
 
 static void typhoon_register(void)
 {
-    sysbus_register_withprop(&typhoon_pcihost_info, TYPE_SYS_BUS_DEVICE);
+    qdev_register_subclass(&typhoon_pcihost_info, TYPE_SYS_BUS_DEVICE);
 }
 device_init(typhoon_register);

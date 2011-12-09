@@ -257,7 +257,7 @@ static DeviceInfo ssi_sd_info = {
 
 static void ssi_sd_register_devices(void)
 {
-    ssi_register_slave(&ssi_sd_info);
+    qdev_register_subclass(&ssi_sd_info, TYPE_SSI_SLAVE);
 }
 
 device_init(ssi_sd_register_devices)

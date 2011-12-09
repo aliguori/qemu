@@ -117,8 +117,8 @@ static DeviceInfo mpcore_priv_info = {
 
 static void arm11mpcore_register_devices(void)
 {
-    sysbus_register_withprop(&mpcore_rirq_info, TYPE_SYS_BUS_DEVICE);
-    sysbus_register_withprop(&mpcore_priv_info, TYPE_SYS_BUS_DEVICE);
+    qdev_register_subclass(&mpcore_rirq_info, TYPE_SYS_BUS_DEVICE);
+    qdev_register_subclass(&mpcore_priv_info, TYPE_SYS_BUS_DEVICE);
 }
 
 device_init(arm11mpcore_register_devices)

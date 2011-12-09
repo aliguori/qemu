@@ -1882,7 +1882,7 @@ static DeviceInfo ohci_sysbus_info = {
 
 static void ohci_register(void)
 {
-    pci_qdev_register(&ohci_pci_info, TYPE_PCI_DEVICE);
-    sysbus_register_withprop(&ohci_sysbus_info, TYPE_SYS_BUS_DEVICE);
+    qdev_register_subclass(&ohci_pci_info, TYPE_PCI_DEVICE);
+    qdev_register_subclass(&ohci_sysbus_info, TYPE_SYS_BUS_DEVICE);
 }
 device_init(ohci_register);

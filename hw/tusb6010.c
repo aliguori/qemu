@@ -805,7 +805,7 @@ static DeviceInfo tusb6010_info = {
 
 static void tusb6010_register_device(void)
 {
-    sysbus_register_withprop(&tusb6010_info, TYPE_SYS_BUS_DEVICE);
+    qdev_register_subclass(&tusb6010_info, TYPE_SYS_BUS_DEVICE);
 }
 
 device_init(tusb6010_register_device)

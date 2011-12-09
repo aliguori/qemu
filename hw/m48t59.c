@@ -763,8 +763,8 @@ static DeviceInfo m48t59_info = {
 
 static void m48t59_register_devices(void)
 {
-    sysbus_register_withprop(&m48t59_info, TYPE_SYS_BUS_DEVICE);
-    isa_qdev_register(&m48t59_isa_info, TYPE_ISA_DEVICE);
+    qdev_register_subclass(&m48t59_info, TYPE_SYS_BUS_DEVICE);
+    qdev_register_subclass(&m48t59_isa_info, TYPE_ISA_DEVICE);
 }
 
 device_init(m48t59_register_devices)

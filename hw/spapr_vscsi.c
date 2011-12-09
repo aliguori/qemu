@@ -973,6 +973,6 @@ static DeviceInfo spapr_vscsi_info = {
 
 static void spapr_vscsi_register(void)
 {
-    spapr_vio_bus_register_withprop(&spapr_vscsi_info, TYPE_VIO_SPAPR_DEVICE);
+    qdev_register_subclass(&spapr_vscsi_info, TYPE_VIO_SPAPR_DEVICE);
 }
 device_init(spapr_vscsi_register);

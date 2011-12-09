@@ -381,7 +381,7 @@ static DeviceInfo vpb_sic_info = {
 
 static void versatilepb_register_devices(void)
 {
-    sysbus_register_withprop(&vpb_sic_info, TYPE_SYS_BUS_DEVICE);
+    qdev_register_subclass(&vpb_sic_info, TYPE_SYS_BUS_DEVICE);
 }
 
 device_init(versatilepb_register_devices)

@@ -240,7 +240,7 @@ static DeviceInfo etraxfs_ser_info = {
 
 static void etraxfs_serial_register(void)
 {
-    sysbus_register_withprop(&etraxfs_ser_info, TYPE_SYS_BUS_DEVICE);
+    qdev_register_subclass(&etraxfs_ser_info, TYPE_SYS_BUS_DEVICE);
 }
 
 device_init(etraxfs_serial_register)

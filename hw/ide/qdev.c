@@ -91,13 +91,6 @@ err:
     return -1;
 }
 
-static void ide_qdev_register(DeviceInfo *info)
-{
-    info->init = ide_qdev_init;
-    info->bus_info = &ide_bus_info;
-    qdev_register_subclass(info, TYPE_IDE_DEVICE);
-}
-
 IDEDevice *ide_create_drive(IDEBus *bus, int unit, DriveInfo *drive)
 {
     DeviceState *dev;
@@ -236,19 +229,27 @@ static DeviceInfo ide_drive_info = {
     }
 };
 
+static void ide_device_class_init(ObjectClass *klass, void *data)
+{
+    DeviceClass *k = DEVICE_CLASS(klass);
+    k->init = ide_qdev_init;
+    k->bus_info = &ide_bus_info;
+}
+
 static TypeInfo ide_device_type_info = {
     .name = TYPE_IDE_DEVICE,
     .parent = TYPE_DEVICE,
     .instance_size = sizeof(IDEDevice),
     .abstract = true,
     .class_size = sizeof(IDEDeviceClass),
+    .class_init = ide_device_class_init,
 };
 
 static void ide_dev_register(void)
 {
-    ide_qdev_register(&ide_hd_info);
-    ide_qdev_register(&ide_cd_info);
-    ide_qdev_register(&ide_drive_info);
+    qdev_register_subclass(&ide_hd_info, TYPE_IDE_DEVICE);
+    qdev_register_subclass(&ide_cd_info, TYPE_IDE_DEVICE);
+    qdev_register_subclass(&ide_drive_info, TYPE_IDE_DEVICE);
     type_register_static(&ide_device_type_info);
 }
 device_init(ide_dev_register);

@@ -166,7 +166,7 @@ static DeviceInfo ads7846_info = {
 
 static void ads7846_register_devices(void)
 {
-    ssi_register_slave(&ads7846_info);
+    qdev_register_subclass(&ads7846_info, TYPE_SSI_SLAVE);
 }
 
 device_init(ads7846_register_devices)

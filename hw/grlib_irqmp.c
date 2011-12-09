@@ -377,7 +377,7 @@ static DeviceInfo grlib_irqmp_info = {
 
 static void grlib_irqmp_register(void)
 {
-    sysbus_register_withprop(&grlib_irqmp_info, TYPE_SYS_BUS_DEVICE);
+    qdev_register_subclass(&grlib_irqmp_info, TYPE_SYS_BUS_DEVICE);
 }
 
 device_init(grlib_irqmp_register)

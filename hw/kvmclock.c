@@ -119,7 +119,7 @@ DeviceState *kvmclock_create(void)
 static void kvmclock_register_device(void)
 {
     if (kvm_enabled()) {
-        sysbus_register_withprop(&kvmclock_info, TYPE_SYS_BUS_DEVICE);
+        qdev_register_subclass(&kvmclock_info, TYPE_SYS_BUS_DEVICE);
     }
 }
 

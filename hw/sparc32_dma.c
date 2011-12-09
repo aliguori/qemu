@@ -307,7 +307,7 @@ static DeviceInfo sparc32_dma_info = {
 
 static void sparc32_dma_register_devices(void)
 {
-    sysbus_register_withprop(&sparc32_dma_info, TYPE_SYS_BUS_DEVICE);
+    qdev_register_subclass(&sparc32_dma_info, TYPE_SYS_BUS_DEVICE);
 }
 
 device_init(sparc32_dma_register_devices)

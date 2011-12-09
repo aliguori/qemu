@@ -876,7 +876,7 @@ static DeviceInfo twl92230_info = {
 
 static void twl92230_register_devices(void)
 {
-    i2c_register_slave_subclass(&twl92230_info, TYPE_I2C_SLAVE);
+    qdev_register_subclass(&twl92230_info, TYPE_I2C_SLAVE);
 }
 
 device_init(twl92230_register_devices)

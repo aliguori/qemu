@@ -332,7 +332,7 @@ static DeviceInfo ecc_info = {
 
 static void ecc_register_devices(void)
 {
-    sysbus_register_withprop(&ecc_info, TYPE_SYS_BUS_DEVICE);
+    qdev_register_subclass(&ecc_info, TYPE_SYS_BUS_DEVICE);
 }
 
 device_init(ecc_register_devices)
