@@ -638,8 +638,8 @@ static DeviceInfo omap2_intc_info = {
 
 static void omap_intc_register_device(void)
 {
-    sysbus_register_withprop(&omap_intc_info, TYPE_SYS_BUS_DEVICE);
-    sysbus_register_withprop(&omap2_intc_info, TYPE_SYS_BUS_DEVICE);
+    qdev_register_subclass(&omap_intc_info, TYPE_SYS_BUS_DEVICE);
+    qdev_register_subclass(&omap2_intc_info, TYPE_SYS_BUS_DEVICE);
 }
 
 device_init(omap_intc_register_device)

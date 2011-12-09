@@ -485,7 +485,7 @@ static DeviceInfo scsi_generic_info = {
 
 static void scsi_generic_register_devices(void)
 {
-    scsi_qdev_register(&scsi_generic_info, TYPE_SCSI_DEVICE);
+    qdev_register_subclass(&scsi_generic_info, TYPE_SCSI_DEVICE);
 }
 device_init(scsi_generic_register_devices)
 

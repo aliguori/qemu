@@ -1177,7 +1177,7 @@ static DeviceInfo lan9118_info = {
 
 static void lan9118_register_devices(void)
 {
-    sysbus_register_withprop(&lan9118_info, TYPE_SYS_BUS_DEVICE);
+    qdev_register_subclass(&lan9118_info, TYPE_SYS_BUS_DEVICE);
 }
 
 /* Legacy helper function.  Should go away when machine config files are

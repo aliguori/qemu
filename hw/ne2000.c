@@ -812,7 +812,7 @@ static DeviceInfo ne2000_info = {
 
 static void ne2000_register_devices(void)
 {
-    pci_qdev_register(&ne2000_info, TYPE_PCI_DEVICE);
+    qdev_register_subclass(&ne2000_info, TYPE_PCI_DEVICE);
 }
 
 device_init(ne2000_register_devices)

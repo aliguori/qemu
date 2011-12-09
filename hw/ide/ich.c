@@ -169,6 +169,6 @@ static DeviceInfo ich_ahci_info = {
 
 static void ich_ahci_register(void)
 {
-    pci_qdev_register(&ich_ahci_info, TYPE_PCI_DEVICE);
+    qdev_register_subclass(&ich_ahci_info, TYPE_PCI_DEVICE);
 }
 device_init(ich_ahci_register);

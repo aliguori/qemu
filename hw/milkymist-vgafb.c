@@ -323,7 +323,7 @@ static DeviceInfo milkymist_vgafb_info = {
 
 static void milkymist_vgafb_register(void)
 {
-    sysbus_register_withprop(&milkymist_vgafb_info, TYPE_SYS_BUS_DEVICE);
+    qdev_register_subclass(&milkymist_vgafb_info, TYPE_SYS_BUS_DEVICE);
 }
 
 device_init(milkymist_vgafb_register)

@@ -449,7 +449,7 @@ static DeviceInfo i6300esb_info = {
 static void i6300esb_register_devices(void)
 {
     watchdog_add_model(&model);
-    pci_qdev_register(&i6300esb_info, TYPE_PCI_DEVICE);
+    qdev_register_subclass(&i6300esb_info, TYPE_PCI_DEVICE);
 }
 
 device_init(i6300esb_register_devices);

@@ -289,7 +289,7 @@ static DeviceInfo lm32_uart_info = {
 
 static void lm32_uart_register(void)
 {
-    sysbus_register_withprop(&lm32_uart_info, TYPE_SYS_BUS_DEVICE);
+    qdev_register_subclass(&lm32_uart_info, TYPE_SYS_BUS_DEVICE);
 }
 
 device_init(lm32_uart_register)

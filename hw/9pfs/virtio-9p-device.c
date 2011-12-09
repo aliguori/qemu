@@ -189,7 +189,7 @@ static DeviceInfo virtio_9p_info = {
 
 static void virtio_9p_register_devices(void)
 {
-    pci_qdev_register(&virtio_9p_info, TYPE_PCI_DEVICE);
+    qdev_register_subclass(&virtio_9p_info, TYPE_PCI_DEVICE);
     virtio_9p_set_fd_limit();
 }
 

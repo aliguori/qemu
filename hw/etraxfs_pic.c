@@ -172,7 +172,7 @@ static DeviceInfo etraxfs_pic_info = {
 
 static void etraxfs_pic_register(void)
 {
-    sysbus_register_withprop(&etraxfs_pic_info, TYPE_SYS_BUS_DEVICE);
+    qdev_register_subclass(&etraxfs_pic_info, TYPE_SYS_BUS_DEVICE);
 }
 
 device_init(etraxfs_pic_register)

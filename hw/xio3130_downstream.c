@@ -203,7 +203,7 @@ static DeviceInfo xio3130_downstream_info = {
 
 static void xio3130_downstream_register(void)
 {
-    pci_qdev_register(&xio3130_downstream_info, TYPE_PCI_DEVICE);
+    qdev_register_subclass(&xio3130_downstream_info, TYPE_PCI_DEVICE);
 }
 
 device_init(xio3130_downstream_register);

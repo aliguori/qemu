@@ -232,7 +232,7 @@ static DeviceInfo gpio_i2c_info = {
 
 static void bitbang_i2c_register(void)
 {
-    sysbus_register_withprop(&gpio_i2c_info, TYPE_SYS_BUS_DEVICE);
+    qdev_register_subclass(&gpio_i2c_info, TYPE_SYS_BUS_DEVICE);
 }
 
 device_init(bitbang_i2c_register)

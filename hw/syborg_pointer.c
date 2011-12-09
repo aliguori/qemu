@@ -229,7 +229,7 @@ static DeviceInfo syborg_pointer_info = {
 
 static void syborg_pointer_register_devices(void)
 {
-    sysbus_register_withprop(&syborg_pointer_info, TYPE_SYS_BUS_DEVICE);
+    qdev_register_subclass(&syborg_pointer_info, TYPE_SYS_BUS_DEVICE);
 }
 
 device_init(syborg_pointer_register_devices)

@@ -576,7 +576,7 @@ static DeviceInfo ebus_info = {
 
 static void pci_ebus_register(void)
 {
-    pci_qdev_register(&ebus_info, TYPE_PCI_DEVICE);
+    qdev_register_subclass(&ebus_info, TYPE_PCI_DEVICE);
 }
 
 device_init(pci_ebus_register);
@@ -657,7 +657,7 @@ static DeviceInfo prom_info = {
 
 static void prom_register_devices(void)
 {
-    sysbus_register_withprop(&prom_info, TYPE_SYS_BUS_DEVICE);
+    qdev_register_subclass(&prom_info, TYPE_SYS_BUS_DEVICE);
 }
 
 device_init(prom_register_devices);
@@ -718,7 +718,7 @@ static DeviceInfo ram_info = {
 
 static void ram_register_devices(void)
 {
-    sysbus_register_withprop(&ram_info, TYPE_SYS_BUS_DEVICE);
+    qdev_register_subclass(&ram_info, TYPE_SYS_BUS_DEVICE);
 }
 
 device_init(ram_register_devices);
