@@ -210,22 +210,24 @@ static int sun4c_intctl_init1(SysBusDevice *dev)
 
 static void sun4c_intctl_class_init(ObjectClass *klass, void *data)
 {
+    DeviceClass *dc = DEVICE_CLASS(klass);
     SysBusDeviceClass *k = SYS_BUS_DEVICE_CLASS(klass);
 
     k->init = sun4c_intctl_init1;
+    dc->reset = sun4c_intctl_reset;
+    dc->vmsd = &vmstate_sun4c_intctl;
 }
 
-static DeviceInfo sun4c_intctl_info = {
-    .name = "sun4c_intctl",
-    .size = sizeof(Sun4c_INTCTLState),
-    .vmsd = &vmstate_sun4c_intctl,
-    .reset = sun4c_intctl_reset,
-    .class_init = sun4c_intctl_class_init,
+static TypeInfo sun4c_intctl_info = {
+    .name          = "sun4c_intctl",
+    .parent        = TYPE_SYS_BUS_DEVICE,
+    .instance_size = sizeof(Sun4c_INTCTLState),
+    .class_init    = sun4c_intctl_class_init,
 };
 
 static void sun4c_intctl_register_devices(void)
 {
-    qdev_register_subclass(&sun4c_intctl_info, TYPE_SYS_BUS_DEVICE);
+    type_register_static(&sun4c_intctl_info);
 }
 
 device_init(sun4c_intctl_register_devices)

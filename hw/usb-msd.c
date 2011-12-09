@@ -634,8 +634,16 @@ static const VMStateDescription vmstate_usb_msd = {
     }
 };
 
+static Property msd_properties[] = {
+    DEFINE_BLOCK_PROPERTIES(MSDState, conf),
+    DEFINE_PROP_STRING("serial", MSDState, serial),
+    DEFINE_PROP_BIT("removable", MSDState, removable, 0, false),
+    DEFINE_PROP_END_OF_LIST(),
+};
+
 static void usb_msd_class_initfn(ObjectClass *klass, void *data)
 {
+    DeviceClass *dc = DEVICE_CLASS(klass);
     USBDeviceClass *uc = USB_DEVICE_CLASS(klass);
 
     uc->init           = usb_msd_initfn;
@@ -647,25 +655,21 @@ static void usb_msd_class_initfn(ObjectClass *klass, void *data)
     uc->handle_reset   = usb_msd_handle_reset;
     uc->handle_control = usb_msd_handle_control;
     uc->handle_data    = usb_msd_handle_data;
+    dc->fw_name = "storage";
+    dc->vmsd = &vmstate_usb_msd;
+    dc->props = msd_properties;
 }
 
-static DeviceInfo msd_info = {
-    .name      = "usb-storage",
-    .fw_name   = "storage",
-    .size      = sizeof(MSDState),
-    .vmsd      = &vmstate_usb_msd,
-    .class_init= usb_msd_class_initfn,
-    .props     = (Property[]) {
-        DEFINE_BLOCK_PROPERTIES(MSDState, conf),
-        DEFINE_PROP_STRING("serial", MSDState, serial),
-        DEFINE_PROP_BIT("removable", MSDState, removable, 0, false),
-        DEFINE_PROP_END_OF_LIST(),
-    },
+static TypeInfo msd_info = {
+    .name          = "usb-storage",
+    .parent        = TYPE_USB_DEVICE,
+    .instance_size = sizeof(MSDState),
+    .class_init    = usb_msd_class_initfn,
 };
 
 static void usb_msd_register_devices(void)
 {
-    qdev_register_subclass(&msd_info, TYPE_USB_DEVICE);
+    type_register_static(&msd_info);
     usb_legacy_register("usb-storage", "disk", usb_msd_init);
 }
 device_init(usb_msd_register_devices)

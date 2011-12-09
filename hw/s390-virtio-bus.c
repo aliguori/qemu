@@ -407,21 +407,23 @@ static int s390_virtio_bridge_init(SysBusDevice *dev)
 
 static void s390_virtio_bridge_class_init(ObjectClass *klass, void *data)
 {
+    DeviceClass *dc = DEVICE_CLASS(klass);
     SysBusDeviceClass *k = SYS_BUS_DEVICE_CLASS(klass);
 
     k->init = s390_virtio_bridge_init;
+    dc->no_user = 1;
 }
 
-static DeviceInfo s390_virtio_bridge_info = {
-    .name = "s390-virtio-bridge",
-    .size = sizeof(SysBusDevice),
-    .no_user = 1,
-    .class_init = s390_virtio_bridge_class_init,
+static TypeInfo s390_virtio_bridge_info = {
+    .name          = "s390-virtio-bridge",
+    .parent        = TYPE_SYS_BUS_DEVICE,
+    .instance_size = sizeof(SysBusDevice),
+    .class_init    = s390_virtio_bridge_class_init,
 };
 
 static void s390_virtio_register_devices(void)
 {
-    qdev_register_subclass(&s390_virtio_bridge_info, TYPE_SYS_BUS_DEVICE);
+    type_register_static(&s390_virtio_bridge_info);
 }
 
 device_init(s390_virtio_register_devices)

@@ -365,23 +365,25 @@ static Property iommu_properties[] = {
 
 static void iommu_class_init(ObjectClass *klass, void *data)
 {
+    DeviceClass *dc = DEVICE_CLASS(klass);
     SysBusDeviceClass *k = SYS_BUS_DEVICE_CLASS(klass);
 
     k->init = iommu_init1;
+    dc->reset = iommu_reset;
+    dc->vmsd = &vmstate_iommu;
+    dc->props = iommu_properties;
 }
 
-static DeviceInfo iommu_info = {
-    .name = "iommu",
-    .size = sizeof(IOMMUState),
-    .vmsd = &vmstate_iommu,
-    .reset = iommu_reset,
-    .props = iommu_properties,
-    .class_init = iommu_class_init,
+static TypeInfo iommu_info = {
+    .name          = "iommu",
+    .parent        = TYPE_SYS_BUS_DEVICE,
+    .instance_size = sizeof(IOMMUState),
+    .class_init    = iommu_class_init,
 };
 
 static void iommu_register_devices(void)
 {
-    qdev_register_subclass(&iommu_info, TYPE_SYS_BUS_DEVICE);
+    type_register_static(&iommu_info);
 }
 
 device_init(iommu_register_devices)

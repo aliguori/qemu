@@ -125,15 +125,16 @@ static void ds1338_class_init(ObjectClass *klass, void *data)
     k->send = ds1338_send;
 }
 
-static DeviceInfo ds1338_info = {
-    .name = "ds1338",
-    .size = sizeof(DS1338State),
-    .class_init = ds1338_class_init,
+static TypeInfo ds1338_info = {
+    .name          = "ds1338",
+    .parent        = TYPE_I2C_SLAVE,
+    .instance_size = sizeof(DS1338State),
+    .class_init    = ds1338_class_init,
 };
 
 static void ds1338_register_devices(void)
 {
-    qdev_register_subclass(&ds1338_info, TYPE_I2C_SLAVE);
+    type_register_static(&ds1338_info);
 }
 
 device_init(ds1338_register_devices)
