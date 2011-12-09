@@ -38,7 +38,7 @@ static bool qdev_hot_removed = false;
 static BusState *main_system_bus;
 static void main_system_bus_create(void);
 
-DeviceInfo *device_info_list;
+static DeviceInfo *device_info_list;
 
 static BusState *qbus_find_recursive(BusState *bus, const char *name,
                                      const BusInfo *info);
