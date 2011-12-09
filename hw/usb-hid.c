@@ -581,7 +581,7 @@ static void usb_tablet_class_initfn(ObjectClass *klass, void *data)
     uc->usb_desc       = &desc_tablet;
 }
 
-static struct DeviceInfo usb_tablet_info = {
+static DeviceInfo usb_tablet_info = {
     .name      = "usb-tablet",
     .size      = sizeof(USBHIDState),
     .vmsd      = &vmstate_usb_ptr,
@@ -598,7 +598,7 @@ static void usb_mouse_class_initfn(ObjectClass *klass, void *data)
     uc->usb_desc       = &desc_mouse;
 }
 
-static struct DeviceInfo usb_mouse_info = {
+static DeviceInfo usb_mouse_info = {
     .name      = "usb-mouse",
     .size      = sizeof(USBHIDState),
     .vmsd      = &vmstate_usb_ptr,
@@ -615,7 +615,7 @@ static void usb_keyboard_class_initfn(ObjectClass *klass, void *data)
     uc->usb_desc       = &desc_keyboard;
 }
 
-static struct DeviceInfo usb_keyboard_info = {
+static DeviceInfo usb_keyboard_info = {
     .name      = "usb-kbd",
     .size      = sizeof(USBHIDState),
     .vmsd      = &vmstate_usb_kbd,
