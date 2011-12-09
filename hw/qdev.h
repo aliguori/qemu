@@ -483,6 +483,8 @@ const char *qdev_property_get_type(DeviceState *dev, const char *name,
  */
 void qdev_property_add_legacy(DeviceState *dev, Property *prop, Error **errp);
 
+void qdev_add_legacy_properties(DeviceState *dev, Property *props);
+
 /**
  * @qdev_get_root - returns the root device of the composition tree
  *
@@ -614,7 +616,5 @@ const VMStateDescription *qdev_get_vmsd(DeviceState *dev);
 const char *qdev_fw_name(DeviceState *dev);
 
 BusInfo *qdev_get_bus_info(DeviceState *dev);
-
-Property *qdev_get_props(DeviceState *dev);
 
 #endif
