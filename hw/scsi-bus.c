@@ -14,12 +14,6 @@ static struct BusInfo scsi_bus_info = {
     .name  = "SCSI",
     .size  = sizeof(SCSIBus),
     .get_fw_dev_path = scsibus_get_fw_dev_path,
-    .props = (Property[]) {
-        DEFINE_PROP_UINT32("channel", SCSIDevice, channel, 0),
-        DEFINE_PROP_UINT32("scsi-id", SCSIDevice, id, -1),
-        DEFINE_PROP_UINT32("lun", SCSIDevice, lun, -1),
-        DEFINE_PROP_END_OF_LIST(),
-    },
 };
 static int next_scsi_bus;
 
@@ -1422,6 +1416,20 @@ static void scsi_device_class_init(ObjectClass *klass, void *data)
     k->exit     = scsi_qdev_exit;
 }
 
+static Property scsi_device_properties[] = {
+    DEFINE_PROP_UINT32("channel", SCSIDevice, channel, 0),
+    DEFINE_PROP_UINT32("scsi-id", SCSIDevice, id, -1),
+    DEFINE_PROP_UINT32("lun", SCSIDevice, lun, -1),
+    DEFINE_PROP_END_OF_LIST(),
+};
+
+static void scsi_device_initfn(Object *obj)
+{
+    DeviceState *dev = DEVICE(obj);
+
+    qdev_add_legacy_properties(dev, scsi_device_properties);
+}
+
 static TypeInfo scsi_device_type_info = {
     .name = TYPE_SCSI_DEVICE,
     .parent = TYPE_DEVICE,
@@ -1429,6 +1437,7 @@ static TypeInfo scsi_device_type_info = {
     .abstract = true,
     .class_size = sizeof(SCSIDeviceClass),
     .class_init = scsi_device_class_init,
+    .instance_init = scsi_device_initfn,
 };
 
 static void scsi_register_devices(void)
