@@ -67,7 +67,7 @@ USBBus *usb_bus_find(int busnr)
 
 static int usb_qdev_init(DeviceState *qdev, DeviceInfo *base)
 {
-    USBDevice *dev = DO_UPCAST(USBDevice, qdev, qdev);
+    USBDevice *dev = USB_DEVICE(qdev);
     USBDeviceInfo *info = DO_UPCAST(USBDeviceInfo, qdev, base);
     int rc;
 
@@ -96,7 +96,7 @@ static int usb_qdev_init(DeviceState *qdev, DeviceInfo *base)
 
 static int usb_qdev_exit(DeviceState *qdev)
 {
-    USBDevice *dev = DO_UPCAST(USBDevice, qdev, qdev);
+    USBDevice *dev = USB_DEVICE(qdev);
 
     if (dev->attached) {
         usb_device_detach(dev);
@@ -116,7 +116,7 @@ void usb_qdev_register(USBDeviceInfo *info)
     info->qdev.init     = usb_qdev_init;
     info->qdev.unplug   = qdev_simple_unplug_cb;
     info->qdev.exit     = usb_qdev_exit;
-    qdev_register(&info->qdev);
+    qdev_register_subclass(&info->qdev, TYPE_USB_DEVICE);
 }
 
 void usb_qdev_register_many(USBDeviceInfo *info)
@@ -143,7 +143,7 @@ USBDevice *usb_create(USBBus *bus, const char *name)
 #endif
 
     dev = qdev_create(&bus->qbus, name);
-    return DO_UPCAST(USBDevice, qdev, dev);
+    return USB_DEVICE(dev);
 }
 
 USBDevice *usb_create_simple(USBBus *bus, const char *name)
@@ -364,7 +364,7 @@ static const char *usb_speed(unsigned int speed)
 
 static void usb_bus_dev_print(Monitor *mon, DeviceState *qdev, int indent)
 {
-    USBDevice *dev = DO_UPCAST(USBDevice, qdev, qdev);
+    USBDevice *dev = USB_DEVICE(qdev);
     USBBus *bus = usb_bus_from_device(dev);
 
     monitor_printf(mon, "%*saddr %d.%d, port %s, speed %s, name %s%s\n",
@@ -376,13 +376,13 @@ static void usb_bus_dev_print(Monitor *mon, DeviceState *qdev, int indent)
 
 static char *usb_get_dev_path(DeviceState *qdev)
 {
-    USBDevice *dev = DO_UPCAST(USBDevice, qdev, qdev);
+    USBDevice *dev = USB_DEVICE(qdev);
     return g_strdup(dev->port->path);
 }
 
 static char *usb_get_fw_dev_path(DeviceState *qdev)
 {
-    USBDevice *dev = DO_UPCAST(USBDevice, qdev, qdev);
+    USBDevice *dev = USB_DEVICE(qdev);
     char *fw_path, *in;
     ssize_t pos = 0, fw_len;
     long nr;
@@ -478,3 +478,18 @@ USBDevice *usbdevice_create(const char *cmdline)
     }
     return usb->usbdevice_init(params);
 }
+
+static TypeInfo usb_device_type_info = {
+    .name = TYPE_USB_DEVICE,
+    .parent = TYPE_DEVICE,
+    .instance_size = sizeof(USBDevice),
+    .abstract = true,
+    .class_size = sizeof(USBDeviceClass),
+};
+
+static void usb_register_devices(void)
+{
+    type_register_static(&usb_device_type_info);
+}
+
+device_init(usb_register_devices);
