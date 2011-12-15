@@ -311,22 +311,33 @@ static const VMStateDescription vmstate_arm_mptimer = {
     }
 };
 
-static SysBusDeviceInfo arm_mptimer_info = {
-    .init = arm_mptimer_init,
-    .qdev.name = "arm_mptimer",
-    .qdev.size = sizeof(arm_mptimer_state),
-    .qdev.vmsd = &vmstate_arm_mptimer,
-    .qdev.reset = arm_mptimer_reset,
-    .qdev.no_user = 1,
-    .qdev.props = (Property[]) {
-        DEFINE_PROP_UINT32("num-cpu", arm_mptimer_state, num_cpu, 0),
-        DEFINE_PROP_END_OF_LIST()
-    }
+static Property arm_mptimer_properties[] = {
+    DEFINE_PROP_UINT32("num-cpu", arm_mptimer_state, num_cpu, 0),
+    DEFINE_PROP_END_OF_LIST()
+};
+
+static void arm_mptimer_class_init(ObjectClass *klass, void *data)
+{
+    SysBusDeviceClass *sdc = SYS_BUS_DEVICE_CLASS(klass);
+    DeviceClass *dc = DEVICE_CLASS(klass);
+
+    sdc->init = arm_mptimer_init;
+    dc->vmsd = &vmstate_arm_mptimer;
+    dc->reset = arm_mptimer_reset;
+    dc->no_user = 1;
+    dc->props = arm_mptimer_properties;
+}
+
+static TypeInfo arm_mptimer_info = {
+    .name          = "arm_mptimer",
+    .parent        = TYPE_SYS_BUS_DEVICE,
+    .instance_size = sizeof(arm_mptimer_state),
+    .class_init    = arm_mptimer_class_init,
 };
 
 static void arm_mptimer_register_devices(void)
 {
-    sysbus_register_withprop(&arm_mptimer_info);
+    type_register_static(&arm_mptimer_info);
 }
 
 device_init(arm_mptimer_register_devices)
