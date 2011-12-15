@@ -134,8 +134,13 @@ PCIBus *pci_prep_init(qemu_irq *pic,
     memory_region_add_subregion(address_space_mem, 0x80800000, &s->mmcfg);
 
     /* PCI host bridge */
+#if 0
     d = pci_register_device(s->bus, "PREP Host Bridge - Motorola Raven",
                             sizeof(PCIDevice), 0, NULL, NULL);
+#else
+    abort();
+    d = NULL;
+#endif
     pci_config_set_vendor_id(d->config, PCI_VENDOR_ID_MOTOROLA);
     pci_config_set_device_id(d->config, PCI_DEVICE_ID_MOTOROLA_RAVEN);
     d->config[0x08] = 0x00; // revision

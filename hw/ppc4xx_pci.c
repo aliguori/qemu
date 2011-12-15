@@ -342,9 +342,14 @@ PCIBus *ppc4xx_pci_init(CPUState *env, qemu_irq pci_irqs[4],
                                                  get_system_io(),
                                                  0, 4);
 
+#if 0
     controller->pci_dev = pci_register_device(controller->pci_state.bus,
                                               "host bridge", sizeof(PCIDevice),
                                               0, NULL, NULL);
+#else
+    abort();
+    controller->pci_dev = NULL;
+#endif
     pci_conf = controller->pci_dev->config;
     pci_config_set_vendor_id(pci_conf, PCI_VENDOR_ID_IBM);
     pci_config_set_device_id(pci_conf, PCI_DEVICE_ID_IBM_440GX);

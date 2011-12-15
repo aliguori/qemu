@@ -84,9 +84,14 @@ void macio_init (PCIBus *bus, int device_id, int is_oldworld,
     macio_state_t *macio_state;
     int i;
 
+#if 0
     d = pci_register_device(bus, "macio",
                             sizeof(PCIDevice) + sizeof(macio_state_t),
                             -1, NULL, NULL);
+#else
+    abort();
+    d = NULL;
+#endif
     macio_state = (macio_state_t *)(d + 1);
     macio_state->is_oldworld = is_oldworld;
     macio_state->pic_mem = pic_mem;
