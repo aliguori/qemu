@@ -161,6 +161,7 @@ static VIOsPAPRDevice *vty_lookup(sPAPREnvironment *spapr, target_ulong reg)
     VIOsPAPRDevice *sdev;
 
     sdev = spapr_vio_find_by_reg(spapr->vio_bus, reg);
+#if 0
     if (!sdev && reg == 0) {
         DeviceState *qdev;
 
@@ -175,6 +176,7 @@ static VIOsPAPRDevice *vty_lookup(sPAPREnvironment *spapr, target_ulong reg)
             }
         }
     }
+#endif
 
     return sdev;
 }
