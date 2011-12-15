@@ -766,7 +766,7 @@ static TypeInfo spapr_vio_type_info = {
     .instance_size = sizeof(VIOsPAPRDevice),
     .abstract = true,
     .class_size = sizeof(VIOsPAPRDeviceClass),
-    .class_init = vio_spapr_device_class_init;
+    .class_init = vio_spapr_device_class_init,
     .instance_init = spapr_vio_device_initfn,
 };
 
