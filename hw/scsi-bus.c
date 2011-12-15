@@ -81,7 +81,7 @@ static void scsi_dma_restart_cb(void *opaque, int running, RunState state)
 
 static int scsi_qdev_init(DeviceState *qdev, DeviceInfo *base)
 {
-    SCSIDevice *dev = DO_UPCAST(SCSIDevice, qdev, qdev);
+    SCSIDevice *dev = SCSI_DEVICE(qdev);
     SCSIDeviceInfo *info = DO_UPCAST(SCSIDeviceInfo, qdev, base);
     SCSIBus *bus = DO_UPCAST(SCSIBus, qbus, dev->qdev.parent_bus);
     SCSIDevice *d;
@@ -140,7 +140,7 @@ err:
 
 static int scsi_qdev_exit(DeviceState *qdev)
 {
-    SCSIDevice *dev = DO_UPCAST(SCSIDevice, qdev, qdev);
+    SCSIDevice *dev = SCSI_DEVICE(qdev);
 
     if (dev->vmsentry) {
         qemu_del_vm_change_state_handler(dev->vmsentry);
@@ -157,7 +157,7 @@ void scsi_qdev_register(SCSIDeviceInfo *info)
     info->qdev.init     = scsi_qdev_init;
     info->qdev.unplug   = qdev_simple_unplug_cb;
     info->qdev.exit     = scsi_qdev_exit;
-    qdev_register(&info->qdev);
+    qdev_register_subclass(&info->qdev, TYPE_SCSI_DEVICE);
 }
 
 /* handle legacy '-drive if=scsi,...' cmd line args */
@@ -182,7 +182,7 @@ SCSIDevice *scsi_bus_legacy_add_drive(SCSIBus *bus, BlockDriverState *bdrv,
     }
     if (qdev_init(dev) < 0)
         return NULL;
-    return DO_UPCAST(SCSIDevice, qdev, dev);
+    return SCSI_DEVICE(dev);
 }
 
 int scsi_bus_legacy_handle_cmdline(SCSIBus *bus)
@@ -278,7 +278,7 @@ static bool scsi_target_emulate_report_luns(SCSITargetReq *r)
     found_lun0 = false;
     n = 0;
     QTAILQ_FOREACH(qdev, &r->req.bus->qbus.children, sibling) {
-        SCSIDevice *dev = DO_UPCAST(SCSIDevice, qdev, qdev);
+        SCSIDevice *dev = SCSI_DEVICE(qdev);
 
         if (dev->channel == channel && dev->id == id) {
             if (dev->lun == 0) {
@@ -300,7 +300,7 @@ static bool scsi_target_emulate_report_luns(SCSITargetReq *r)
     stl_be_p(&r->buf, n);
     i = found_lun0 ? 8 : 16;
     QTAILQ_FOREACH(qdev, &r->req.bus->qbus.children, sibling) {
-        SCSIDevice *dev = DO_UPCAST(SCSIDevice, qdev, qdev);
+        SCSIDevice *dev = SCSI_DEVICE(qdev);
 
         if (dev->channel == channel && dev->id == id) {
             store_lun(&r->buf[i], dev->lun);
@@ -1367,7 +1367,7 @@ void scsi_device_purge_requests(SCSIDevice *sdev, SCSISense sense)
 
 static char *scsibus_get_fw_dev_path(DeviceState *dev)
 {
-    SCSIDevice *d = DO_UPCAST(SCSIDevice, qdev, dev);
+    SCSIDevice *d = SCSI_DEVICE(dev);
     char path[100];
 
     snprintf(path, sizeof(path), "channel@%x/%s@%x,%x", d->channel,
@@ -1382,7 +1382,7 @@ SCSIDevice *scsi_device_find(SCSIBus *bus, int channel, int id, int lun)
     SCSIDevice *target_dev = NULL;
 
     QTAILQ_FOREACH_REVERSE(qdev, &bus->qbus.children, ChildrenHead, sibling) {
-        SCSIDevice *dev = DO_UPCAST(SCSIDevice, qdev, qdev);
+        SCSIDevice *dev = SCSI_DEVICE(qdev);
 
         if (dev->channel == channel && dev->id == id) {
             if (dev->lun == lun) {
@@ -1393,3 +1393,18 @@ SCSIDevice *scsi_device_find(SCSIBus *bus, int channel, int id, int lun)
     }
     return target_dev;
 }
+
+static TypeInfo scsi_device_type_info = {
+    .name = TYPE_SCSI_DEVICE,
+    .parent = TYPE_DEVICE,
+    .instance_size = sizeof(SCSIDevice),
+    .abstract = true,
+    .class_size = sizeof(SCSIDeviceClass),
+};
+
+static void scsi_register_devices(void)
+{
+    type_register_static(&scsi_device_type_info);
+}
+
+device_init(scsi_register_devices);

@@ -361,7 +361,7 @@ static int get_stream_blocksize(BlockDriverState *bdrv)
 
 static void scsi_generic_reset(DeviceState *dev)
 {
-    SCSIDevice *s = DO_UPCAST(SCSIDevice, qdev, dev);
+    SCSIDevice *s = SCSI_DEVICE(dev);
 
     scsi_device_purge_requests(s, SENSE_CODE(RESET));
 }
