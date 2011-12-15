@@ -109,9 +109,13 @@ static int virtconsole_initfn(VirtIOSerialPort *port)
     if (vcon->chr) {
         qemu_chr_add_handlers(vcon->chr, chr_can_read, chr_read, chr_event,
                               vcon);
-        info->have_data = flush_buf;
-        info->guest_open = guest_open;
-        info->guest_close = guest_close;
+        /* FIXME: This is not right */
+        abort();
+        if (0) {
+            info->have_data = flush_buf;
+            info->guest_open = guest_open;
+            info->guest_close = guest_close;
+        }
     }
 
     return 0;
