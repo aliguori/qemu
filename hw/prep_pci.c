@@ -106,12 +106,37 @@ static void prep_set_irq(void *opaque, int irq_num, int level)
     qemu_set_irq(pic[(irq_num & 1) ? 11 : 9] , level);
 }
 
+static int prep_hb_initfn(PCIDevice *d)
+{
+    d->config[0x0C] = 0x08; // cache_line_size
+    d->config[0x0D] = 0x10; // latency_timer
+    d->config[0x34] = 0x00; // capabilities_pointer
+
+    return 0;
+}
+
+static PCIDeviceInfo prep_hb_info = {
+    .qdev.name = "PREP Host Bridge - Motorola Raven",
+    .qdev.size = sizeof(PCIDevice),
+    .init = prep_hb_initfn,
+    .vendor_id = PCI_VENDOR_ID_MOTOROLA,
+    .device_id = PCI_DEVICE_ID_MOTOROLA_RAVEN,
+    .revision = 0x00,
+    .class_id = PCI_CLASS_BRIDGE_HOST,
+};
+
+static void prep_register(void)
+{
+    pci_qdev_register(&prep_hb_info);
+}
+
+device_init(prep_register);
+
 PCIBus *pci_prep_init(qemu_irq *pic,
                       MemoryRegion *address_space_mem,
                       MemoryRegion *address_space_io)
 {
     PREPPCIState *s;
-    PCIDevice *d;
 
     s = g_malloc0(sizeof(PREPPCIState));
     s->bus = pci_register_bus(NULL, "pci",
@@ -133,16 +158,7 @@ PCIBus *pci_prep_init(qemu_irq *pic,
     memory_region_init_io(&s->mmcfg, &PPC_PCIIO_ops, s, "pciio", 0x00400000);
     memory_region_add_subregion(address_space_mem, 0x80800000, &s->mmcfg);
 
-    /* PCI host bridge */
-    d = pci_register_device(s->bus, "PREP Host Bridge - Motorola Raven",
-                            sizeof(PCIDevice), 0, NULL, NULL);
-    pci_config_set_vendor_id(d->config, PCI_VENDOR_ID_MOTOROLA);
-    pci_config_set_device_id(d->config, PCI_DEVICE_ID_MOTOROLA_RAVEN);
-    d->config[0x08] = 0x00; // revision
-    pci_config_set_class(d->config, PCI_CLASS_BRIDGE_HOST);
-    d->config[0x0C] = 0x08; // cache_line_size
-    d->config[0x0D] = 0x10; // latency_timer
-    d->config[0x34] = 0x00; // capabilities_pointer
+    pci_create_simple(s->bus, 0, "PREP Host Bridge - Motorola Raven");
 
     return s->bus;
 }
