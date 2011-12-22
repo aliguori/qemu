@@ -172,7 +172,7 @@ static void pc_init1(MemoryRegion *system_memory,
 
     dev = pc_vga_init(isa_bus, pci_enabled ? pci_bus : NULL);
     if (dev) {
-        qdev_property_add_child(qdev_get_root(), "vga", dev, NULL);
+        object_property_add_child(object_get_root(), "vga", OBJECT(dev), NULL);
     }
 
     if (xen_enabled()) {
@@ -219,8 +219,8 @@ static void pc_init1(MemoryRegion *system_memory,
      * generally the right way to do this.
      */
 
-    qdev_property_add_child(qdev_resolve_path("/i440fx/piix3", NULL),
-                            "rtc", (DeviceState *)rtc_state, NULL);
+    object_property_add_child(object_resolve_path("/i440fx/piix3", NULL),
+                              "rtc", OBJECT(rtc_state), NULL);
 
     audio_init(isa_bus, pci_enabled ? pci_bus : NULL);
 
