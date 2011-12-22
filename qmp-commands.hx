@@ -2018,3 +2018,8 @@ EQMP
         .args_type  = "password:s",
         .mhandler.cmd_new = qmp_marshal_input_change_vnc_password,
     },
+    {
+        .name       = "qom-list-types",
+        .args_type  = "implements:s?,abstract:b?",
+        .mhandler.cmd_new = qmp_marshal_input_qom_list_types,
+    }

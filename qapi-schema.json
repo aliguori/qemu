@@ -1434,3 +1434,10 @@
 { 'command': 'block_set_io_throttle',
   'data': { 'device': 'str', 'bps': 'int', 'bps_rd': 'int', 'bps_wr': 'int',
             'iops': 'int', 'iops_rd': 'int', 'iops_wr': 'int' } }
+
+{ 'type': 'ObjectTypeInfo',
+  'data': { 'name': 'str' } }
+
+{ 'command': 'qom-list-types',
+  'data': { '*implements': 'str', '*abstract': 'bool' },
+  'returns': [ 'ObjectTypeInfo' ] }
