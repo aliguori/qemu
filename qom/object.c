@@ -462,6 +462,8 @@ ObjectClass *object_class_by_name(const char *typename)
 typedef struct OCFData
 {
     void (*fn)(ObjectClass *klass, void *opaque);
+    const char *implements_type;
+    bool include_abstract;
     void *opaque;
 } OCFData;
 
@@ -470,16 +472,28 @@ static void object_class_foreach_tramp(gpointer key, gpointer value,
 {
     OCFData *data = opaque;
     TypeImpl *type = value;
+    ObjectClass *k;
 
     type_class_init(type);
+    k = type->class;
 
-    data->fn(type->class, data->opaque);
+    if (!data->include_abstract && type->abstract) {
+        return;
+    }
+
+    if (data->implements_type && 
+        !object_class_dynamic_cast(k, data->implements_type)) {
+        return;
+    }
+
+    data->fn(k, data->opaque);
 }
 
 void object_class_foreach(void (*fn)(ObjectClass *klass, void *opaque),
+                          const char *implements_type, bool include_abstract,
                           void *opaque)
 {
-    OCFData data = { fn, opaque };
+    OCFData data = { fn, implements_type, include_abstract, opaque };
 
     g_hash_table_foreach(type_table_get(), object_class_foreach_tramp, &data);
 }
