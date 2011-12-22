@@ -1549,3 +1549,10 @@
 # Since: 1.1
 ##
 { 'command': 'block_job_cancel', 'data': { 'device': 'str' } }
+
+{ 'type': 'ObjectTypeInfo',
+  'data': { 'name': 'str' } }
+
+{ 'command': 'qom-list-types',
+  'data': { '*implements': 'str', '*abstract': 'bool' },
+  'returns': [ 'ObjectTypeInfo' ] }
