@@ -16,7 +16,7 @@
 
 #include "qobject.h"
 #include "qdict.h"
-#include "error.h"
+#include "qemu/error.h"
 
 typedef void (QmpCommandFunc)(QDict *, QObject **, Error **);
 

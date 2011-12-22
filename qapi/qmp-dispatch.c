@@ -14,7 +14,7 @@
 #include "qemu-objects.h"
 #include "qapi/qmp-core.h"
 #include "json-parser.h"
-#include "error.h"
+#include "qemu/error.h"
 #include "error_int.h"
 #include "qerror.h"
 
