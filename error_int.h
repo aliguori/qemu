@@ -15,7 +15,7 @@
 #include "qemu-common.h"
 #include "qobject.h"
 #include "qdict.h"
-#include "error.h"
+#include "qemu/error.h"
 
 /**
  * Internal QEMU functions for working with Error.

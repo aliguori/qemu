@@ -15,7 +15,7 @@
 #define QAPI_TYPES_CORE_H
 
 #include "qemu-common.h"
-#include "error.h"
+#include "qemu/error.h"
 
 /* FIXME this is temporary until we remove middle mode */
 #include "monitor.h"
