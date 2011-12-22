@@ -1275,3 +1275,10 @@
 { 'command': 'qom-set',
   'data': { 'path': 'str', 'property': 'str', 'value': 'visitor' },
   'gen': 'no' }
+
+{ 'type': 'ObjectTypeInfo',
+  'data': { 'name': 'str' } }
+
+{ 'command': 'qom-list-types',
+  'data': { '*implements': 'str', '*abstract': 'bool' },
+  'returns': [ 'ObjectTypeInfo' ] }
