@@ -61,14 +61,50 @@ Property *qdev_get_props(DeviceState *dev)
     return dc->props;
 }
 
+/*
+ * Aliases were a bad idea from the start.  Let's keep them
+ * from spreading further.
+ */
+static const char *qdev_class_get_alias(DeviceClass *dc)
+{
+    const char *typename = object_class_get_name(OBJECT_CLASS(dc));
+
+    if (strcmp(typename, "virtio-blk-pci") == 0) {
+        return "virtio-blk";
+    } else if (strcmp(typename, "virtio-net-pci") == 0) {
+        return "virtio-net";
+    } else if (strcmp(typename, "virtio-serial-pci") == 0) {
+        return "virtio-serial";
+    } else if (strcmp(typename, "virtio-balloon-pci") == 0) {
+        return "virtio-balloon";
+    } else if (strcmp(typename, "virtio-blk-s390") == 0) {
+        return "virtio-blk";
+    } else if (strcmp(typename, "virtio-net-s390") == 0) {
+        return "virtio-net";
+    } else if (strcmp(typename, "virtio-serial-s390") == 0) {
+        return "virtio-serial";
+    } else if (strcmp(typename, "lsi53c895a") == 0) {
+        return "lsi";
+    } else if (strcmp(typename, "ich9-ahci") == 0) {
+        return "ahci";
+    }
+
+    return NULL;
+}
+
+static bool qdev_class_has_alias(DeviceClass *dc)
+{
+    return (qdev_class_get_alias(dc) != NULL);
+}
+
 const char *qdev_fw_name(DeviceState *dev)
 {
     DeviceClass *dc = DEVICE_GET_CLASS(dev);
 
     if (dc->fw_name) {
         return dc->fw_name;
-    } else if (dc->alias) {
-        return dc->alias;
+    } else if (qdev_class_has_alias(dc)) {
+        return qdev_class_get_alias(dc);
     }
 
     return object_get_typename(OBJECT(dev));
@@ -161,8 +197,8 @@ static void qdev_print_devinfo(ObjectClass *klass, void *opaque)
     if (dc->bus_info) {
         error_printf(", bus %s", dc->bus_info->name);
     }
-    if (dc->alias) {
-        error_printf(", alias \"%s\"", dc->alias);
+    if (qdev_class_has_alias(dc)) {
+        error_printf(", alias \"%s\"", qdev_class_get_alias(dc));
     }
     if (dc->desc) {
         error_printf(", desc \"%s\"", dc->desc);
@@ -188,6 +224,27 @@ static int set_property(const char *name, const char *value, void *opaque)
     return 0;
 }
 
+static const char *find_typename_by_alias(const char *alias)
+{
+    /* I don't think s390 aliasing could have ever worked... */
+
+    if (strcmp(alias, "virtio-blk") == 0) {
+        return "virtio-blk-pci";
+    } else if (strcmp(alias, "virtio-net") == 0) {
+        return "virtio-net-pci";
+    } else if (strcmp(alias, "virtio-serial") == 0) {
+        return "virtio-serial-pci";
+    } else if (strcmp(alias, "virtio-balloon") == 0) {
+        return "virtio-balloon-pci";
+    } else if (strcmp(alias, "lsi") == 0) {
+        return "lsi53c895a";
+    } else if (strcmp(alias, "ahci") == 0) {
+        return "ich9-ahci";
+    }
+
+    return NULL;
+}
+
 int qdev_device_help(QemuOpts *opts)
 {
     const char *driver;
@@ -207,6 +264,15 @@ int qdev_device_help(QemuOpts *opts)
     }
 
     klass = object_class_by_name(driver);
+    if (!klass) {
+        const char *typename = find_typename_by_alias(driver);
+
+        if (typename) {
+            driver = typename;
+            klass = object_class_by_name(driver);
+        }
+    }
+
     if (!klass) {
         return 0;
     }
@@ -263,6 +329,7 @@ static DeviceState *qdev_get_peripheral_anon(void)
 
 DeviceState *qdev_device_add(QemuOpts *opts)
 {
+    ObjectClass *obj;
     DeviceClass *k;
     const char *driver, *path, *id;
     DeviceState *qdev;
@@ -275,7 +342,22 @@ DeviceState *qdev_device_add(QemuOpts *opts)
     }
 
     /* find driver */
-    k = DEVICE_CLASS(object_class_by_name(driver));
+    obj = object_class_by_name(driver);
+    if (!obj) {
+        const char *typename = find_typename_by_alias(driver);
+
+        if (typename) {
+            driver = typename;
+            obj = object_class_by_name(driver);
+        }
+    }
+
+    if (!obj) {
+        qerror_report(QERR_INVALID_PARAMETER_VALUE, "driver", "device type");
+        return NULL;
+    }
+
+    k = DEVICE_CLASS(obj);
 
     /* find bus */
     path = qemu_opt_get(opts, "bus");
@@ -753,7 +835,8 @@ static DeviceState *qbus_find_dev(BusState *bus, char *elem)
     QTAILQ_FOREACH(dev, &bus->children, sibling) {
         DeviceClass *dc = DEVICE_GET_CLASS(dev);
 
-        if (dc->alias && strcmp(dc->alias, elem) == 0) {
+        if (qdev_class_has_alias(dc) &&
+            strcmp(qdev_class_get_alias(dc), elem) == 0) {
             return dev;
         }
     }
