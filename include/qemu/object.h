@@ -19,8 +19,8 @@
 #include <stdbool.h>
 #include "qemu-queue.h"
 
-struct Visitor;
-struct Error;
+#include "qemu/visitor.h"
+#include "qemu/error.h"
 
 struct TypeImpl;
 typedef struct TypeImpl *Type;
@@ -130,10 +130,10 @@ typedef struct InterfaceInfo InterfaceInfo;
  * Called when trying to get/set a property.
  */
 typedef void (ObjectPropertyAccessor)(Object *obj,
-                                      struct Visitor *v,
+                                      Visitor *v,
                                       void *opaque,
                                       const char *name,
-                                      struct Error **errp);
+                                      Error **errp);
 
 /**
  * ObjectPropertyRelease:
@@ -522,7 +522,7 @@ void object_property_add(Object *obj, const char *name, const char *type,
                          ObjectPropertyAccessor *get,
                          ObjectPropertyAccessor *set,
                          ObjectPropertyRelease *release,
-                         void *opaque, struct Error **errp);
+                         void *opaque, Error **errp);
 
 /**
  * object_property_get:
@@ -534,8 +534,8 @@ void object_property_add(Object *obj, const char *name, const char *type,
  *
  * Reads a property from a object.
  */
-void object_property_get(Object *obj, struct Visitor *v, const char *name,
-                         struct Error **errp);
+void object_property_get(Object *obj, Visitor *v, const char *name,
+                         Error **errp);
 
 /**
  * object_property_set:
@@ -548,8 +548,8 @@ void object_property_get(Object *obj, struct Visitor *v, const char *name,
  *
  * Writes a property to a object.
  */
-void object_property_set(Object *obj, struct Visitor *v, const char *name,
-                         struct Error **errp);
+void object_property_set(Object *obj, Visitor *v, const char *name,
+                         Error **errp);
 
 /**
  * @object_property_get_type:
@@ -560,7 +560,7 @@ void object_property_set(Object *obj, struct Visitor *v, const char *name,
  * Returns:  The type name of the property.
  */
 const char *object_property_get_type(Object *obj, const char *name,
-                                     struct Error **errp);
+                                     Error **errp);
 
 /**
  * object_get_root:
@@ -616,7 +616,7 @@ Object *object_resolve_path(const char *path, bool *ambiguous);
  * a bidirectional relationship.  This is by design.
  */
 void object_property_add_child(Object *obj, const char *name,
-                               Object *child, struct Error **errp);
+                               Object *child, Error **errp);
 
 /**
  * object_property_add_link:
@@ -634,7 +634,7 @@ void object_property_add_child(Object *obj, const char *name,
  */
 void object_property_add_link(Object *obj, const char *name,
                               const char *type, Object **child,
-                              struct Error **errp);
+                              Error **errp);
 
 /**
  * object_property_add_str:
@@ -649,8 +649,8 @@ void object_property_add_link(Object *obj, const char *name,
  * property of type 'string'.
  */
 void object_property_add_str(Object *obj, const char *name,
-                             char *(*get)(Object *, struct Error **),
-                             void (*set)(Object *, const char *, struct Error **),
-                             struct Error **errp);
+                             char *(*get)(Object *, Error **),
+                             void (*set)(Object *, const char *, Error **),
+                             Error **errp);
 
 #endif
