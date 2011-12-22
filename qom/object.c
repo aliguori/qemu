@@ -473,7 +473,7 @@ static void object_class_foreach_tramp(gpointer key, gpointer value,
 
     type_class_init(type);
 
-    data->fn(value, type->class);
+    data->fn(type->class, data->opaque);
 }
 
 void object_class_foreach(void (*fn)(ObjectClass *klass, void *opaque),
