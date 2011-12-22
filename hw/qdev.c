@@ -290,8 +290,6 @@ void qdev_free(DeviceState *dev)
     Property *prop;
     DeviceClass *dc = DEVICE_GET_CLASS(dev);
 
-    qdev_property_del_all(dev);
-
     if (dev->state == DEV_STATE_INITIALIZED) {
         while (dev->num_child_bus) {
             bus = QLIST_FIRST(&dev->child_bus);
@@ -569,106 +567,19 @@ char* qdev_get_fw_dev_path(DeviceState *dev)
     return strdup(path);
 }
 
-char *qdev_get_type(DeviceState *dev, Error **errp)
+static char *qdev_get_type(Object *obj, Error **errp)
 {
-    return g_strdup(object_get_typename(OBJECT(dev)));
-}
-
-void qdev_ref(DeviceState *dev)
-{
-    dev->ref++;
-}
-
-void qdev_unref(DeviceState *dev)
-{
-    g_assert(dev->ref > 0);
-    dev->ref--;
-}
-
-void qdev_property_add(DeviceState *dev, const char *name, const char *type,
-                       DevicePropertyAccessor *get, DevicePropertyAccessor *set,
-                       DevicePropertyRelease *release,
-                       void *opaque, Error **errp)
-{
-    DeviceProperty *prop = g_malloc0(sizeof(*prop));
-
-    prop->name = g_strdup(name);
-    prop->type = g_strdup(type);
-
-    prop->get = get;
-    prop->set = set;
-    prop->release = release;
-    prop->opaque = opaque;
-
-    QTAILQ_INSERT_TAIL(&dev->properties, prop, node);
-}
-
-static DeviceProperty *qdev_property_find(DeviceState *dev, const char *name)
-{
-    DeviceProperty *prop;
-
-    QTAILQ_FOREACH(prop, &dev->properties, node) {
-        if (strcmp(prop->name, name) == 0) {
-            return prop;
-        }
-    }
-
-    return NULL;
-}
-
-void qdev_property_get(DeviceState *dev, Visitor *v, const char *name,
-                       Error **errp)
-{
-    DeviceProperty *prop = qdev_property_find(dev, name);
-
-    if (prop == NULL) {
-        error_set(errp, QERR_PROPERTY_NOT_FOUND, dev->id?:"", name);
-        return;
-    }
-
-    if (!prop->get) {
-        error_set(errp, QERR_PERMISSION_DENIED);
-    } else {
-        prop->get(dev, v, prop->opaque, name, errp);
-    }
-}
-
-void qdev_property_set(DeviceState *dev, Visitor *v, const char *name,
-                       Error **errp)
-{
-    DeviceProperty *prop = qdev_property_find(dev, name);
-
-    if (prop == NULL) {
-        error_set(errp, QERR_PROPERTY_NOT_FOUND, dev->id?:"", name);
-        return;
-    }
-
-    if (!prop->set) {
-        error_set(errp, QERR_PERMISSION_DENIED);
-    } else {
-        prop->set(dev, v, prop->opaque, name, errp);
-    }
-}
-
-const char *qdev_property_get_type(DeviceState *dev, const char *name, Error **errp)
-{
-    DeviceProperty *prop = qdev_property_find(dev, name);
-
-    if (prop == NULL) {
-        error_set(errp, QERR_PROPERTY_NOT_FOUND, dev->id?:"", name);
-        return NULL;
-    }
-
-    return prop->type;
+    return g_strdup(object_get_typename(obj));
 }
 
 /**
  * Legacy property handling
  */
 
-static void qdev_get_legacy_property(DeviceState *dev, Visitor *v, void *opaque,
+static void qdev_get_legacy_property(Object *obj, Visitor *v, void *opaque,
                                      const char *name, Error **errp)
 {
+    DeviceState *dev = DEVICE(obj);
     Property *prop = opaque;
 
     char buffer[1024];
@@ -678,9 +589,10 @@ static void qdev_get_legacy_property(DeviceState *dev, Visitor *v, void *opaque,
     visit_type_str(v, &ptr, name, errp);
 }
 
-static void qdev_set_legacy_property(DeviceState *dev, Visitor *v, void *opaque,
+static void qdev_set_legacy_property(Object *obj, Visitor *v, void *opaque,
                                      const char *name, Error **errp)
 {
+    DeviceState *dev = DEVICE(obj);
     Property *prop = opaque;
     Error *local_err = NULL;
     char *ptr = NULL;
@@ -720,11 +632,11 @@ void qdev_property_add_legacy(DeviceState *dev, Property *prop,
     type = g_strdup_printf("legacy<%s>",
                            prop->info->legacy_name ?: prop->info->name);
 
-    qdev_property_add(dev, name, type,
-                      prop->info->print ? qdev_get_legacy_property : NULL,
-                      prop->info->parse ? qdev_set_legacy_property : NULL,
-                      NULL,
-                      prop, errp);
+    object_property_add(OBJECT(dev), name, type,
+                        prop->info->print ? qdev_get_legacy_property : NULL,
+                        prop->info->parse ? qdev_set_legacy_property : NULL,
+                        NULL,
+                        prop, errp);
 
     g_free(type);
     g_free(name);
@@ -1079,7 +991,6 @@ static void device_initfn(Object *obj)
     }
 
     dev->instance_id_alias = -1;
-    QTAILQ_INIT(&dev->properties);
     dev->state = DEV_STATE_CREATED;
 
     qdev_prop_set_defaults(dev, qdev_get_props(dev));
@@ -1088,7 +999,7 @@ static void device_initfn(Object *obj)
         qdev_property_add_static(dev, prop, NULL);
     }
 
-    qdev_property_add_str(dev, "type", qdev_get_type, NULL, NULL);
+    object_property_add_str(OBJECT(dev), "type", qdev_get_type, NULL, NULL);
 }
 
 void device_reset(DeviceState *dev)
