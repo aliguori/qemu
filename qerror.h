@@ -15,7 +15,7 @@
 #include "qdict.h"
 #include "qstring.h"
 #include "qemu-error.h"
-#include "error.h"
+#include "qemu/error.h"
 #include <stdarg.h>
 
 typedef struct QErrorStringTable {

@@ -11,7 +11,7 @@
  */
 
 #include "qemu-common.h"
-#include "error.h"
+#include "qemu/error.h"
 #include "qjson.h"
 #include "qdict.h"
 #include "error_int.h"
