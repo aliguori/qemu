@@ -255,7 +255,7 @@ int qdev_device_help(QemuOpts *opts)
     driver = qemu_opt_get(opts, "driver");
     if (driver && !strcmp(driver, "?")) {
         bool show_no_user = false;
-        object_class_foreach(qdev_print_devinfo, &show_no_user);
+        object_class_foreach(qdev_print_devinfo, TYPE_DEVICE, false, &show_no_user);
         return 1;
     }
 
@@ -1077,7 +1077,7 @@ void do_info_qtree(Monitor *mon)
 
 void do_info_qdm(Monitor *mon)
 {
-    object_class_foreach(qdev_print_devinfo, NULL);
+    object_class_foreach(qdev_print_devinfo, TYPE_DEVICE, false, NULL);
 }
 
 int do_device_add(Monitor *mon, const QDict *qdict, QObject **ret_data)
