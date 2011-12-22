@@ -2027,3 +2027,10 @@ EQMP
 	.args_type  = "path:s,property:s",
 	.mhandler.cmd_new = qmp_qom_get,
     },
+
+    {
+        .name       = "qom-list-types",
+        .args_type  = "implements:s?,abstract:b?",
+        .mhandler.cmd_new = qmp_marshal_input_qom_list_types,
+    },
+
