@@ -17,7 +17,7 @@
 #include "qdict.h"
 #include "qemu-common.h"
 #include "notify.h"
-#include "error.h"
+#include "qemu/error.h"
 
 typedef struct MigrationState MigrationState;
 

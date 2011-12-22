@@ -26,7 +26,7 @@
 #include "net.h"
 #include "monitor.h"
 #include "console.h"
-#include "error.h"
+#include "qemu/error.h"
 #include "qmp-commands.h"
 
 static QEMUPutKBDEvent *qemu_put_kbd_event;
