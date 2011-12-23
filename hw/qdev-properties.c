@@ -1015,31 +1015,17 @@ PropertyInfo qdev_prop_pci_devfn = {
 
 /* --- public helpers --- */
 
-static Property *qdev_prop_walk(Property *props, const char *name)
-{
-    if (!props)
-        return NULL;
-    while (props->name) {
-        if (strcmp(props->name, name) == 0)
-            return props;
-        props++;
-    }
-    return NULL;
-}
-
 static Property *qdev_prop_find(DeviceState *dev, const char *name)
 {
-    Property *prop;
+    Object *obj = OBJECT(dev);
+    ObjectProperty *prop;
 
-    /* device properties */
-    prop = qdev_prop_walk(qdev_get_props(dev), name);
-    if (prop)
-        return prop;
-
-    /* bus properties */
-    prop = qdev_prop_walk(dev->parent_bus->info->props, name);
-    if (prop)
-        return prop;
+    QTAILQ_FOREACH(prop, &obj->properties, node) {
+        if (strstart(prop->type, "legacy<", NULL) &&
+            strcmp(&prop->name[7], name) == 0) {
+            return prop->opaque;
+        }
+    }
 
     return NULL;
 }
