@@ -636,6 +636,9 @@ void object_property_add_link(Object *obj, const char *name,
                               const char *type, Object **child,
                               Error **errp);
 
+typedef char *(StringGetter)(Object *, Error **);
+typedef void (StringSetter)(Object *, const char *, Error **);
+
 /**
  * object_property_add_str:
  * @obj: the object to add a property to
@@ -649,8 +652,7 @@ void object_property_add_link(Object *obj, const char *name,
  * property of type 'string'.
  */
 void object_property_add_str(Object *obj, const char *name,
-                             char *(*get)(Object *, Error **),
-                             void (*set)(Object *, const char *, Error **),
+                             StringGetter *get, StringSetter *set,
                              Error **errp);
 
 #endif
