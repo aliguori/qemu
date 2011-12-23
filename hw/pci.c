@@ -40,7 +40,6 @@
 #endif
 
 static void pcibus_dev_print(Monitor *mon, DeviceState *dev, int indent);
-static char *pcibus_get_dev_path(DeviceState *dev);
 static char *pcibus_get_fw_dev_path(DeviceState *dev);
 static int pcibus_reset(BusState *qbus);
 
@@ -49,7 +48,6 @@ static void pci_bus_class_init(ObjectClass *klass, void *data)
     BusClass *k = BUS_CLASS(klass);
 
     k->print_dev = pcibus_dev_print;
-    k->get_dev_path = pcibus_get_dev_path;
     k->get_fw_dev_path = pcibus_get_fw_dev_path;
     k->reset = pcibus_reset;
 }
@@ -1906,7 +1904,42 @@ static char *pcibus_get_fw_dev_path(DeviceState *dev)
     return strdup(path);
 }
 
-static char *pcibus_get_dev_path(DeviceState *dev)
+static int pci_qdev_find_recursive(PCIBus *bus,
+                                   const char *id, PCIDevice **pdev)
+{
+    DeviceState *qdev = qdev_find_recursive(&bus->qbus, id);
+    if (!qdev) {
+        return -ENODEV;
+    }
+
+    /* roughly check if given qdev is pci device */
+    if (object_dynamic_cast(OBJECT(qdev), TYPE_PCI_DEVICE)) {
+        *pdev = PCI_DEVICE(qdev);
+        return 0;
+    }
+    return -EINVAL;
+}
+
+int pci_qdev_find_device(const char *id, PCIDevice **pdev)
+{
+    struct PCIHostBus *host;
+    int rc = -ENODEV;
+
+    QLIST_FOREACH(host, &host_buses, next) {
+        int tmp = pci_qdev_find_recursive(host->bus, id, pdev);
+        if (!tmp) {
+            rc = 0;
+            break;
+        }
+        if (tmp != -ENODEV) {
+            rc = tmp;
+        }
+    }
+
+    return rc;
+}
+
+static char *pci_qdev_get_dev_path(DeviceState *dev)
 {
     PCIDevice *d = container_of(dev, PCIDevice, qdev);
     PCIDevice *t;
@@ -1955,41 +1988,6 @@ static char *pcibus_get_dev_path(DeviceState *dev)
     return path;
 }
 
-static int pci_qdev_find_recursive(PCIBus *bus,
-                                   const char *id, PCIDevice **pdev)
-{
-    DeviceState *qdev = qdev_find_recursive(&bus->qbus, id);
-    if (!qdev) {
-        return -ENODEV;
-    }
-
-    /* roughly check if given qdev is pci device */
-    if (object_dynamic_cast(OBJECT(qdev), TYPE_PCI_DEVICE)) {
-        *pdev = PCI_DEVICE(qdev);
-        return 0;
-    }
-    return -EINVAL;
-}
-
-int pci_qdev_find_device(const char *id, PCIDevice **pdev)
-{
-    struct PCIHostBus *host;
-    int rc = -ENODEV;
-
-    QLIST_FOREACH(host, &host_buses, next) {
-        int tmp = pci_qdev_find_recursive(host->bus, id, pdev);
-        if (!tmp) {
-            rc = 0;
-            break;
-        }
-        if (tmp != -ENODEV) {
-            rc = tmp;
-        }
-    }
-
-    return rc;
-}
-
 MemoryRegion *pci_address_space(PCIDevice *dev)
 {
     return dev->bus->address_space_mem;
@@ -2007,6 +2005,7 @@ static void pci_device_class_init(ObjectClass *klass, void *data)
     k->unplug = pci_unplug_device;
     k->exit = pci_unregister_device;
     k->bus_type = TYPE_PCI_BUS;
+    k->get_dev_path = pci_qdev_get_dev_path;
 }
 
 static Property pci_bus_properties[] = {

@@ -7,7 +7,6 @@
 
 static void usb_bus_dev_print(Monitor *mon, DeviceState *qdev, int indent);
 
-static char *usb_get_dev_path(DeviceState *dev);
 static char *usb_get_fw_dev_path(DeviceState *qdev);
 static int usb_qdev_exit(DeviceState *qdev);
 
@@ -18,7 +17,6 @@ static void usb_bus_class_init(ObjectClass *klass, void *data)
     BusClass *k = BUS_CLASS(klass);
 
     k->print_dev = usb_bus_dev_print;
-    k->get_dev_path = usb_get_dev_path;
     k->get_fw_dev_path = usb_get_fw_dev_path;
 }
 
@@ -464,12 +462,6 @@ static void usb_bus_dev_print(Monitor *mon, DeviceState *qdev, int indent)
                    dev->attached ? ", attached" : "");
 }
 
-static char *usb_get_dev_path(DeviceState *qdev)
-{
-    USBDevice *dev = USB_DEVICE(qdev);
-    return g_strdup(dev->port->path);
-}
-
 static char *usb_get_fw_dev_path(DeviceState *qdev)
 {
     USBDevice *dev = USB_DEVICE(qdev);
@@ -565,13 +557,21 @@ USBDevice *usbdevice_create(const char *cmdline)
     return f->usbdevice_init(params);
 }
 
+static char *usb_qdev_get_dev_path(DeviceState *qdev)
+{
+    USBDevice *dev = USB_DEVICE(qdev);
+    return g_strdup(dev->port->path);
+}
+
 static void usb_device_class_init(ObjectClass *klass, void *data)
 {
     DeviceClass *k = DEVICE_CLASS(klass);
+
     k->bus_type = TYPE_USB_BUS;
-    k->init     = usb_qdev_init;
-    k->unplug   = qdev_simple_unplug_cb;
-    k->exit     = usb_qdev_exit;
+    k->init = usb_qdev_init;
+    k->unplug = qdev_simple_unplug_cb;
+    k->exit = usb_qdev_exit;
+    k->get_dev_path = usb_qdev_get_dev_path;
 }
 
 static Property usb_bus_properties[] = {
