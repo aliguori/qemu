@@ -192,6 +192,8 @@ qmp-commands.h qmp-marshal.c :\
 $(SRC_PATH)/qapi-schema.json $(SRC_PATH)/scripts/qapi-commands.py
 	$(call quiet-command,$(PYTHON) $(SRC_PATH)/scripts/qapi-commands.py $(gen-out-type) -m -o "." < $<, "  GEN   $@")
 
+test-object: test-object.o $(addprefix qom/, $(qom-y)) error.o $(oslib-obj-y) $(qobject-obj-y) $(tools-obj-y) $(qapi-obj-y)
+
 QGALIB_OBJ=$(addprefix $(qapi-dir)/, qga-qapi-types.o qga-qapi-visit.o qga-qmp-marshal.o)
 QGALIB_GEN=$(addprefix $(qapi-dir)/, qga-qapi-types.h qga-qapi-visit.h qga-qmp-commands.h)
 $(QGALIB_OBJ): $(QGALIB_GEN) $(GENERATED_HEADERS)
