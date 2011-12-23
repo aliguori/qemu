@@ -272,11 +272,12 @@ static void piix4_update_hotplug(PIIX4PMState *s)
 {
     PCIDevice *dev = &s->dev;
     BusState *bus = qdev_get_parent_bus(&dev->qdev);
-    DeviceState *qdev, *next;
+    BusChild *kid, *next;
 
     s->pci0_hotplug_enable = ~0;
 
-    QTAILQ_FOREACH_SAFE(qdev, &bus->children, sibling, next) {
+    QTAILQ_FOREACH_SAFE(kid, &bus->children, sibling, next) {
+        DeviceState *qdev = kid->child;
         PCIDevice *pdev = PCI_DEVICE(qdev);
         PCIDeviceClass *pc = PCI_DEVICE_GET_CLASS(pdev);
         int slot = PCI_SLOT(pdev->devfn);
@@ -492,10 +493,11 @@ static uint32_t pciej_read(void *opaque, uint32_t addr)
 static void pciej_write(void *opaque, uint32_t addr, uint32_t val)
 {
     BusState *bus = opaque;
-    DeviceState *qdev, *next;
+    BusChild *kid, *next;
     int slot = ffs(val) - 1;
 
-    QTAILQ_FOREACH_SAFE(qdev, &bus->children, sibling, next) {
+    QTAILQ_FOREACH_SAFE(kid, &bus->children, sibling, next) {
+        DeviceState *qdev = kid->child;
         PCIDevice *dev = PCI_DEVICE(qdev);
         PCIDeviceClass *pc = PCI_DEVICE_GET_CLASS(dev);
         if (PCI_SLOT(dev->devfn) == slot && !pc->no_hotplug) {

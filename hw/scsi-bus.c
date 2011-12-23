@@ -276,7 +276,7 @@ static void store_lun(uint8_t *outbuf, int lun)
 
 static bool scsi_target_emulate_report_luns(SCSITargetReq *r)
 {
-    DeviceState *qdev;
+    BusChild *kid;
     int i, len, n;
     int channel, id;
     bool found_lun0;
@@ -291,7 +291,8 @@ static bool scsi_target_emulate_report_luns(SCSITargetReq *r)
     id = r->req.dev->id;
     found_lun0 = false;
     n = 0;
-    QTAILQ_FOREACH(qdev, &r->req.bus->qbus.children, sibling) {
+    QTAILQ_FOREACH(kid, &r->req.bus->qbus.children, sibling) {
+        DeviceState *qdev = kid->child;
         SCSIDevice *dev = SCSI_DEVICE(qdev);
 
         if (dev->channel == channel && dev->id == id) {
@@ -313,7 +314,8 @@ static bool scsi_target_emulate_report_luns(SCSITargetReq *r)
     memset(r->buf, 0, len);
     stl_be_p(&r->buf, n);
     i = found_lun0 ? 8 : 16;
-    QTAILQ_FOREACH(qdev, &r->req.bus->qbus.children, sibling) {
+    QTAILQ_FOREACH(kid, &r->req.bus->qbus.children, sibling) {
+        DeviceState *qdev = kid->child;
         SCSIDevice *dev = SCSI_DEVICE(qdev);
 
         if (dev->channel == channel && dev->id == id) {
@@ -1377,10 +1379,11 @@ void scsi_device_purge_requests(SCSIDevice *sdev, SCSISense sense)
 
 SCSIDevice *scsi_device_find(SCSIBus *bus, int channel, int id, int lun)
 {
-    DeviceState *qdev;
+    BusChild *kid;
     SCSIDevice *target_dev = NULL;
 
-    QTAILQ_FOREACH_REVERSE(qdev, &bus->qbus.children, ChildrenHead, sibling) {
+    QTAILQ_FOREACH_REVERSE(kid, &bus->qbus.children, ChildrenHead, sibling) {
+        DeviceState *qdev = kid->child;
         SCSIDevice *dev = SCSI_DEVICE(qdev);
 
         if (dev->channel == channel && dev->id == id) {
