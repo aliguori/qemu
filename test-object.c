@@ -23,7 +23,13 @@ static void register_my_device(void)
     type_register_static(&my_device_info);
 }
 
+static void unregister_my_device(void)
+{
+    type_unregister(&my_device_info);
+}
+
 device_init(register_my_device);
+device_exit(unregister_my_device);
 
 /** module infrastructure **/
 
@@ -31,9 +37,17 @@ typedef void (module_init_fn)(void);
 static module_init_fn *init_fns[1024];
 static int nb_init_fns = 0;
 
+static module_init_fn *exit_fns[1024];
+static int nb_exit_fns = 0;
+
 void register_module_init(module_init_fn *fn, module_init_type type)
 {
     init_fns[nb_init_fns++] = fn;
+}
+
+void register_module_exit(module_init_fn *fn, module_init_type type)
+{
+    exit_fns[nb_exit_fns++] = fn;
 }
 
 static void init_modules(void)
@@ -42,6 +56,15 @@ static void init_modules(void)
 
     for (i = 0; i < nb_init_fns; i++) {
         init_fns[i]();
+    }
+}
+
+static void exit_modules(void)
+{
+    int i;
+
+    for (i = 0; i < nb_exit_fns; i++) {
+        exit_fns[i]();
     }
 }
 
@@ -62,6 +85,8 @@ int main(int argc, char **argv)
     object_ref(OBJECT(&dev1));
 
     object_unref(OBJECT(&dev1));
+
+    exit_modules();
 
     return 0;
 }

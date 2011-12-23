@@ -20,6 +20,11 @@ static void __attribute__((constructor)) do_qemu_init_ ## function(void) {  \
     register_module_init(function, type);                                   \
 }
 
+#define module_exit(function, type)                                         \
+static void __attribute__((constructor)) do_qemu_exit_ ## function(void) {  \
+    register_module_exit(function, type);                                   \
+}
+
 typedef enum {
     MODULE_INIT_BLOCK,
     MODULE_INIT_DEVICE,
@@ -33,7 +38,10 @@ typedef enum {
 #define machine_init(function) module_init(function, MODULE_INIT_MACHINE)
 #define qapi_init(function) module_init(function, MODULE_INIT_QAPI)
 
+#define device_exit(function) module_exit(function, MODULE_INIT_DEVICE)
+
 void register_module_init(void (*fn)(void), module_init_type type);
+void register_module_exit(void (*fn)(void), module_init_type type);
 
 void module_call_init(module_init_type type);
 

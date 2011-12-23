@@ -443,6 +443,8 @@ const char *object_get_typename(Object *obj);
  */
 Type type_register_static(const TypeInfo *info);
 
+void type_unregister(const TypeInfo *info);
+
 /**
  * type_register:
  * @info: The #TypeInfo of the new type
