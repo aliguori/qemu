@@ -25,22 +25,12 @@
 static ISABus *isabus;
 target_phys_addr_t isa_mem_base = 0;
 
-static void isabus_dev_print(Monitor *mon, DeviceState *dev, int indent);
-
 #define TYPE_ISA_BUS "ISA"
-
-static void isa_bus_class_init(ObjectClass *klass, void *data)
-{
-    BusClass *k = BUS_CLASS(klass);
-
-    k->print_dev = isabus_dev_print;
-}
 
 static TypeInfo isa_bus_info = {
     .name = TYPE_ISA_BUS,
     .parent = TYPE_BUS,
     .instance_size = sizeof(ISABus),
-    .class_init = isa_bus_class_init,
 };
 
 ISABus *isa_bus_new(DeviceState *dev, MemoryRegion *address_space_io)
@@ -166,19 +156,6 @@ ISADevice *isa_create_simple(ISABus *bus, const char *name)
     return dev;
 }
 
-static void isabus_dev_print(Monitor *mon, DeviceState *dev, int indent)
-{
-    ISADevice *d = ISA_DEVICE(dev);
-
-    if (d->isairq[1] != -1) {
-        monitor_printf(mon, "%*sisa irqs %d,%d\n", indent, "",
-                       d->isairq[0], d->isairq[1]);
-    } else if (d->isairq[0] != -1) {
-        monitor_printf(mon, "%*sisa irq %d\n", indent, "",
-                       d->isairq[0]);
-    }
-}
-
 static int isabus_bridge_init(SysBusDevice *dev)
 {
     /* nothing */
@@ -216,12 +193,26 @@ static char *isa_device_get_fw_dev_path(DeviceState *dev)
     return strdup(path);
 }
 
+static void isa_qdev_dev_print(DeviceState *dev, Monitor *mon, int indent)
+{
+    ISADevice *d = ISA_DEVICE(dev);
+
+    if (d->isairq[1] != -1) {
+        monitor_printf(mon, "%*sisa irqs %d,%d\n", indent, "",
+                       d->isairq[0], d->isairq[1]);
+    } else if (d->isairq[0] != -1) {
+        monitor_printf(mon, "%*sisa irq %d\n", indent, "",
+                       d->isairq[0]);
+    }
+}
+
 static void isa_device_class_init(ObjectClass *klass, void *data)
 {
     DeviceClass *k = DEVICE_CLASS(klass);
     k->init = isa_qdev_init;
     k->bus_type = TYPE_ISA_BUS;
     k->get_fw_dev_path = isa_device_get_fw_dev_path;
+    k->print_dev = isa_qdev_dev_print;
 }
 
 static TypeInfo isa_device_type_info = {
