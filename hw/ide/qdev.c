@@ -25,38 +25,19 @@
 
 /* --------------------------------- */
 
-static char *idebus_get_fw_dev_path(DeviceState *dev);
-
 #define TYPE_IDE_BUS "IDE"
-
-static void ide_bus_class_init(ObjectClass *klass, void *data)
-{
-    BusClass *k = BUS_CLASS(klass);
-
-    k->get_fw_dev_path = idebus_get_fw_dev_path;
-}
+#define IDE_BUS(obj) OBJECT_CHECK(IDEBus, (obj), TYPE_IDE_BUS)
 
 static TypeInfo ide_bus_info = {
     .name = TYPE_IDE_BUS,
     .parent = TYPE_BUS,
     .instance_size = sizeof(IDEBus),
-    .class_init = ide_bus_class_init,
 };
 
 void ide_bus_new(IDEBus *idebus, DeviceState *dev, int bus_id)
 {
     qbus_create_inplace(&idebus->qbus, TYPE_IDE_BUS, dev, NULL);
     idebus->bus_id = bus_id;
-}
-
-static char *idebus_get_fw_dev_path(DeviceState *dev)
-{
-    char path[30];
-
-    snprintf(path, sizeof(path), "%s@%d", qdev_fw_name(dev),
-             ((IDEBus*)dev->parent_bus)->bus_id);
-
-    return strdup(path);
 }
 
 static int ide_qdev_init(DeviceState *qdev)
@@ -247,11 +228,23 @@ static TypeInfo ide_drive_info = {
     .class_init    = ide_drive_class_init,
 };
 
+static char *ide_device_get_fw_dev_path(DeviceState *dev)
+{
+    IDEBus *parent_bus = IDE_BUS(dev->parent_bus);
+    char path[30];
+
+    snprintf(path, sizeof(path), "%s@%d", qdev_fw_name(dev),
+             parent_bus->bus_id);
+
+    return g_strdup(path);
+}
+
 static void ide_device_class_init(ObjectClass *klass, void *data)
 {
     DeviceClass *k = DEVICE_CLASS(klass);
     k->init = ide_qdev_init;
     k->bus_type = TYPE_IDE_BUS;
+    k->get_fw_dev_path = ide_device_get_fw_dev_path;
 }
 
 static Property ide_bus_properties[] = {
