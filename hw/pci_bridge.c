@@ -314,7 +314,7 @@ int pci_bridge_initfn(PCIDevice *dev)
     pci_set_word(dev->config + PCI_SEC_STATUS,
                  PCI_STATUS_66MHZ | PCI_STATUS_FAST_BACK);
 
-    qbus_create_inplace(&sec_bus->qbus, &pci_bus_info, &dev->qdev,
+    qbus_create_inplace(&sec_bus->qbus, TYPE_PCI_BUS, &dev->qdev,
                         br->bus_name);
     sec_bus->parent_dev = dev;
     sec_bus->map_irq = br->map_irq;
