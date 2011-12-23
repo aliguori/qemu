@@ -40,7 +40,6 @@
 #endif
 
 static void pcibus_dev_print(Monitor *mon, DeviceState *dev, int indent);
-static char *pcibus_get_fw_dev_path(DeviceState *dev);
 static int pcibus_reset(BusState *qbus);
 
 static void pci_bus_class_init(ObjectClass *klass, void *data)
@@ -48,7 +47,6 @@ static void pci_bus_class_init(ObjectClass *klass, void *data)
     BusClass *k = BUS_CLASS(klass);
 
     k->print_dev = pcibus_dev_print;
-    k->get_fw_dev_path = pcibus_get_fw_dev_path;
     k->reset = pcibus_reset;
 }
 
@@ -1872,20 +1870,6 @@ static char *pci_dev_fw_name(DeviceState *dev, char *buf, int len)
     return buf;
 }
 
-static char *pcibus_get_fw_dev_path(DeviceState *dev)
-{
-    PCIDevice *d = (PCIDevice *)dev;
-    char path[50], name[33];
-    int off;
-
-    off = snprintf(path, sizeof(path), "%s@%x",
-                   pci_dev_fw_name(dev, name, sizeof name),
-                   PCI_SLOT(d->devfn));
-    if (PCI_FUNC(d->devfn))
-        snprintf(path + off, sizeof(path) + off, ",%x", PCI_FUNC(d->devfn));
-    return strdup(path);
-}
-
 static int pci_qdev_find_recursive(PCIBus *bus,
                                    const char *id, PCIDevice **pdev)
 {
@@ -1980,6 +1964,20 @@ MemoryRegion *pci_address_space_io(PCIDevice *dev)
     return dev->bus->address_space_io;
 }
 
+static char *pci_qdev_get_fw_dev_path(DeviceState *dev)
+{
+    PCIDevice *d = PCI_DEVICE(dev);
+    char path[50], name[33];
+    int off;
+
+    off = snprintf(path, sizeof(path), "%s@%x",
+                   pci_dev_fw_name(dev, name, sizeof name),
+                   PCI_SLOT(d->devfn));
+    if (PCI_FUNC(d->devfn))
+        snprintf(path + off, sizeof(path) + off, ",%x", PCI_FUNC(d->devfn));
+    return strdup(path);
+}
+
 static void pci_device_class_init(ObjectClass *klass, void *data)
 {
     DeviceClass *k = DEVICE_CLASS(klass);
@@ -1988,6 +1986,7 @@ static void pci_device_class_init(ObjectClass *klass, void *data)
     k->exit = pci_unregister_device;
     k->bus_type = TYPE_PCI_BUS;
     k->get_dev_path = pci_qdev_get_dev_path;
+    k->get_fw_dev_path = pci_qdev_get_fw_dev_path;
 }
 
 static Property pci_bus_properties[] = {

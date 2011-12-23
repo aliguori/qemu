@@ -26,7 +26,6 @@ static ISABus *isabus;
 target_phys_addr_t isa_mem_base = 0;
 
 static void isabus_dev_print(Monitor *mon, DeviceState *dev, int indent);
-static char *isabus_get_fw_dev_path(DeviceState *dev);
 
 #define TYPE_ISA_BUS "ISA"
 
@@ -35,7 +34,6 @@ static void isa_bus_class_init(ObjectClass *klass, void *data)
     BusClass *k = BUS_CLASS(klass);
 
     k->print_dev = isabus_dev_print;
-    k->get_fw_dev_path = isabus_get_fw_dev_path;
 }
 
 static TypeInfo isa_bus_info = {
@@ -204,11 +202,26 @@ static TypeInfo isabus_bridge_info = {
     .class_init    = isabus_bridge_class_init,
 };
 
+static char *isa_device_get_fw_dev_path(DeviceState *dev)
+{
+    ISADevice *d = (ISADevice*)dev;
+    char path[40];
+    int off;
+
+    off = snprintf(path, sizeof(path), "%s", qdev_fw_name(dev));
+    if (d->ioport_id) {
+        snprintf(path + off, sizeof(path) - off, "@%04x", d->ioport_id);
+    }
+
+    return strdup(path);
+}
+
 static void isa_device_class_init(ObjectClass *klass, void *data)
 {
     DeviceClass *k = DEVICE_CLASS(klass);
     k->init = isa_qdev_init;
     k->bus_type = TYPE_ISA_BUS;
+    k->get_fw_dev_path = isa_device_get_fw_dev_path;
 }
 
 static TypeInfo isa_device_type_info = {
@@ -225,20 +238,6 @@ static void isabus_register_devices(void)
     type_register_static(&isa_bus_info);
     type_register_static(&isabus_bridge_info);
     type_register_static(&isa_device_type_info);
-}
-
-static char *isabus_get_fw_dev_path(DeviceState *dev)
-{
-    ISADevice *d = (ISADevice*)dev;
-    char path[40];
-    int off;
-
-    off = snprintf(path, sizeof(path), "%s", qdev_fw_name(dev));
-    if (d->ioport_id) {
-        snprintf(path + off, sizeof(path) - off, "@%04x", d->ioport_id);
-    }
-
-    return strdup(path);
 }
 
 MemoryRegion *isa_address_space(ISADevice *dev)
