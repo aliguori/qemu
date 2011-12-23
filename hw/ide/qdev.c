@@ -31,10 +31,6 @@ static struct BusInfo ide_bus_info = {
     .name  = "IDE",
     .size  = sizeof(IDEBus),
     .get_fw_dev_path = idebus_get_fw_dev_path,
-    .props = (Property[]) {
-        DEFINE_PROP_UINT32("unit", IDEDevice, unit, -1),
-        DEFINE_PROP_END_OF_LIST(),
-    },
 };
 
 void ide_bus_new(IDEBus *idebus, DeviceState *dev, int bus_id)
@@ -248,10 +244,21 @@ static void ide_device_class_init(ObjectClass *klass, void *data)
     k->bus_info = &ide_bus_info;
 }
 
+static Property ide_bus_properties[] = {
+    DEFINE_PROP_UINT32("unit", IDEDevice, unit, -1),
+    DEFINE_PROP_END_OF_LIST(),
+};
+
+static void ide_device_initfn(Object *obj)
+{
+    qdev_add_properties(DEVICE(obj), ide_bus_properties);
+}
+
 static TypeInfo ide_device_type_info = {
     .name = TYPE_IDE_DEVICE,
     .parent = TYPE_DEVICE,
     .instance_size = sizeof(IDEDevice),
+    .instance_init = ide_device_initfn,
     .abstract = true,
     .class_size = sizeof(IDEDeviceClass),
     .class_init = ide_device_class_init,
