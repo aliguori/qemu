@@ -16,7 +16,6 @@ static void scsi_bus_class_init(ObjectClass *klass, void *data)
 {
     BusClass *k = BUS_CLASS(klass);
 
-    k->get_dev_path = scsibus_get_dev_path;
     k->get_fw_dev_path = scsibus_get_fw_dev_path;
 }
 
@@ -1427,14 +1426,14 @@ void scsi_device_purge_requests(SCSIDevice *sdev, SCSISense sense)
     sdev->unit_attention = sense;
 }
 
-static char *scsibus_get_dev_path(DeviceState *dev)
+static char *scsi_qdev_get_dev_path(DeviceState *dev)
 {
-    SCSIDevice *d = DO_UPCAST(SCSIDevice, qdev, dev);
+    SCSIDevice *d = SCSI_DEVICE(dev);
     DeviceState *hba = dev->parent_bus->parent;
     char *id = NULL;
 
-    if (hba && hba->parent_bus && hba->parent_bus->info->get_dev_path) {
-        id = hba->parent_bus->info->get_dev_path(hba);
+    if (hba) {
+        id = qdev_get_dev_path(hba);
     }
     if (id) {
         return g_strdup_printf("%s/%d:%d:%d", id, d->channel, d->id, d->lun);
@@ -1575,6 +1574,7 @@ static void scsi_device_class_init(ObjectClass *klass, void *data)
     k->init     = scsi_qdev_init;
     k->unplug   = qdev_simple_unplug_cb;
     k->exit     = scsi_qdev_exit;
+    k->get_dev_path = scsi_qdev_get_dev_path;
 }
 
 static Property scsi_bus_properties[] = {
