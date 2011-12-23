@@ -6,22 +6,13 @@
 #include "blockdev.h"
 #include "trace.h"
 
-static char *scsibus_get_fw_dev_path(DeviceState *dev);
 static int scsi_req_parse(SCSICommand *cmd, SCSIDevice *dev, uint8_t *buf);
 static void scsi_req_dequeue(SCSIRequest *req);
-
-static void scsi_bus_class_init(ObjectClass *klass, void *data)
-{
-    BusClass *k = BUS_CLASS(klass);
-
-    k->get_fw_dev_path = scsibus_get_fw_dev_path;
-}
 
 static TypeInfo scsi_bus_info = {
     .name = TYPE_SCSI_BUS,
     .parent = TYPE_BUS,
     .instance_size = sizeof(SCSIBus),
-    .class_init = scsi_bus_class_init,
 };
 static int next_scsi_bus;
 
@@ -1384,17 +1375,6 @@ void scsi_device_purge_requests(SCSIDevice *sdev, SCSISense sense)
     sdev->unit_attention = sense;
 }
 
-static char *scsibus_get_fw_dev_path(DeviceState *dev)
-{
-    SCSIDevice *d = SCSI_DEVICE(dev);
-    char path[100];
-
-    snprintf(path, sizeof(path), "channel@%x/%s@%x,%x", d->channel,
-             qdev_fw_name(dev), d->id, d->lun);
-
-    return strdup(path);
-}
-
 SCSIDevice *scsi_device_find(SCSIBus *bus, int channel, int id, int lun)
 {
     DeviceState *qdev;
@@ -1413,6 +1393,17 @@ SCSIDevice *scsi_device_find(SCSIBus *bus, int channel, int id, int lun)
     return target_dev;
 }
 
+static char *scsi_qdev_get_fw_dev_path(DeviceState *dev)
+{
+    SCSIDevice *d = SCSI_DEVICE(dev);
+    char path[100];
+
+    snprintf(path, sizeof(path), "channel@%x/%s@%x,%x", d->channel,
+             qdev_fw_name(dev), d->id, d->lun);
+
+    return strdup(path);
+}
+
 static void scsi_device_class_init(ObjectClass *klass, void *data)
 {
     DeviceClass *k = DEVICE_CLASS(klass);
@@ -1420,6 +1411,7 @@ static void scsi_device_class_init(ObjectClass *klass, void *data)
     k->init     = scsi_qdev_init;
     k->unplug   = qdev_simple_unplug_cb;
     k->exit     = scsi_qdev_exit;
+    k->get_fw_dev_path = scsi_qdev_get_fw_dev_path;
 }
 
 static Property scsi_bus_properties[] = {
