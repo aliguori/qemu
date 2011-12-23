@@ -1062,9 +1062,12 @@ static Answer *ccid_peek_next_answer(USBCCIDState *s)
         : &s->pending_answers[s->pending_answers_start % PENDING_ANSWERS_NUM];
 }
 
-static struct BusInfo ccid_bus_info = {
-    .name = "ccid-bus",
-    .size = sizeof(CCIDBus),
+#define TYPE_CCID_BUS "ccid-bus"
+
+static TypeInfo ccid_bus_info = {
+    .name = TYPE_CCID_BUS,
+    .parent = TYPE_BUS,
+    .instance_size = sizeof(CCIDBus),
 };
 
 void ccid_card_send_apdu_to_guest(CCIDCardState *card,
@@ -1193,7 +1196,7 @@ static int ccid_initfn(USBDevice *dev)
     USBCCIDState *s = DO_UPCAST(USBCCIDState, dev, dev);
 
     usb_desc_init(dev);
-    qbus_create_inplace(&s->bus.qbus, &ccid_bus_info, &dev->qdev, NULL);
+    qbus_create_inplace(&s->bus.qbus, TYPE_CCID_BUS, &dev->qdev, NULL);
     s->bus.qbus.allow_hotplug = 1;
     s->card = NULL;
     s->migration_state = MIGRATION_NONE;
@@ -1344,7 +1347,7 @@ static TypeInfo ccid_info = {
 static void ccid_card_class_init(ObjectClass *klass, void *data)
 {
     DeviceClass *k = DEVICE_CLASS(klass);
-    k->bus_info = &ccid_bus_info;
+    k->bus_type = TYPE_CCID_BUS;
     k->init = ccid_card_init;
     k->exit = ccid_card_exit;
 }
@@ -1371,6 +1374,7 @@ static TypeInfo ccid_card_type_info = {
 
 static void ccid_register_devices(void)
 {
+    type_register_static(&ccid_bus_info);
     type_register_static(&ccid_card_type_info);
     type_register_static(&ccid_info);
     usb_legacy_register(CCID_DEV_NAME, "ccid", NULL);

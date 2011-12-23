@@ -49,9 +49,12 @@
     do { } while (0)
 #endif
 
-static struct BusInfo spapr_vio_bus_info = {
-    .name       = "spapr-vio",
-    .size       = sizeof(VIOsPAPRBus),
+#define TYPE_SPAPR_VIO_BUS "spapr-vio-bus"
+
+static TypeInfo spapr_vio_bus_info = {
+    .name = TYPE_SPAPR_VIO_BUS,
+    .parent = TYPE_BUS,
+    .instance_size = sizeof(VIOsPAPRBus),
 };
 
 VIOsPAPRDevice *spapr_vio_find_by_reg(VIOsPAPRBus *bus, uint32_t reg)
@@ -678,7 +681,7 @@ VIOsPAPRBus *spapr_vio_bus_init(void)
 
     /* Create bus on bridge device */
 
-    qbus = qbus_create(&spapr_vio_bus_info, dev, "spapr-vio");
+    qbus = qbus_create(TYPE_SPAPR_VIO_BUS, dev, "spapr-vio");
     bus = DO_UPCAST(VIOsPAPRBus, bus, qbus);
 
     /* hcall-vio */
@@ -728,7 +731,7 @@ static void vio_spapr_device_class_init(ObjectClass *klass, void *data)
 {
     DeviceClass *k = DEVICE_CLASS(klass);
     k->init = spapr_vio_busdev_init;
-    k->bus_info = &spapr_vio_bus_info;
+    k->bus_type = TYPE_SPAPR_VIO_BUS;
 }
 
 static Property spapr_vio_bus_properties[] = {
@@ -753,6 +756,7 @@ static TypeInfo spapr_vio_type_info = {
 
 static void spapr_vio_register_devices(void)
 {
+    type_register_static(&spapr_vio_bus_info);
     type_register_static(&spapr_vio_bridge_info);
     type_register_static(&spapr_vio_type_info);
 }
