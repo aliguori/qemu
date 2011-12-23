@@ -20,10 +20,6 @@ struct i2c_bus
 static struct BusInfo i2c_bus_info = {
     .name = "I2C",
     .size = sizeof(i2c_bus),
-    .props = (Property[]) {
-        DEFINE_PROP_UINT8("address", struct I2CSlave, address, 0),
-        DEFINE_PROP_END_OF_LIST(),
-    }
 };
 
 static void i2c_bus_pre_save(void *opaque)
@@ -221,10 +217,21 @@ static void i2c_slave_class_init(ObjectClass *klass, void *data)
     k->bus_info = &i2c_bus_info;
 }
 
+static Property i2c_bus_properties[] = {
+    DEFINE_PROP_UINT8("address", struct I2CSlave, address, 0),
+    DEFINE_PROP_END_OF_LIST(),
+};
+
+static void i2c_slave_initfn(Object *obj)
+{
+    qdev_add_properties(DEVICE(obj), i2c_bus_properties);
+}
+
 static TypeInfo i2c_slave_type_info = {
     .name = TYPE_I2C_SLAVE,
     .parent = TYPE_DEVICE,
     .instance_size = sizeof(I2CSlave),
+    .instance_init = i2c_slave_initfn,
     .abstract = true,
     .class_size = sizeof(I2CSlaveClass),
     .class_init = i2c_slave_class_init,

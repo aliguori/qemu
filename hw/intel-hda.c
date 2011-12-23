@@ -32,10 +32,6 @@
 static struct BusInfo hda_codec_bus_info = {
     .name      = "HDA",
     .size      = sizeof(HDACodecBus),
-    .props     = (Property[]) {
-        DEFINE_PROP_UINT32("cad", HDACodecDevice, cad, -1),
-        DEFINE_PROP_END_OF_LIST()
-    }
 };
 
 void hda_codec_bus_init(DeviceState *dev, HDACodecBus *bus,
@@ -1278,10 +1274,21 @@ static void hda_codec_device_class_init(ObjectClass *klass, void *data)
     k->bus_info = &hda_codec_bus_info;
 }
 
+static Property hda_codec_bus_properties[] = {
+    DEFINE_PROP_UINT32("cad", HDACodecDevice, cad, -1),
+    DEFINE_PROP_END_OF_LIST()
+};
+
+static void hda_codec_device_initfn(Object *obj)
+{
+    qdev_add_properties(DEVICE(obj), hda_codec_bus_properties);
+}
+
 static TypeInfo hda_codec_device_type_info = {
     .name = TYPE_HDA_CODEC_DEVICE,
     .parent = TYPE_DEVICE,
     .instance_size = sizeof(HDACodecDevice),
+    .instance_init = hda_codec_device_initfn,
     .abstract = true,
     .class_size = sizeof(HDACodecDeviceClass),
     .class_init = hda_codec_device_class_init,
