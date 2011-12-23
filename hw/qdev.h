@@ -357,8 +357,6 @@ const char *qdev_fw_name(DeviceState *dev);
 
 BusInfo *qdev_get_bus_info(DeviceState *dev);
 
-Property *qdev_get_props(DeviceState *dev);
-
 /* FIXME: make this a link<> */
 void qdev_set_parent_bus(DeviceState *dev, BusState *bus);
 
