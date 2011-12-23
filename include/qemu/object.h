@@ -526,6 +526,8 @@ void object_property_add(Object *obj, const char *name, const char *type,
                          ObjectPropertyRelease *release,
                          void *opaque, Error **errp);
 
+void object_property_del(Object *obj, const char *name, Error **errp);
+
 /**
  * object_property_get:
  * @obj: the object
