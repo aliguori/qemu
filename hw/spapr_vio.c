@@ -59,11 +59,11 @@ static TypeInfo spapr_vio_bus_info = {
 
 VIOsPAPRDevice *spapr_vio_find_by_reg(VIOsPAPRBus *bus, uint32_t reg)
 {
-    DeviceState *qdev;
+    BusChild *kid;
     VIOsPAPRDevice *dev = NULL;
 
-    QTAILQ_FOREACH(qdev, &bus->bus.children, sibling) {
-        dev = (VIOsPAPRDevice *)qdev;
+    QTAILQ_FOREACH(kid, &bus->bus.children, sibling) {
+        dev = (VIOsPAPRDevice *)kid->child;
         if (dev->reg == reg) {
             return dev;
         }
@@ -604,7 +604,7 @@ static void rtas_quiesce(sPAPREnvironment *spapr, uint32_t token,
                          uint32_t nret, target_ulong rets)
 {
     VIOsPAPRBus *bus = spapr->vio_bus;
-    DeviceState *qdev;
+    BusChild *kid;
     VIOsPAPRDevice *dev = NULL;
 
     if (nargs != 0) {
@@ -612,8 +612,8 @@ static void rtas_quiesce(sPAPREnvironment *spapr, uint32_t token,
         return;
     }
 
-    QTAILQ_FOREACH(qdev, &bus->bus.children, sibling) {
-        dev = (VIOsPAPRDevice *)qdev;
+    QTAILQ_FOREACH(kid, &bus->bus.children, sibling) {
+        dev = (VIOsPAPRDevice *)kid->child;
         spapr_vio_quiesce_one(dev);
     }
 
@@ -623,7 +623,7 @@ static void rtas_quiesce(sPAPREnvironment *spapr, uint32_t token,
 static int spapr_vio_check_reg(VIOsPAPRDevice *sdev)
 {
     VIOsPAPRDevice *other_sdev;
-    DeviceState *qdev;
+    BusChild *kid;
     VIOsPAPRBus *sbus;
 
     sbus = DO_UPCAST(VIOsPAPRBus, bus, sdev->qdev.parent_bus);
@@ -633,13 +633,13 @@ static int spapr_vio_check_reg(VIOsPAPRDevice *sdev)
      * other mechanism). We have to open code this because we have to check
      * for matches with devices other than us.
      */
-    QTAILQ_FOREACH(qdev, &sbus->bus.children, sibling) {
-        other_sdev = DO_UPCAST(VIOsPAPRDevice, qdev, qdev);
+    QTAILQ_FOREACH(kid, &sbus->bus.children, sibling) {
+        other_sdev = DO_UPCAST(VIOsPAPRDevice, qdev, kid->child);
 
         if (other_sdev != sdev && other_sdev->reg == sdev->reg) {
             fprintf(stderr, "vio: %s and %s devices conflict at address %#x\n",
                     object_get_typename(OBJECT(sdev)),
-                    object_get_typename(OBJECT(qdev)),
+                    object_get_typename(OBJECT(other_sdev)),
                     sdev->reg);
             return -EEXIST;
         }
@@ -819,19 +819,20 @@ static int compare_reg(const void *p1, const void *p2)
 int spapr_populate_vdevice(VIOsPAPRBus *bus, void *fdt)
 {
     DeviceState *qdev, **qdevs;
+    BusChild *kid;
     int i, num, ret = 0;
 
     /* Count qdevs on the bus list */
     num = 0;
-    QTAILQ_FOREACH(qdev, &bus->bus.children, sibling) {
+    QTAILQ_FOREACH(kid, &bus->bus.children, sibling) {
         num++;
     }
 
     /* Copy out into an array of pointers */
     qdevs = g_malloc(sizeof(qdev) * num);
     num = 0;
-    QTAILQ_FOREACH(qdev, &bus->bus.children, sibling) {
-        qdevs[num++] = qdev;
+    QTAILQ_FOREACH(kid, &bus->bus.children, sibling) {
+        qdevs[num++] = kid->child;
     }
 
     /* Sort the array */
