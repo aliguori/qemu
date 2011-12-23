@@ -59,11 +59,11 @@ static TypeInfo spapr_vio_bus_info = {
 
 VIOsPAPRDevice *spapr_vio_find_by_reg(VIOsPAPRBus *bus, uint32_t reg)
 {
-    DeviceState *qdev;
+    BusChild *kid;
     VIOsPAPRDevice *dev = NULL;
 
-    QTAILQ_FOREACH(qdev, &bus->bus.children, sibling) {
-        dev = (VIOsPAPRDevice *)qdev;
+    QTAILQ_FOREACH(kid, &bus->bus.children, sibling) {
+        dev = VIO_SPAPR_DEVICE(kid->child);
         if (dev->reg == reg) {
             return dev;
         }
@@ -604,7 +604,7 @@ static void rtas_quiesce(sPAPREnvironment *spapr, uint32_t token,
                          uint32_t nret, target_ulong rets)
 {
     VIOsPAPRBus *bus = spapr->vio_bus;
-    DeviceState *qdev;
+    BusChild *kid;
     VIOsPAPRDevice *dev = NULL;
 
     if (nargs != 0) {
@@ -612,8 +612,8 @@ static void rtas_quiesce(sPAPREnvironment *spapr, uint32_t token,
         return;
     }
 
-    QTAILQ_FOREACH(qdev, &bus->bus.children, sibling) {
-        dev = (VIOsPAPRDevice *)qdev;
+    QTAILQ_FOREACH(kid, &bus->bus.children, sibling) {
+        dev = VIO_SPAPR_DEVICE(kid->child);
         spapr_vio_quiesce_one(dev);
     }
 
@@ -818,19 +818,21 @@ static int compare_reg(const void *p1, const void *p2)
 
 int spapr_populate_vdevice(VIOsPAPRBus *bus, void *fdt)
 {
+    BusChild *kid;
     DeviceState *qdev, **qdevs;
     int i, num, ret = 0;
 
     /* Count qdevs on the bus list */
     num = 0;
-    QTAILQ_FOREACH(qdev, &bus->bus.children, sibling) {
+    QTAILQ_FOREACH(kid, &bus->bus.children, sibling) {
         num++;
     }
 
     /* Copy out into an array of pointers */
     qdevs = g_malloc(sizeof(qdev) * num);
     num = 0;
-    QTAILQ_FOREACH(qdev, &bus->bus.children, sibling) {
+    QTAILQ_FOREACH(kid, &bus->bus.children, sibling) {
+        DeviceState *qdev = kid->child;
         qdevs[num++] = qdev;
     }
 
