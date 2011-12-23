@@ -121,14 +121,14 @@ static void display_property(Object *obj, const char *name,
                              const char *typename, bool read_only,
                              void *opaque)
 {
-    const char *legacy_typename;
+    char *legacy_typename;
 
     if (!strstart(typename, "legacy<", NULL)) {
         return;
     }
 
     legacy_typename = g_strdup(&typename[7]);
-    legacy_typename[strlen(legacy_typename) - 2] = 0;
+    legacy_typename[strlen(legacy_typename) - 1] = 0;
 
     /*
      * TODO Properties without a parser are just for dirty hacks.
@@ -138,7 +138,7 @@ static void display_property(Object *obj, const char *name,
      */
     if (!read_only) {
         error_printf("%s.%s=%s\n", object_get_typename(obj),
-                     name, legacy_typename);
+                     &name[7], legacy_typename);
     }
 
     g_free(legacy_typename);
@@ -147,7 +147,6 @@ static void display_property(Object *obj, const char *name,
 int qdev_device_help(QemuOpts *opts)
 {
     const char *driver;
-    Property *prop;
     ObjectClass *klass;
     DeviceClass *info;
     Object *obj;
@@ -155,7 +154,8 @@ int qdev_device_help(QemuOpts *opts)
     driver = qemu_opt_get(opts, "driver");
     if (driver && !strcmp(driver, "?")) {
         bool show_no_user = false;
-        object_class_foreach(qdev_print_devinfo, TYPE_DEVICE, false, &show_no_user);
+        object_class_foreach(qdev_print_devinfo, TYPE_DEVICE,
+                             false, &show_no_user);
         return 1;
     }
 
@@ -180,6 +180,7 @@ int qdev_device_help(QemuOpts *opts)
 
     obj = object_new(driver);
     object_property_foreach(obj, display_property, NULL);
+    object_delete(obj);
 
     return 1;
 }
@@ -505,10 +506,10 @@ static void qtree_printer_visit_str(Visitor *v, char **obj,
     QTreePrinter *p = (QTreePrinter *)v;
 
     monitor_printf(p->mon, "%*sdev-prop: %s = %s\n",
-                   p->indent, "", name, *obj);
+                   p->indent, "", &name[7], *obj);
 }
 
-static void qdev_print_props(Object *obj, const char *name,
+static void qdev_print_prop(Object *obj, const char *name,
                              const char *typename, bool read_only,
                              void *opaque)
 {
@@ -521,12 +522,15 @@ static void qdev_print_props(Object *obj, const char *name,
 
 static void qdev_print(Monitor *mon, DeviceState *dev, int indent)
 {
-    QTreePrinter printer = { .type_str = qtree_printer_visit_str };
+    QTreePrinter printer = {
+        .visitor.type_str = qtree_printer_visit_str,
+        .mon = mon,
+        .indent = indent + 2,
+    };
     BusState *child;
 
     qdev_printf("dev: %s, id \"%s\"\n", object_get_typename(OBJECT(dev)),
                 dev->id ? dev->id : "");
-    indent += 2;
     if (dev->num_gpio_in) {
         qdev_printf("gpio-in %d\n", dev->num_gpio_in);
     }
@@ -535,9 +539,9 @@ static void qdev_print(Monitor *mon, DeviceState *dev, int indent)
     }
     object_property_foreach(OBJECT(dev), qdev_print_prop, &printer);
     if (dev->parent_bus->info->print_dev)
-        dev->parent_bus->info->print_dev(mon, dev, indent);
+        dev->parent_bus->info->print_dev(mon, dev, indent + 2);
     QLIST_FOREACH(child, &dev->child_bus, sibling) {
-        qbus_print(mon, child, indent);
+        qbus_print(mon, child, indent + 2);
     }
 }
 
