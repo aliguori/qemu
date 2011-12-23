@@ -495,12 +495,12 @@ void qbus_free(BusState *bus)
     }
 }
 
-static char *bus_get_fw_dev_path(BusState *bus, DeviceState *dev)
+static char *do_qdev_get_fw_dev_path(DeviceState *dev)
 {
-    BusClass *bc = BUS_GET_CLASS(bus);
+    DeviceClass *dc = DEVICE_GET_CLASS(dev);
 
-    if (bc->get_fw_dev_path) {
-        return bc->get_fw_dev_path(dev);
+    if (dc->get_fw_dev_path) {
+        return dc->get_fw_dev_path(dev);
     }
 
     return NULL;
@@ -513,7 +513,7 @@ static int qdev_get_fw_dev_path_helper(DeviceState *dev, char *p, int size)
     if (dev && dev->parent_bus) {
         char *d;
         l = qdev_get_fw_dev_path_helper(dev->parent_bus->parent, p, size);
-        d = bus_get_fw_dev_path(dev->parent_bus, dev);
+        d = do_qdev_get_fw_dev_path(dev);
         if (d) {
             l += snprintf(p + l, size - l, "%s", d);
             g_free(d);
