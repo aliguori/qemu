@@ -59,11 +59,11 @@ static TypeInfo spapr_vio_bus_info = {
 
 VIOsPAPRDevice *spapr_vio_find_by_reg(VIOsPAPRBus *bus, uint32_t reg)
 {
-    DeviceState *qdev;
+    BusChild *kid;
     VIOsPAPRDevice *dev = NULL;
 
-    QTAILQ_FOREACH(qdev, &bus->bus.children, sibling) {
-        dev = (VIOsPAPRDevice *)qdev;
+    QTAILQ_FOREACH(kid, &bus->bus.children, sibling) {
+        dev = VIO_SPAPR_DEVICE(kid->child);
         if (dev->reg == reg) {
             return dev;
         }
@@ -604,7 +604,7 @@ static void rtas_quiesce(sPAPREnvironment *spapr, uint32_t token,
                          uint32_t nret, target_ulong rets)
 {
     VIOsPAPRBus *bus = spapr->vio_bus;
-    DeviceState *qdev;
+    BusChild *kid;
     VIOsPAPRDevice *dev = NULL;
 
     if (nargs != 0) {
@@ -612,8 +612,8 @@ static void rtas_quiesce(sPAPREnvironment *spapr, uint32_t token,
         return;
     }
 
-    QTAILQ_FOREACH(qdev, &bus->bus.children, sibling) {
-        dev = (VIOsPAPRDevice *)qdev;
+    QTAILQ_FOREACH(kid, &bus->bus.children, sibling) {
+        dev = VIO_SPAPR_DEVICE(kid->child);
         spapr_vio_quiesce_one(dev);
     }
 
@@ -766,11 +766,11 @@ device_init(spapr_vio_register_devices)
 #ifdef CONFIG_FDT
 int spapr_populate_vdevice(VIOsPAPRBus *bus, void *fdt)
 {
-    DeviceState *qdev;
+    BusChild *kid;
     int ret = 0;
 
-    QTAILQ_FOREACH(qdev, &bus->bus.children, sibling) {
-        VIOsPAPRDevice *dev = (VIOsPAPRDevice *)qdev;
+    QTAILQ_FOREACH(kid, &bus->bus.children, sibling) {
+        VIOsPAPRDevice *dev = VIO_SPAPR_DEVICE(kid->child);
 
         ret = vio_make_devnode(dev, fdt);
 

@@ -42,17 +42,18 @@ static const uint32_t bars[] = {
 static PCIDevice *find_dev(sPAPREnvironment *spapr,
                            uint64_t buid, uint32_t config_addr)
 {
-    DeviceState *qdev;
     int devfn = (config_addr >> 8) & 0xFF;
     sPAPRPHBState *phb;
 
     QLIST_FOREACH(phb, &spapr->phbs, list) {
+        BusChild *kid;
+
         if (phb->buid != buid) {
             continue;
         }
 
-        QTAILQ_FOREACH(qdev, &phb->host_state.bus->qbus.children, sibling) {
-            PCIDevice *dev = (PCIDevice *)qdev;
+        QTAILQ_FOREACH(kid, &phb->host_state.bus->qbus.children, sibling) {
+            PCIDevice *dev = PCI_DEVICE(kid->child);
             if (dev->devfn == devfn) {
                 return dev;
             }
@@ -357,7 +358,7 @@ int spapr_populate_pci_devices(sPAPRPHBState *phb,
 {
     PCIBus *bus = phb->host_state.bus;
     int bus_off, node_off = 0, devid, fn, i, n, devices;
-    DeviceState *qdev;
+    BusChild *kid;
     char nodename[256];
     struct {
         uint32_t hi;
@@ -418,8 +419,8 @@ int spapr_populate_pci_devices(sPAPRPHBState *phb,
 
     /* Populate PCI devices and allocate IRQs */
     devices = 0;
-    QTAILQ_FOREACH(qdev, &bus->qbus.children, sibling) {
-        PCIDevice *dev = PCI_DEVICE(qdev);
+    QTAILQ_FOREACH(kid, &bus->qbus.children, sibling) {
+        PCIDevice *dev = PCI_DEVICE(kid->child);
         int irq_index = pci_spapr_map_irq(dev, 0);
         uint32_t *irqmap = interrupt_map[devices];
         uint8_t *config = dev->config;

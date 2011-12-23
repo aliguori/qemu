@@ -166,16 +166,16 @@ static VIOsPAPRDevice *vty_lookup(sPAPREnvironment *spapr, target_ulong reg)
 
     sdev = spapr_vio_find_by_reg(spapr->vio_bus, reg);
     if (!sdev && reg == 0) {
-        DeviceState *qdev;
+        BusChild *kid;
 
         /* Hack for kernel early debug, which always specifies reg==0.
          * We search all VIO devices, and grab the first available vty
          * device.  This attempts to mimic existing PowerVM behaviour
          * (early debug does work there, despite having no vty with
          * reg==0. */
-        QTAILQ_FOREACH(qdev, &spapr->vio_bus->bus.children, sibling) {
-            if (object_dynamic_cast(OBJECT(qdev), "spapr-vty")) {
-                return DO_UPCAST(VIOsPAPRDevice, qdev, qdev);
+        QTAILQ_FOREACH(kid, &spapr->vio_bus->bus.children, sibling) {
+            if (object_dynamic_cast(OBJECT(kid->child), "spapr-vty")) {
+                return VIO_SPAPR_DEVICE(kid->child);
             }
         }
     }
