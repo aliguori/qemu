@@ -955,18 +955,6 @@ PropertyInfo qdev_prop_pci_devfn = {
 
 /* --- public helpers --- */
 
-static Property *qdev_prop_walk(Property *props, const char *name)
-{
-    if (!props)
-        return NULL;
-    while (props->name) {
-        if (strcmp(props->name, name) == 0)
-            return props;
-        props++;
-    }
-    return NULL;
-}
-
 static Property *qdev_prop_find(DeviceState *dev, const char *name)
 {
     Object *obj = OBJECT(dev);
@@ -974,7 +962,7 @@ static Property *qdev_prop_find(DeviceState *dev, const char *name)
 
     QTAILQ_FOREACH(prop, &obj->properties, node) {
         if (strstart(prop->type, "legacy<", NULL) &&
-            strcmp(prop->name, name) == 0) {
+            strcmp(&prop->name[7], name) == 0) {
             return prop->opaque;
         }
     }

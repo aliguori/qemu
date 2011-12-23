@@ -764,7 +764,7 @@ static void object_set_link_property(Object *obj, Visitor *v, void *opaque,
             gchar *target_type;
 
             target_type = g_strdup(&type[5]);
-            target_type[strlen(target_type) - 2] = 0;
+            target_type[strlen(target_type) - 1] = 0;
 
             printf("target_type is %s\n", target_type);
 
@@ -1001,12 +1001,6 @@ void object_property_add_str(Object *obj, const char *name,
                         object_property_release_str,
                         prop, errp);
 }
-
-typedef void (ObjectPropertyEnumerator)(Object *obj,
-                                        const char *name,
-                                        const char *typename,
-                                        bool read_only,
-                                        void *opaque);
 
 void object_property_foreach(Object *obj, ObjectPropertyEnumerator *fn,
                              void *opaque)
