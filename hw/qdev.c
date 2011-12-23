@@ -76,22 +76,26 @@ bool qdev_exists(const char *name)
 static void qdev_property_add_legacy(DeviceState *dev, Property *prop,
                                      Error **errp);
 
-void qdev_set_parent_bus(DeviceState *dev, BusState *bus)
+void qdev_add_properties(DeviceState *dev, Property *props)
 {
     Property *prop;
 
+    for (prop = props; prop && prop->name; prop++) {
+        qdev_property_add_legacy(dev, prop, NULL);
+        qdev_property_add_static(dev, prop, NULL);
+    }
+    qdev_prop_set_defaults(dev, props);
+}
+
+void qdev_set_parent_bus(DeviceState *dev, BusState *bus)
+{
     if (qdev_hotplug) {
         assert(bus->allow_hotplug);
     }
 
     dev->parent_bus = bus;
     QTAILQ_INSERT_HEAD(&bus->children, dev, sibling);
-
-    for (prop = qdev_get_bus_info(dev)->props; prop && prop->name; prop++) {
-        qdev_property_add_legacy(dev, prop, NULL);
-        qdev_property_add_static(dev, prop, NULL);
-    }
-    qdev_prop_set_defaults(dev, dev->parent_bus->info->props);
+    qdev_add_properties(dev, dev->parent_bus->info->props);
 }
 
 /* Create a new device.  This only initializes the device state structure
@@ -632,13 +636,8 @@ static void device_initfn(Object *obj)
     dev->instance_id_alias = -1;
     dev->state = DEV_STATE_CREATED;
 
-    for (prop = qdev_get_props(dev); prop && prop->name; prop++) {
-        qdev_property_add_legacy(dev, prop, NULL);
-        qdev_property_add_static(dev, prop, NULL);
-    }
-
+    qdev_add_properties(dev, qdev_get_props(dev));
     object_property_add_str(OBJECT(dev), "type", qdev_get_type, NULL, NULL);
-    qdev_prop_set_defaults(dev, qdev_get_props(dev));
 }
 
 /* Unlink device from bus and free the structure.  */
