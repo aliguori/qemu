@@ -27,15 +27,25 @@
 
 static char *idebus_get_fw_dev_path(DeviceState *dev);
 
-static struct BusInfo ide_bus_info = {
-    .name  = "IDE",
-    .size  = sizeof(IDEBus),
-    .get_fw_dev_path = idebus_get_fw_dev_path,
+#define TYPE_IDE_BUS "IDE"
+
+static void ide_bus_class_init(ObjectClass *klass, void *data)
+{
+    BusClass *k = BUS_CLASS(klass);
+
+    k->get_fw_dev_path = idebus_get_fw_dev_path;
+}
+
+static TypeInfo ide_bus_info = {
+    .name = TYPE_IDE_BUS,
+    .parent = TYPE_BUS,
+    .instance_size = sizeof(IDEBus),
+    .class_init = ide_bus_class_init,
 };
 
 void ide_bus_new(IDEBus *idebus, DeviceState *dev, int bus_id)
 {
-    qbus_create_inplace(&idebus->qbus, &ide_bus_info, dev, NULL);
+    qbus_create_inplace(&idebus->qbus, TYPE_IDE_BUS, dev, NULL);
     idebus->bus_id = bus_id;
 }
 
@@ -241,7 +251,7 @@ static void ide_device_class_init(ObjectClass *klass, void *data)
 {
     DeviceClass *k = DEVICE_CLASS(klass);
     k->init = ide_qdev_init;
-    k->bus_info = &ide_bus_info;
+    k->bus_type = TYPE_IDE_BUS;
 }
 
 static Property ide_bus_properties[] = {
@@ -266,6 +276,7 @@ static TypeInfo ide_device_type_info = {
 
 static void ide_dev_register(void)
 {
+    type_register_static(&ide_bus_info);
     type_register_static(&ide_hd_info);
     type_register_static(&ide_cd_info);
     type_register_static(&ide_drive_info);

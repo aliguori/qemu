@@ -16,9 +16,12 @@ struct SSIBus {
     BusState qbus;
 };
 
-static struct BusInfo ssi_bus_info = {
-    .name = "SSI",
-    .size = sizeof(SSIBus),
+#define TYPE_SSI_BUS "SSI"
+
+static TypeInfo ssi_bus_info = {
+    .name = TYPE_SSI_BUS,
+    .parent = TYPE_BUS,
+    .instance_size = sizeof(SSIBus),
 };
 
 static int ssi_slave_init(DeviceState *dev)
@@ -40,7 +43,7 @@ static void ssi_slave_class_init(ObjectClass *klass, void *data)
 {
     DeviceClass *dc = DEVICE_CLASS(klass);
     dc->init = ssi_slave_init;
-    dc->bus_info = &ssi_bus_info;
+    dc->bus_type = TYPE_SSI_BUS;
 }
 
 static TypeInfo ssi_slave_info = {
@@ -62,7 +65,7 @@ DeviceState *ssi_create_slave(SSIBus *bus, const char *name)
 SSIBus *ssi_create_bus(DeviceState *parent, const char *name)
 {
     BusState *bus;
-    bus = qbus_create(&ssi_bus_info, parent, name);
+    bus = qbus_create(TYPE_SSI_BUS, parent, name);
     return FROM_QBUS(SSIBus, bus);
 }
 
@@ -82,6 +85,7 @@ uint32_t ssi_transfer(SSIBus *bus, uint32_t val)
 
 static void register_ssi_slave(void)
 {
+    type_register_static(&ssi_bus_info);
     type_register_static(&ssi_slave_info);
 }
 
