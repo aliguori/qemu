@@ -24,11 +24,19 @@
 static void sysbus_dev_print(Monitor *mon, DeviceState *dev, int indent);
 static char *sysbus_get_fw_dev_path(DeviceState *dev);
 
-struct BusInfo system_bus_info = {
-    .name       = "System",
-    .size       = sizeof(BusState),
-    .print_dev  = sysbus_dev_print,
-    .get_fw_dev_path = sysbus_get_fw_dev_path,
+static void system_bus_class_init(ObjectClass *klass, void *data)
+{
+    BusClass *k = BUS_CLASS(klass);
+
+    k->print_dev = sysbus_dev_print;
+    k->get_fw_dev_path = sysbus_get_fw_dev_path;
+}
+
+static TypeInfo system_bus_info = {
+    .name = TYPE_SYSTEM_BUS,
+    .parent = TYPE_BUS,
+    .instance_size = sizeof(BusState),
+    .class_init = system_bus_class_init,
 };
 
 void sysbus_connect_irq(SysBusDevice *dev, int n, qemu_irq irq)
@@ -244,7 +252,7 @@ static void sysbus_device_class_init(ObjectClass *klass, void *data)
 {
     DeviceClass *k = DEVICE_CLASS(klass);
     k->init = sysbus_device_init;
-    k->bus_info = &system_bus_info;
+    k->bus_type = TYPE_SYSTEM_BUS;
 }
 
 static TypeInfo sysbus_device_type_info = {
@@ -258,6 +266,7 @@ static TypeInfo sysbus_device_type_info = {
 
 static void sysbus_register(void)
 {
+    type_register_static(&system_bus_info);
     type_register_static(&sysbus_device_type_info);
 }
 
