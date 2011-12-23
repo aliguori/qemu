@@ -119,12 +119,40 @@ static const char *find_typename_by_alias(const char *alias)
     return NULL;
 }
 
+static void display_property(Object *obj, const char *name,
+                             const char *typename, bool read_only,
+                             void *opaque)
+{
+    const char *legacy_typename;
+
+    if (!strstart(typename, "legacy<", NULL)) {
+        return;
+    }
+
+    legacy_typename = g_strdup(&typename[7]);
+    legacy_typename[strlen(legacy_typename) - 2] = 0;
+
+    /*
+     * TODO Properties without a parser are just for dirty hacks.
+     * qdev_prop_ptr is the only such PropertyInfo.  It's marked
+     * for removal.  This conditional should be removed along with
+     * it.
+     */
+    if (!read_only) {
+        error_printf("%s.%s=%s\n", object_get_typename(obj),
+                     name, legacy_typename);
+    }
+
+    g_free(legacy_typename);
+}
+
 int qdev_device_help(QemuOpts *opts)
 {
     const char *driver;
     Property *prop;
     ObjectClass *klass;
     DeviceClass *info;
+    Object *obj;
 
     driver = qemu_opt_get(opts, "driver");
     if (driver && !strcmp(driver, "?")) {
@@ -152,28 +180,9 @@ int qdev_device_help(QemuOpts *opts)
     }
     info = DEVICE_CLASS(klass);
 
-    for (prop = info->props; prop && prop->name; prop++) {
-        /*
-         * TODO Properties without a parser are just for dirty hacks.
-         * qdev_prop_ptr is the only such PropertyInfo.  It's marked
-         * for removal.  This conditional should be removed along with
-         * it.
-         */
-        if (!prop->info->parse) {
-            continue;           /* no way to set it, don't show */
-        }
-        error_printf("%s.%s=%s\n", driver, prop->name,
-                     prop->info->legacy_name ?: prop->info->name);
-    }
-    if (info->bus_info) {
-        for (prop = info->bus_info->props; prop && prop->name; prop++) {
-            if (!prop->info->parse) {
-                continue;           /* no way to set it, don't show */
-            }
-            error_printf("%s.%s=%s\n", driver, prop->name,
-                         prop->info->legacy_name ?: prop->info->name);
-        }
-    }
+    obj = object_new(driver);
+    object_property_foreach(obj, display_property, NULL);
+
     return 1;
 }
 
@@ -486,31 +495,39 @@ DeviceState *qdev_device_add(QemuOpts *opts)
 #define qdev_printf(fmt, ...) monitor_printf(mon, "%*s" fmt, indent, "", ## __VA_ARGS__)
 static void qbus_print(Monitor *mon, BusState *bus, int indent);
 
-static void qdev_print_props(Monitor *mon, DeviceState *dev, Property *props,
-                             const char *prefix, int indent)
+typedef struct QTreePrinter
 {
-    char buf[64];
+    Visitor visitor;
+    Monitor *mon;
+    int indent;
+    const char *prefix;
+} QTreePrinter;
 
-    if (!props)
-        return;
-    while (props->name) {
-        /*
-         * TODO Properties without a print method are just for dirty
-         * hacks.  qdev_prop_ptr is the only such PropertyInfo.  It's
-         * marked for removal.  The test props->info->print should be
-         * removed along with it.
-         */
-        if (props->info->print) {
-            props->info->print(dev, props, buf, sizeof(buf));
-            qdev_printf("%s-prop: %s = %s\n", prefix, props->name, buf);
-        }
-        props++;
+static void qtree_printer_visit_str(Visitor *v, char **obj,
+                                    const char *name, Error **errp)
+{
+    QTreePrinter *p = (QTreePrinter *)v;
+
+    monitor_printf(p->mon, "%*sdev-prop: %s = %s\n",
+                   p->indent, "", name, *obj);
+}
+
+static void qdev_print_props(Object *obj, const char *name,
+                             const char *typename, bool read_only,
+                             void *opaque)
+{
+    QTreePrinter *printer = opaque;
+
+    if (strstart(typename, "legacy<", NULL)) {
+        object_property_get(obj, &printer->visitor, name, NULL);
     }
 }
 
 static void qdev_print(Monitor *mon, DeviceState *dev, int indent)
 {
+    QTreePrinter printer = { .type_str = qtree_printer_visit_str };
     BusState *child;
+
     qdev_printf("dev: %s, id \"%s\"\n", object_get_typename(OBJECT(dev)),
                 dev->id ? dev->id : "");
     indent += 2;
@@ -520,8 +537,7 @@ static void qdev_print(Monitor *mon, DeviceState *dev, int indent)
     if (dev->num_gpio_out) {
         qdev_printf("gpio-out %d\n", dev->num_gpio_out);
     }
-    qdev_print_props(mon, dev, qdev_get_props(dev), "dev", indent);
-    qdev_print_props(mon, dev, dev->parent_bus->info->props, "bus", indent);
+    object_property_foreach(OBJECT(dev), qdev_print_prop, &printer);
     if (dev->parent_bus->info->print_dev)
         dev->parent_bus->info->print_dev(mon, dev, indent);
     QLIST_FOREACH(child, &dev->child_bus, sibling) {

@@ -95,7 +95,6 @@ struct BusInfo {
     bus_get_dev_path get_dev_path;
     bus_get_fw_dev_path get_fw_dev_path;
     qbus_resetfn *reset;
-    Property *props;
 };
 
 struct BusState {
@@ -302,7 +301,6 @@ extern PropertyInfo qdev_prop_pci_devfn;
 
 /* Set properties between creation and init.  */
 void *qdev_get_prop_ptr(DeviceState *dev, Property *prop);
-int qdev_prop_exists(DeviceState *dev, const char *name);
 int qdev_prop_parse(DeviceState *dev, const char *name, const char *value);
 void qdev_prop_set(DeviceState *dev, const char *name, void *src, enum PropertyType type);
 void qdev_prop_set_bit(DeviceState *dev, const char *name, bool value);

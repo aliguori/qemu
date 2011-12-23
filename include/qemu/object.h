@@ -657,4 +657,13 @@ void object_property_add_str(Object *obj, const char *name,
                              StringGetter *get, StringSetter *set,
                              Error **errp);
 
+typedef void (ObjectPropertyEnumerator)(Object *obj,
+                                        const char *name,
+                                        const char *typename,
+                                        bool read_only,
+                                        void *opaque);
+
+void object_property_foreach(Object *obj, ObjectPropertyEnumerator *fn,
+                             void *opaque);
+
 #endif
