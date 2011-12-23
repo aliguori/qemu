@@ -89,7 +89,6 @@ void qdev_set_parent_bus(DeviceState *dev, BusState *bus)
 
     dev->parent_bus = bus;
     QTAILQ_INSERT_HEAD(&bus->children, dev, sibling);
-    qdev_add_properties(dev, dev->parent_bus->info->props);
 }
 
 /* Create a new device.  This only initializes the device state structure
