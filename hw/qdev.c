@@ -587,7 +587,6 @@ void qdev_property_add_static(DeviceState *dev, Property *prop,
 static void device_initfn(Object *obj)
 {
     DeviceState *dev = DEVICE(obj);
-    Property *prop;
 
     if (qdev_hotplug) {
         dev->hotplugged = 1;
