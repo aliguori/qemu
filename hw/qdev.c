@@ -69,14 +69,48 @@ void qdev_add_properties(DeviceState *dev, Property *props)
     }
 }
 
-void qdev_set_parent_bus(DeviceState *dev, BusState *bus)
+static void bus_remove_child(BusState *bus, DeviceState *child)
 {
+    BusChild *kid;
+
+    QTAILQ_FOREACH(kid, &bus->children, sibling) {
+        if (kid->child == child) {
+            char name[32];
+
+            snprintf(name, sizeof(name), "child[%d]", kid->index);
+            QTAILQ_REMOVE(&bus->children, kid, sibling);
+            object_property_del(OBJECT(bus), name, NULL);
+            g_free(kid);
+            return;
+        }
+    }
+}
+
+static void bus_add_child(BusState *bus, DeviceState *child)
+{
+    char name[32];
+    BusChild *kid = g_malloc0(sizeof(*kid));
+
     if (qdev_hotplug) {
         assert(bus->allow_hotplug);
     }
 
+    kid->index = bus->max_index++;
+    kid->child = child;
+
+    QTAILQ_INSERT_HEAD(&bus->children, kid, sibling);
+
+    snprintf(name, sizeof(name), "child[%d]", kid->index);
+    object_property_add_link(OBJECT(bus), name,
+                             object_get_typename(OBJECT(child)),
+                             (Object **)&kid->child,
+                             NULL);
+}
+
+void qdev_set_parent_bus(DeviceState *dev, BusState *bus)
+{
     dev->parent_bus = bus;
-    QTAILQ_INSERT_HEAD(&bus->children, dev, sibling);
+    bus_add_child(bus, dev);
 }
 
 /* Create a new device.  This only initializes the device state structure
@@ -347,7 +381,7 @@ BusState *qdev_get_child_bus(DeviceState *dev, const char *name)
 int qbus_walk_children(BusState *bus, qdev_walkerfn *devfn,
                        qbus_walkerfn *busfn, void *opaque)
 {
-    DeviceState *dev;
+    BusChild *kid;
     int err;
 
     if (busfn) {
@@ -357,8 +391,8 @@ int qbus_walk_children(BusState *bus, qdev_walkerfn *devfn,
         }
     }
 
-    QTAILQ_FOREACH(dev, &bus->children, sibling) {
-        err = qdev_walk_children(dev, devfn, busfn, opaque);
+    QTAILQ_FOREACH(kid, &bus->children, sibling) {
+        err = qdev_walk_children(kid->child, devfn, busfn, opaque);
         if (err < 0) {
             return err;
         }
@@ -392,12 +426,17 @@ int qdev_walk_children(DeviceState *dev, qdev_walkerfn *devfn,
 
 DeviceState *qdev_find_recursive(BusState *bus, const char *id)
 {
-    DeviceState *dev, *ret;
+    BusChild *kid;
+    DeviceState *ret;
     BusState *child;
 
-    QTAILQ_FOREACH(dev, &bus->children, sibling) {
-        if (dev->id && strcmp(dev->id, id) == 0)
+    QTAILQ_FOREACH(kid, &bus->children, sibling) {
+        DeviceState *dev = kid->child;
+
+        if (dev->id && strcmp(dev->id, id) == 0) {
             return dev;
+        }
+
         QLIST_FOREACH(child, &dev->child_bus, sibling) {
             ret = qdev_find_recursive(child, id);
             if (ret) {
@@ -477,9 +516,10 @@ static void main_system_bus_create(void)
 
 void qbus_free(BusState *bus)
 {
-    DeviceState *dev;
+    BusChild *kid;
 
-    while ((dev = QTAILQ_FIRST(&bus->children)) != NULL) {
+    while ((kid = QTAILQ_FIRST(&bus->children)) != NULL) {
+        DeviceState *dev = kid->child;
         qdev_free(dev);
     }
     if (bus->parent) {
@@ -1009,7 +1049,7 @@ static void device_finalize(Object *obj)
         }
     }
     if (dev->parent_bus) {
-        QTAILQ_REMOVE(&dev->parent_bus->children, dev, sibling);
+        bus_remove_child(dev->parent_bus, dev);
     }
     if (dev->parent) {
         qdev_property_del_child(dev->parent, dev, NULL);

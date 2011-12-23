@@ -643,6 +643,23 @@ static ObjectProperty *object_property_find(Object *obj, const char *name)
     return NULL;
 }
 
+void object_property_del(Object *obj, const char *name, Error **errp)
+{
+    ObjectProperty *prop = object_property_find(obj, name);
+
+    if (prop == NULL) {
+        error_set(errp, QERR_PROPERTY_NOT_FOUND, "", name);
+        return;
+    }
+
+    if (prop->release) {
+        prop->release(obj, name, prop->opaque);
+    }
+
+    QTAILQ_REMOVE(&obj->properties, prop, node);
+
+}
+
 void object_property_get(Object *obj, Visitor *v, const char *name,
                          Error **errp)
 {
