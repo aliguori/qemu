@@ -96,7 +96,6 @@ struct BusInfo {
     bus_get_dev_path get_dev_path;
     bus_get_fw_dev_path get_fw_dev_path;
     qbus_resetfn *reset;
-    Property *props;
 };
 
 struct BusState {

@@ -45,18 +45,6 @@ const VMStateDescription *qdev_get_vmsd(DeviceState *dev)
     return dc->vmsd;
 }
 
-BusInfo *qdev_get_bus_info(DeviceState *dev)
-{
-    DeviceClass *dc = DEVICE_GET_CLASS(dev);
-    return dc->bus_info;
-}
-
-Property *qdev_get_props(DeviceState *dev)
-{
-    DeviceClass *dc = DEVICE_GET_CLASS(dev);
-    return dc->props;
-}
-
 const char *qdev_fw_name(DeviceState *dev)
 {
     DeviceClass *dc = DEVICE_GET_CLASS(dev);
@@ -95,7 +83,6 @@ void qdev_set_parent_bus(DeviceState *dev, BusState *bus)
 
     dev->parent_bus = bus;
     QTAILQ_INSERT_HEAD(&bus->children, dev, sibling);
-    qdev_add_properties(dev, dev->parent_bus->info->props);
 }
 
 /* Create a new device.  This only initializes the device state structure
@@ -608,7 +595,7 @@ void qdev_property_add_legacy(DeviceState *dev, Property *prop,
     object_property_add(OBJECT(dev), name, type,
                         prop->info->print ? qdev_get_legacy_property : prop->info->get,
                         prop->info->parse ? qdev_set_legacy_property : prop->info->set,
-                        NULL,
+                        prop->info->release,
                         prop, errp);
 
     g_free(type);
@@ -642,7 +629,7 @@ void qdev_property_add_static(DeviceState *dev, Property *prop,
 static void device_initfn(Object *obj)
 {
     DeviceState *dev = DEVICE(obj);
-    Property *prop;
+    DeviceClass *dc = DEVICE_GET_CLASS(dev);
 
     if (qdev_hotplug) {
         dev->hotplugged = 1;
@@ -652,7 +639,8 @@ static void device_initfn(Object *obj)
     dev->instance_id_alias = -1;
     dev->state = DEV_STATE_CREATED;
 
-    qdev_add_properties(dev, qdev_get_props(dev));
+    qdev_add_properties(dev, dc->props);
+
     object_property_add_str(OBJECT(dev), "type", qdev_get_type, NULL, NULL);
 }
 
@@ -660,8 +648,8 @@ static void device_initfn(Object *obj)
 static void device_finalize(Object *obj)
 {
     DeviceState *dev = DEVICE(obj);
-    BusState *bus;
     DeviceClass *dc = DEVICE_GET_CLASS(dev);
+    BusState *bus;
 
     if (dev->state == DEV_STATE_INITIALIZED) {
         while (dev->num_child_bus) {
@@ -678,7 +666,9 @@ static void device_finalize(Object *obj)
             qemu_opts_del(dev->opts);
         }
     }
-    QTAILQ_REMOVE(&dev->parent_bus->children, dev, sibling);
+    if (dev->parent_bus) {
+        QTAILQ_REMOVE(&dev->parent_bus->children, dev, sibling);
+    }
 }
 
 void device_reset(DeviceState *dev)
