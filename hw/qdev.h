@@ -48,6 +48,7 @@ typedef struct DeviceClass {
     /* callbacks */
     void (*reset)(DeviceState *dev);
     char *(*get_dev_path)(DeviceState *dev);
+    char *(*get_fw_dev_path)(DeviceState *dev);
 
     /* device state */
     const VMStateDescription *vmsd;
@@ -96,7 +97,6 @@ struct BusClass {
 
     /* FIXME first arg should be BusState */
     void (*print_dev)(Monitor *mon, DeviceState *dev, int indent);
-    char *(*get_fw_dev_path)(DeviceState *dev);
     int (*reset)(BusState *bus);
 };
 
