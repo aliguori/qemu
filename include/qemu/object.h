@@ -659,4 +659,13 @@ void object_property_add_str(Object *obj, const char *name,
                              void (*set)(Object *, const char *, struct Error **),
                              struct Error **errp);
 
+typedef void (ObjectPropertyEnumerator)(Object *obj,
+                                        const char *name,
+                                        const char *typename,
+                                        bool read_only,
+                                        void *opaque);
+
+void object_property_foreach(Object *obj, ObjectPropertyEnumerator *fn,
+                             void *opaque);
+
 #endif
