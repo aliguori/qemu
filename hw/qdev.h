@@ -366,4 +366,6 @@ void qdev_set_parent_bus(DeviceState *dev, BusState *bus);
 
 extern int qdev_hotplug;
 
+void qdev_add_properties(DeviceState *dev, Property *props);
+
 #endif
