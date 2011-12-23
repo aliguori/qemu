@@ -22,14 +22,12 @@
 #include "exec-memory.h"
 
 static void sysbus_dev_print(Monitor *mon, DeviceState *dev, int indent);
-static char *sysbus_get_fw_dev_path(DeviceState *dev);
 
 static void system_bus_class_init(ObjectClass *klass, void *data)
 {
     BusClass *k = BUS_CLASS(klass);
 
     k->print_dev = sysbus_dev_print;
-    k->get_fw_dev_path = sysbus_get_fw_dev_path;
 }
 
 static TypeInfo system_bus_info = {
@@ -196,24 +194,6 @@ static void sysbus_dev_print(Monitor *mon, DeviceState *dev, int indent)
     }
 }
 
-static char *sysbus_get_fw_dev_path(DeviceState *dev)
-{
-    SysBusDevice *s = sysbus_from_qdev(dev);
-    char path[40];
-    int off;
-
-    off = snprintf(path, sizeof(path), "%s", qdev_fw_name(dev));
-
-    if (s->num_mmio) {
-        snprintf(path + off, sizeof(path) - off, "@"TARGET_FMT_plx,
-                 s->mmio[0].addr);
-    } else if (s->num_pio) {
-        snprintf(path + off, sizeof(path) - off, "@i%04x", s->pio[0]);
-    }
-
-    return strdup(path);
-}
-
 void sysbus_add_memory(SysBusDevice *dev, target_phys_addr_t addr,
                        MemoryRegion *mem)
 {
@@ -243,11 +223,30 @@ void sysbus_del_io(SysBusDevice *dev, MemoryRegion *mem)
     memory_region_del_subregion(get_system_io(), mem);
 }
 
+static char *sysbus_get_fw_dev_path(DeviceState *dev)
+{
+    SysBusDevice *s = sysbus_from_qdev(dev);
+    char path[40];
+    int off;
+
+    off = snprintf(path, sizeof(path), "%s", qdev_fw_name(dev));
+
+    if (s->num_mmio) {
+        snprintf(path + off, sizeof(path) - off, "@"TARGET_FMT_plx,
+                 s->mmio[0].addr);
+    } else if (s->num_pio) {
+        snprintf(path + off, sizeof(path) - off, "@i%04x", s->pio[0]);
+    }
+
+    return strdup(path);
+}
+
 static void sysbus_device_class_init(ObjectClass *klass, void *data)
 {
     DeviceClass *k = DEVICE_CLASS(klass);
     k->init = sysbus_device_init;
     k->bus_type = TYPE_SYSTEM_BUS;
+    k->get_fw_dev_path = sysbus_get_fw_dev_path;
 }
 
 static TypeInfo sysbus_device_type_info = {
