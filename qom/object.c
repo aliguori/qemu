@@ -308,6 +308,8 @@ void object_finalize(void *data)
 
     object_deinit(obj, ti);
     object_property_del_all(obj);
+
+    g_assert(obj->ref == 0);
 }
 
 Object *object_new_with_type(Type type)
@@ -318,6 +320,7 @@ Object *object_new_with_type(Type type)
 
     obj = g_malloc(type->instance_size);
     object_initialize_with_type(obj, type);
+    object_ref(obj);
 
     return obj;
 }
@@ -331,7 +334,8 @@ Object *object_new(const char *typename)
 
 void object_delete(Object *obj)
 {
-    object_finalize(obj);
+    object_unref(obj);
+    g_assert(obj->ref == 0);
     g_free(obj);
 }
 
@@ -529,6 +533,10 @@ void object_unref(Object *obj)
 {
     g_assert(obj->ref > 0);
     obj->ref--;
+
+    if (obj->ref == 0) {
+        object_finalize(obj);
+    }
 }
 
 void object_property_add(Object *obj, const char *name, const char *type,
@@ -632,6 +640,14 @@ static void object_get_child_property(Object *obj, Visitor *v, void *opaque,
     g_free(path);
 }
 
+static void object_finalize_child_property(Object *obj, const char *name,
+                                           void *opaque)
+{
+    Object *child = opaque;
+
+    object_unref(child);
+}
+
 void object_property_add_child(Object *obj, const char *name,
                                Object *child, Error **errp)
 {
@@ -640,7 +656,7 @@ void object_property_add_child(Object *obj, const char *name,
     type = g_strdup_printf("child<%s>", object_get_typename(OBJECT(child)));
 
     object_property_add(obj, name, type, object_get_child_property,
-                        NULL, NULL, child, errp);
+                        NULL, object_finalize_child_property, child, errp);
 
     object_ref(child);
     g_assert(child->parent == NULL);
