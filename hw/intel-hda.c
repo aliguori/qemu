@@ -29,16 +29,19 @@
 /* --------------------------------------------------------------------- */
 /* hda bus                                                               */
 
-static struct BusInfo hda_codec_bus_info = {
-    .name      = "HDA",
-    .size      = sizeof(HDACodecBus),
+#define TYPE_HDA_BUS "HDA"
+
+static TypeInfo hda_codec_bus_info = {
+    .name = TYPE_HDA_BUS,
+    .parent = TYPE_BUS,
+    .instance_size = sizeof(HDACodecBus),
 };
 
 void hda_codec_bus_init(DeviceState *dev, HDACodecBus *bus,
                         hda_codec_response_func response,
                         hda_codec_xfer_func xfer)
 {
-    qbus_create_inplace(&bus->qbus, &hda_codec_bus_info, dev, NULL);
+    qbus_create_inplace(&bus->qbus, TYPE_HDA_BUS, dev, NULL);
     bus->response = response;
     bus->xfer = xfer;
 }
@@ -1271,7 +1274,7 @@ static void hda_codec_device_class_init(ObjectClass *klass, void *data)
     DeviceClass *k = DEVICE_CLASS(klass);
     k->init = hda_codec_dev_init;
     k->exit = hda_codec_dev_exit;
-    k->bus_info = &hda_codec_bus_info;
+    k->bus_type = TYPE_HDA_BUS;
 }
 
 static Property hda_codec_bus_properties[] = {
@@ -1296,6 +1299,7 @@ static TypeInfo hda_codec_device_type_info = {
 
 static void intel_hda_register(void)
 {
+    type_register_static(&hda_codec_bus_info);
     type_register_static(&intel_hda_info);
     type_register_static(&hda_codec_device_type_info);
 }

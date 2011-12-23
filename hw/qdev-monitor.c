@@ -68,8 +68,8 @@ static void qdev_print_devinfo(ObjectClass *klass, void *opaque)
     }
 
     error_printf("name \"%s\"", object_class_get_name(klass));
-    if (dc->bus_info) {
-        error_printf(", bus %s", dc->bus_info->name);
+    if (dc->bus_type) {
+        error_printf(", bus %s", dc->bus_type);
     }
     if (qdev_class_has_alias(dc)) {
         error_printf(", alias \"%s\"", qdev_class_get_alias(dc));
@@ -286,7 +286,7 @@ static DeviceState *qbus_find_dev(BusState *bus, char *elem)
 }
 
 static BusState *qbus_find_recursive(BusState *bus, const char *name,
-                                     const BusInfo *info)
+                                     const char *bus_typename)
 {
     DeviceState *dev;
     BusState *child, *ret;
@@ -295,7 +295,8 @@ static BusState *qbus_find_recursive(BusState *bus, const char *name,
     if (name && (strcmp(bus->name, name) != 0)) {
         match = 0;
     }
-    if (info && (bus->info != info)) {
+    if (bus_typename &&
+        (strcmp(object_get_typename(OBJECT(bus)), bus_typename) != 0)) {
         match = 0;
     }
     if (match) {
@@ -304,7 +305,7 @@ static BusState *qbus_find_recursive(BusState *bus, const char *name,
 
     QTAILQ_FOREACH(dev, &bus->children, sibling) {
         QLIST_FOREACH(child, &dev->child_bus, sibling) {
-            ret = qbus_find_recursive(child, name, info);
+            ret = qbus_find_recursive(child, name, bus_typename);
             if (ret) {
                 return ret;
             }
@@ -439,16 +440,16 @@ DeviceState *qdev_device_add(QemuOpts *opts)
         if (!bus) {
             return NULL;
         }
-        if (bus->info != k->bus_info) {
+        if (strcmp(object_get_typename(OBJECT(bus)), k->bus_type) != 0){
             qerror_report(QERR_BAD_BUS_FOR_DEVICE,
-                           driver, bus->info->name);
+                          driver, object_get_typename(OBJECT(bus)));
             return NULL;
         }
     } else {
-        bus = qbus_find_recursive(sysbus_get_default(), NULL, k->bus_info);
+        bus = qbus_find_recursive(sysbus_get_default(), NULL, k->bus_type);
         if (!bus) {
             qerror_report(QERR_NO_BUS_FOR_DEVICE,
-                          driver, k->bus_info->name);
+                          driver, k->bus_type);
             return NULL;
         }
     }
@@ -522,6 +523,15 @@ static void qdev_print_prop(Object *obj, const char *name,
     }
 }
 
+static void bus_print_dev(BusState *bus, Monitor *mon, DeviceState *dev, int indent)
+{
+    BusClass *bc = BUS_GET_CLASS(bus);
+
+    if (bc->print_dev) {
+        bc->print_dev(mon, dev, indent);
+    }
+}
+
 static void qdev_print(Monitor *mon, DeviceState *dev, int indent)
 {
     QTreePrinter printer = {
@@ -540,8 +550,7 @@ static void qdev_print(Monitor *mon, DeviceState *dev, int indent)
         qdev_printf("gpio-out %d\n", dev->num_gpio_out);
     }
     object_property_foreach(OBJECT(dev), qdev_print_prop, &printer);
-    if (dev->parent_bus->info->print_dev)
-        dev->parent_bus->info->print_dev(mon, dev, indent + 2);
+    bus_print_dev(dev->parent_bus, mon, dev, indent + 2);
     QLIST_FOREACH(child, &dev->child_bus, sibling) {
         qbus_print(mon, child, indent + 2);
     }
@@ -553,7 +562,7 @@ static void qbus_print(Monitor *mon, BusState *bus, int indent)
 
     qdev_printf("bus: %s\n", bus->name);
     indent += 2;
-    qdev_printf("type %s\n", bus->info->name);
+    qdev_printf("type %s\n", object_get_typename(OBJECT(bus)));
     QTAILQ_FOREACH(dev, &bus->children, sibling) {
         qdev_print(mon, dev, indent);
     }
