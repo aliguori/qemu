@@ -52,10 +52,6 @@
 static struct BusInfo spapr_vio_bus_info = {
     .name       = "spapr-vio",
     .size       = sizeof(VIOsPAPRBus),
-    .props = (Property[]) {
-        DEFINE_PROP_UINT32("irq", VIOsPAPRDevice, vio_irq_num, 0), \
-        DEFINE_PROP_END_OF_LIST(),
-    },
 };
 
 VIOsPAPRDevice *spapr_vio_find_by_reg(VIOsPAPRBus *bus, uint32_t reg)
@@ -735,10 +731,21 @@ static void vio_spapr_device_class_init(ObjectClass *klass, void *data)
     k->bus_info = &spapr_vio_bus_info;
 }
 
+static Property spapr_vio_bus_properties[] = {
+    DEFINE_PROP_UINT32("irq", VIOsPAPRDevice, vio_irq_num, 0),  \
+    DEFINE_PROP_END_OF_LIST(),
+};
+
+static void vio_spapr_device_initfn(Object *obj)
+{
+    qdev_add_properties(DEVICE(obj), spapr_vio_bus_properties);
+}
+
 static TypeInfo spapr_vio_type_info = {
     .name = TYPE_VIO_SPAPR_DEVICE,
     .parent = TYPE_DEVICE,
     .instance_size = sizeof(VIOsPAPRDevice),
+    .instance_init = vio_spapr_device_initfn,
     .abstract = true,
     .class_size = sizeof(VIOsPAPRDeviceClass),
     .class_init = vio_spapr_device_class_init,
