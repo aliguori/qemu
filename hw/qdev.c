@@ -545,15 +545,10 @@ char* qdev_get_fw_dev_path(DeviceState *dev)
 
 char *qdev_get_dev_path(DeviceState *dev)
 {
-    BusClass *bc;
+    DeviceClass *dc = DEVICE_GET_CLASS(dev);
 
-    if (!dev->parent_bus) {
-        return NULL;
-    }
-
-    bc = BUS_GET_CLASS(dev->parent_bus);
-    if (bc->get_dev_path) {
-        return bc->get_dev_path(dev);
+    if (dc->get_dev_path) {
+        return dc->get_dev_path(dev);
     }
 
     return NULL;
