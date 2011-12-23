@@ -44,12 +44,6 @@ const VMStateDescription *qdev_get_vmsd(DeviceState *dev)
     return dc->vmsd;
 }
 
-BusInfo *qdev_get_bus_info(DeviceState *dev)
-{
-    DeviceClass *dc = DEVICE_GET_CLASS(dev);
-    return dc->bus_info;
-}
-
 const char *qdev_fw_name(DeviceState *dev)
 {
     DeviceClass *dc = DEVICE_GET_CLASS(dev);
