@@ -21,20 +21,10 @@
 #include "monitor.h"
 #include "exec-memory.h"
 
-static void sysbus_dev_print(Monitor *mon, DeviceState *dev, int indent);
-
-static void system_bus_class_init(ObjectClass *klass, void *data)
-{
-    BusClass *k = BUS_CLASS(klass);
-
-    k->print_dev = sysbus_dev_print;
-}
-
 static TypeInfo system_bus_info = {
     .name = TYPE_SYSTEM_BUS,
     .parent = TYPE_BUS,
     .instance_size = sizeof(BusState),
-    .class_init = system_bus_class_init,
 };
 
 void sysbus_connect_irq(SysBusDevice *dev, int n, qemu_irq irq)
@@ -180,20 +170,6 @@ DeviceState *sysbus_try_create_varargs(const char *name,
     return dev;
 }
 
-static void sysbus_dev_print(Monitor *mon, DeviceState *dev, int indent)
-{
-    SysBusDevice *s = sysbus_from_qdev(dev);
-    target_phys_addr_t size;
-    int i;
-
-    monitor_printf(mon, "%*sirq %d\n", indent, "", s->num_irq);
-    for (i = 0; i < s->num_mmio; i++) {
-        size = memory_region_size(s->mmio[i].memory);
-        monitor_printf(mon, "%*smmio " TARGET_FMT_plx "/" TARGET_FMT_plx "\n",
-                       indent, "", s->mmio[i].addr, size);
-    }
-}
-
 void sysbus_add_memory(SysBusDevice *dev, target_phys_addr_t addr,
                        MemoryRegion *mem)
 {
@@ -241,12 +217,27 @@ static char *sysbus_get_fw_dev_path(DeviceState *dev)
     return strdup(path);
 }
 
+static void sysbus_dev_print(DeviceState *dev, Monitor *mon, int indent)
+{
+    SysBusDevice *s = sysbus_from_qdev(dev);
+    target_phys_addr_t size;
+    int i;
+
+    monitor_printf(mon, "%*sirq %d\n", indent, "", s->num_irq);
+    for (i = 0; i < s->num_mmio; i++) {
+        size = memory_region_size(s->mmio[i].memory);
+        monitor_printf(mon, "%*smmio " TARGET_FMT_plx "/" TARGET_FMT_plx "\n",
+                       indent, "", s->mmio[i].addr, size);
+    }
+}
+
 static void sysbus_device_class_init(ObjectClass *klass, void *data)
 {
     DeviceClass *k = DEVICE_CLASS(klass);
     k->init = sysbus_device_init;
     k->bus_type = TYPE_SYSTEM_BUS;
     k->get_fw_dev_path = sysbus_get_fw_dev_path;
+    k->print_dev = sysbus_dev_print;
 }
 
 static TypeInfo sysbus_device_type_info = {

@@ -660,33 +660,13 @@ static int virtio_serial_load(QEMUFile *f, void *opaque, int version_id)
     return 0;
 }
 
-static void virtser_bus_dev_print(Monitor *mon, DeviceState *qdev, int indent);
-
 #define TYPE_VIRTIO_SERIAL_BUS "virtio-serial-bus"
-
-static void virtser_bus_class_init(ObjectClass *klass, void *data)
-{
-    BusClass *k = BUS_CLASS(klass);
-    k->print_dev = virtser_bus_dev_print;
-}
 
 static TypeInfo virtser_bus_info = {
     .name = TYPE_VIRTIO_SERIAL_BUS,
     .parent = TYPE_BUS,
     .instance_size = sizeof(VirtIOSerialBus),
-    .class_init = virtser_bus_class_init,
 };
-
-static void virtser_bus_dev_print(Monitor *mon, DeviceState *qdev, int indent)
-{
-    VirtIOSerialPort *port = DO_UPCAST(VirtIOSerialPort, dev, qdev);
-
-    monitor_printf(mon, "%*sport %d, guest %s, host %s, throttle %s\n",
-                   indent, "", port->id,
-                   port->guest_connected ? "on" : "off",
-                   port->host_connected ? "on" : "off",
-                   port->throttled ? "on" : "off");
-}
 
 /* This function is only used if a port id is not provided by the user */
 static uint32_t find_free_port_id(VirtIOSerial *vser)
@@ -920,6 +900,17 @@ void virtio_serial_exit(VirtIODevice *vdev)
     virtio_cleanup(vdev);
 }
 
+static void virtio_serial_port_dev_print(DeviceState *qdev, Monitor *mon, int indent)
+{
+    VirtIOSerialPort *port = DO_UPCAST(VirtIOSerialPort, dev, qdev);
+
+    monitor_printf(mon, "%*sport %d, guest %s, host %s, throttle %s\n",
+                   indent, "", port->id,
+                   port->guest_connected ? "on" : "off",
+                   port->host_connected ? "on" : "off",
+                   port->throttled ? "on" : "off");
+}
+
 static void virtio_serial_port_class_init(ObjectClass *klass, void *data)
 {
     DeviceClass *k = DEVICE_CLASS(klass);
@@ -927,6 +918,7 @@ static void virtio_serial_port_class_init(ObjectClass *klass, void *data)
     k->bus_type = TYPE_VIRTIO_SERIAL_BUS;
     k->exit = virtser_port_qdev_exit;
     k->unplug = qdev_simple_unplug_cb;
+    k->print_dev = virtio_serial_port_dev_print;
 }
 
 static Property virtser_bus_properties[] = {
