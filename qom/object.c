@@ -281,12 +281,24 @@ static void object_interface_init(Object *obj, InterfaceImpl *iface)
     obj->interfaces = g_slist_prepend(obj->interfaces, iface_obj);
 }
 
+static char *object_get_typename_dup(Object *obj, Error **errp)
+{
+    return g_strdup(object_get_typename(obj));
+}
+
+static void object_base_init(Object *obj)
+{
+    object_property_add_str(obj, "type", object_get_typename_dup, NULL, NULL);
+}
+
 static void object_init_with_type(Object *obj, TypeImpl *ti)
 {
     int i;
 
     if (type_has_parent(ti)) {
         object_init_with_type(obj, type_get_parent(ti));
+    } else {
+        object_base_init(obj);
     }
 
     for (i = 0; i < ti->num_interfaces; i++) {
