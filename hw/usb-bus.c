@@ -5,24 +5,14 @@
 #include "monitor.h"
 #include "trace.h"
 
-static void usb_bus_dev_print(Monitor *mon, DeviceState *qdev, int indent);
-
 static int usb_qdev_exit(DeviceState *qdev);
 
 #define TYPE_USB_BUS "usb-bus"
-
-static void usb_bus_class_init(ObjectClass *klass, void *data)
-{
-    BusClass *k = BUS_CLASS(klass);
-
-    k->print_dev = usb_bus_dev_print;
-}
 
 static TypeInfo usb_bus_info = {
     .name = TYPE_USB_BUS,
     .parent = TYPE_BUS,
     .instance_size = sizeof(USBBus),
-    .class_init = usb_bus_class_init,
 };
 
 static int next_usb_bus = 0;
@@ -458,18 +448,6 @@ static const char *usb_speed(unsigned int speed)
     return txt[speed];
 }
 
-static void usb_bus_dev_print(Monitor *mon, DeviceState *qdev, int indent)
-{
-    USBDevice *dev = USB_DEVICE(qdev);
-    USBBus *bus = usb_bus_from_device(dev);
-
-    monitor_printf(mon, "%*saddr %d.%d, port %s, speed %s, name %s%s\n",
-                   indent, "", bus->busnr, dev->addr,
-                   dev->port ? dev->port->path : "-",
-                   usb_speed(dev->speed), dev->product_desc,
-                   dev->attached ? ", attached" : "");
-}
-
 void usb_info(Monitor *mon)
 {
     USBBus *bus;
@@ -571,6 +549,18 @@ static char *usb_qdev_get_fw_dev_path(DeviceState *qdev)
     return fw_path;
 }
 
+static void usb_qdev_dev_print(DeviceState *qdev, Monitor *mon, int indent)
+{
+    USBDevice *dev = USB_DEVICE(qdev);
+    USBBus *bus = usb_bus_from_device(dev);
+
+    monitor_printf(mon, "%*saddr %d.%d, port %s, speed %s, name %s%s\n",
+                   indent, "", bus->busnr, dev->addr,
+                   dev->port ? dev->port->path : "-",
+                   usb_speed(dev->speed), dev->product_desc,
+                   dev->attached ? ", attached" : "");
+}
+
 static void usb_device_class_init(ObjectClass *klass, void *data)
 {
     DeviceClass *k = DEVICE_CLASS(klass);
@@ -581,6 +571,7 @@ static void usb_device_class_init(ObjectClass *klass, void *data)
     k->exit = usb_qdev_exit;
     k->get_dev_path = usb_qdev_get_dev_path;
     k->get_fw_dev_path = usb_qdev_get_fw_dev_path;
+    k->print_dev = usb_qdev_dev_print;
 }
 
 static Property usb_bus_properties[] = {
