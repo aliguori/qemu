@@ -17,6 +17,8 @@ static TypeInfo container_info = {
     .name          = "container",
     .instance_size = sizeof(Object),
     .parent        = TYPE_OBJECT,
+    .instance_size = sizeof(Object),
+    .class_size    = sizeof(ObjectClass),
 };
 
 static void container_init(void)
