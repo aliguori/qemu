@@ -523,12 +523,12 @@ static void qdev_print_prop(Object *obj, const char *name,
     }
 }
 
-static void bus_print_dev(BusState *bus, Monitor *mon, DeviceState *dev, int indent)
+static void qdev_print_dev(DeviceState *dev, Monitor *mon, int indent)
 {
-    BusClass *bc = BUS_GET_CLASS(bus);
+    DeviceClass *dc = DEVICE_GET_CLASS(dev);
 
-    if (bc->print_dev) {
-        bc->print_dev(mon, dev, indent);
+    if (dc->print_dev) {
+        dc->print_dev(dev, mon, indent);
     }
 }
 
@@ -550,7 +550,7 @@ static void qdev_print(Monitor *mon, DeviceState *dev, int indent)
         qdev_printf("gpio-out %d\n", dev->num_gpio_out);
     }
     object_property_foreach(OBJECT(dev), qdev_print_prop, &printer);
-    bus_print_dev(dev->parent_bus, mon, dev, indent + 2);
+    qdev_print_dev(dev, mon, indent + 2);
     QLIST_FOREACH(child, &dev->child_bus, sibling) {
         qbus_print(mon, child, indent + 2);
     }
