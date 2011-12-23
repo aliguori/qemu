@@ -67,6 +67,10 @@ void register_module_init(void (*fn)(void), module_init_type type)
     QTAILQ_INSERT_TAIL(l, e, node);
 }
 
+void register_module_exit(void (*fn)(void), module_init_type type)
+{
+}
+
 void module_call_init(module_init_type type)
 {
     ModuleTypeList *l;

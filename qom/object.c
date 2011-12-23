@@ -13,8 +13,6 @@
 #include "qemu/object.h"
 #include "qemu-common.h"
 #include "qapi/qapi-visit-core.h"
-#include "hw/qdev.h"
-// FIXME remove above
 
 #define MAX_INTERFACES 32
 
@@ -30,7 +28,7 @@ struct InterfaceImpl
 
 struct TypeImpl
 {
-    const char *name;
+    char *name;
 
     size_t class_size;
 
@@ -46,7 +44,7 @@ struct TypeImpl
 
     bool abstract;
 
-    const char *parent;
+    char *parent;
     TypeImpl *parent_type;
 
     ObjectClass *class;
@@ -63,10 +61,10 @@ typedef struct Interface
 
 #define INTERFACE(obj) OBJECT_CHECK(Interface, obj, TYPE_INTERFACE)
 
+static GHashTable *type_table;
+
 static GHashTable *type_table_get(void)
 {
-    static GHashTable *type_table;
-
     if (type_table == NULL) {
         type_table = g_hash_table_new(g_str_hash, g_str_equal);
     }
@@ -132,6 +130,62 @@ static TypeImpl *type_get_by_name(const char *name)
     }
 
     return type_table_lookup(name);
+}
+
+static void type_class_interface_deinit(TypeImpl *type, InterfaceImpl *iface)
+{
+    char *name;
+    TypeInfo info = {};
+
+    name = g_strdup_printf("<%s::%s>", type->name, iface->parent);
+    info.name = name;
+
+    type_unregister(&info);
+    g_free(name);
+}
+
+static void type_class_deinit(TypeImpl *type)
+{
+    int i;
+
+    if (type->class == NULL) {
+        return;
+    }
+
+    for (i = 0; i < type->num_interfaces; i++) {
+        type_class_interface_deinit(type, &type->interfaces[i]);
+    }
+
+    if (type->class_finalize) {
+        type->class_finalize(type->class, type->class_data);
+    }
+
+    g_free(type->class);
+    type->class = NULL;
+}
+
+void type_unregister(const TypeInfo *info)
+{
+    TypeImpl *type = type_get_by_name(info->name);
+
+    g_assert(type != NULL);
+
+
+    type_class_deinit(type);
+
+    g_hash_table_remove(type_table_get(), type->name);
+    if (g_hash_table_size(type_table_get()) == 0) {
+        g_hash_table_unref(type_table);
+        type_table = NULL;
+    }
+
+    /* FIXME: check to see if anything is derived from this.  I don't think
+       we should prevent unregistration in the case something is derived but
+       we should at least mark the class as orphaned. */
+
+    g_free(type->name);
+    g_free(type->parent);
+    g_free(type);
 }
 
 static TypeImpl *type_get_parent(TypeImpl *type)
@@ -398,18 +452,24 @@ Object *object_dynamic_cast(Object *obj, const char *typename)
 }
 
 
+static TypeInfo interface_info = {
+    .name = TYPE_INTERFACE,
+    .instance_size = sizeof(Interface),
+    .abstract = true,
+};
+
 static void register_interface(void)
 {
-    static TypeInfo interface_info = {
-        .name = TYPE_INTERFACE,
-        .instance_size = sizeof(Interface),
-        .abstract = true,
-    };
-
     type_register_static(&interface_info);
 }
 
+static void unregister_interface(void)
+{
+    type_unregister(&interface_info);
+}
+
 device_init(register_interface);
+device_exit(unregister_interface);
 
 Object *object_dynamic_cast_assert(Object *obj, const char *typename)
 {
