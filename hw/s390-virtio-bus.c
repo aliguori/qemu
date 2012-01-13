@@ -420,6 +420,8 @@ static int s390_virtio_busdev_init(DeviceState *dev)
 
 static void virtio_s390_device_class_init(ObjectClass *klass, void *data)
 {
+    DeviceClass *dc = DEVICE_CLASS(klass);
+
     dc->init = s390_virtio_busdev_init;
     dc->bus_type = TYPE_S390_VIRTIO_BUS;
     dc->unplug = qdev_simple_unplug_cb;
