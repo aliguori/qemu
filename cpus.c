@@ -740,6 +740,48 @@ static void *qemu_kvm_cpu_thread_fn(void *arg)
     return NULL;
 }
 
+static void *qemu_dummy_cpu_thread_fn(void *arg)
+{
+#ifdef _WIN32
+    fprintf(stderr, "qtest is not supported under Windows\n");
+    exit(1);
+#else
+    CPUState *env = arg;
+    sigset_t waitset;
+    int r;
+
+    qemu_mutex_lock_iothread();
+    qemu_thread_get_self(env->thread);
+    env->thread_id = qemu_get_thread_id();
+
+    sigemptyset(&waitset);
+    sigaddset(&waitset, SIG_IPI);
+
+    /* signal CPU creation */
+    env->created = 1;
+    qemu_cond_signal(&qemu_cpu_cond);
+
+    cpu_single_env = env;
+    while (1) {
+        cpu_single_env = NULL;
+        qemu_mutex_unlock_iothread();
+        do {
+            int sig;
+            r = sigwait(&waitset, &sig);
+        } while (r == -1 && (errno == EAGAIN || errno == EINTR));
+        if (r == -1) {
+            perror("sigwait");
+            exit(1);
+        }
+        qemu_mutex_lock_iothread();
+        cpu_single_env = env;
+        qemu_wait_io_event_common(env);
+    }
+
+    return NULL; 
+#endif
+}
+
 static void tcg_exec_all(void);
 
 static void *qemu_tcg_cpu_thread_fn(void *arg)
@@ -797,7 +839,7 @@ void qemu_cpu_kick(void *_env)
     CPUState *env = _env;
 
     qemu_cond_broadcast(env->halt_cond);
-    if (kvm_enabled() && !env->thread_kicked) {
+    if (!tcg_enabled() && !env->thread_kicked) {
         qemu_cpu_kick_thread(env);
         env->thread_kicked = true;
     }
@@ -826,7 +868,7 @@ int qemu_cpu_is_self(void *_env)
 
 void qemu_mutex_lock_iothread(void)
 {
-    if (kvm_enabled()) {
+    if (!tcg_enabled()) {
         qemu_mutex_lock(&qemu_global_mutex);
     } else {
         iothread_requesting_mutex = true;
@@ -929,6 +971,18 @@ static void qemu_kvm_start_vcpu(CPUState *env)
     }
 }
 
+static void qemu_dummy_start_vcpu(CPUState *env)
+{
+    env->thread = g_malloc0(sizeof(QemuThread));
+    env->halt_cond = g_malloc0(sizeof(QemuCond));
+    qemu_cond_init(env->halt_cond);
+    qemu_thread_create(env->thread, qemu_dummy_cpu_thread_fn, env,
+                       QEMU_THREAD_JOINABLE);
+    while (env->created == 0) {
+        qemu_cond_wait(&qemu_cpu_cond, &qemu_global_mutex);
+    }
+}
+
 void qemu_init_vcpu(void *_env)
 {
     CPUState *env = _env;
@@ -938,8 +992,10 @@ void qemu_init_vcpu(void *_env)
     env->stopped = 1;
     if (kvm_enabled()) {
         qemu_kvm_start_vcpu(env);
-    } else {
+    } else if (tcg_enabled()) {
         qemu_tcg_init_vcpu(env);
+    } else {
+        qemu_dummy_start_vcpu(env);
     }
 }
 
