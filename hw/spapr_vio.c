@@ -623,7 +623,7 @@ static void rtas_quiesce(sPAPREnvironment *spapr, uint32_t token,
 static int spapr_vio_check_reg(VIOsPAPRDevice *sdev)
 {
     VIOsPAPRDevice *other_sdev;
-    DeviceState *qdev;
+    BusChild *kid;
     VIOsPAPRBus *sbus;
 
     sbus = DO_UPCAST(VIOsPAPRBus, bus, sdev->qdev.parent_bus);
@@ -633,7 +633,8 @@ static int spapr_vio_check_reg(VIOsPAPRDevice *sdev)
      * other mechanism). We have to open code this because we have to check
      * for matches with devices other than us.
      */
-    QTAILQ_FOREACH(qdev, &sbus->bus.children, sibling) {
+    QTAILQ_FOREACH(kid, &sbus->bus.children, sibling) {
+        DeviceState *qdev = kid->child;
         other_sdev = DO_UPCAST(VIOsPAPRDevice, qdev, qdev);
 
         if (other_sdev != sdev && other_sdev->reg == sdev->reg) {
