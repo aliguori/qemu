@@ -10,7 +10,7 @@ CHECKS += test-qmp-output-visitor$(EXESUF)
 CHECKS += test-string-input-visitor$(EXESUF)
 CHECKS += test-string-output-visitor$(EXESUF)
 
-HW_TESTS=
+HW_TESTS=tests/rtc-test
 
 TARGETS=$(patsubst %-softmmu,%, $(filter %-softmmu,$(TARGET_DIRS)))
 
