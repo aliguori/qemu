@@ -267,6 +267,19 @@ void qdev_init_nofail(DeviceState *dev)
 /* Unlink device from bus and free the structure.  */
 void qdev_free(DeviceState *dev)
 {
+    Object *obj = OBJECT(dev);
+
+    /* This sucks */
+    if (obj->parent) {
+        ObjectProperty *prop;
+
+        QTAILQ_FOREACH(prop, &obj->parent->properties, node) {
+            if (strstart(prop->type, "child<", NULL) && prop->opaque == obj) {
+                object_property_del(obj->parent, prop->name, NULL);
+                break;
+            }
+        }
+    }
     object_delete(OBJECT(dev));
 }
 
