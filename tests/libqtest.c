@@ -235,6 +235,18 @@ bool qtest_get_irq(QTestState *s, int num)
     return s->irq_level[num];
 }
 
+void qtest_irq_intercept_out(QTestState *s, const char *qom_path)
+{
+    qtest_sendf(s, "irq_intercept_out %s\n", qom_path);
+    qtest_rsp(s, 0);
+}
+
+void qtest_irq_intercept_in(QTestState *s, const char *qom_path)
+{
+    qtest_sendf(s, "irq_intercept_in %s\n", qom_path);
+    qtest_rsp(s, 0);
+}
+
 static void qtest_out(QTestState *s, const char *cmd, uint16_t addr, uint32_t value)
 {
     qtest_sendf(s, "%s 0x%x 0x%x\n", cmd, addr, value);
