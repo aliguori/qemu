@@ -249,6 +249,7 @@ int main(int argc, char **argv)
     /* These tests only work on i386 and x86_64 */
     if (strcmp(arch, "i386") == 0 || strcmp(arch, "x86_64") == 0) {
         s = qtest_start("-vnc none");
+        qtest_irq_intercept_in(s, "ioapic");
 
         qtest_add_func("/rtc/bcd/check-time", bcd_check_time);
         qtest_add_func("/rtc/dec/check-time", dec_check_time);
