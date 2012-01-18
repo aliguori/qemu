@@ -32,6 +32,4 @@ static inline int qtest_available(void)
 
 int qtest_init(void);
 
-qemu_irq *qtest_interrupt_controller_init(void);
-
 #endif
