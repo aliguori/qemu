@@ -26,6 +26,10 @@ void qtest_quit(QTestState *s);
 
 bool qtest_get_irq(QTestState *s, int num);
 
+void qtest_irq_intercept_in(QTestState *s, const char *string);
+
+void qtest_irq_intercept_out(QTestState *s, const char *string);
+
 void qtest_outb(QTestState *s, uint16_t addr, uint8_t value);
 
 void qtest_outw(QTestState *s, uint16_t addr, uint16_t value);
@@ -51,6 +55,8 @@ void qtest_add_func(const char *str, void (*fn));
         )
 
 #define get_irq(num) qtest_get_irq(global_qtest, (num))
+#define irq_intercept_in(num) qtest_irq_intercept_in(global_qtest, (num))
+#define irq_intercept_out(num) qtest_irq_intercept_out(global_qtest, (num))
 #define outb(addr, val) qtest_outb(global_qtest, (addr), (val))
 #define outw(addr, val) qtest_outw(global_qtest, (addr), (val))
 #define outl(addr, val) qtest_outl(global_qtest, (addr), (val))
