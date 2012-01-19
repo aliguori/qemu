@@ -10,6 +10,9 @@ typedef struct GtkDisplayState
     cairo_surface_t *surface;
     DisplayChangeListener dcl;
     DisplayState *ds;
+    int buttons;
+    int last_x;
+    int last_y;
 } GtkDisplayState;
 
 static GtkDisplayState *global_state;
@@ -148,6 +151,28 @@ static gboolean gd_expose_event(GtkWidget *widget, GdkEventExpose *expose,
     return ret;
 }
 
+static gboolean gd_motion_event(GtkWidget *widget, GdkEventMotion *motion,
+                                void *opaque)
+{
+    GtkDisplayState *s = opaque;
+    int dx, dy;
+
+    if (kbd_mouse_is_absolute()) {
+        dx = motion->x * 0x7FFF / (s->ds->surface->width - 1);
+        dy = motion->y * 0x7FFF / (s->ds->surface->height - 1);
+    } else {
+        dx = motion->x - s->last_x;
+        dy = motion->y - s->last_y;
+
+        s->last_x = motion->x;
+        s->last_y = motion->y;
+    }
+
+    kbd_mouse_event(dx, dy, 0, s->buttons);
+        
+    return TRUE;
+}
+
 void gtk_display_init(DisplayState *ds)
 {
     GtkDisplayState *s = g_malloc0(sizeof(*s));
@@ -170,6 +195,16 @@ void gtk_display_init(DisplayState *ds)
 
     g_signal_connect(s->drawing_area, "expose-event",
                      G_CALLBACK(gd_expose_event), s);
+
+    g_signal_connect(s->drawing_area, "motion-notify-event",
+                     G_CALLBACK(gd_motion_event), s);
+
+    gtk_widget_add_events(s->drawing_area,
+                          GDK_POINTER_MOTION_MASK |
+                          GDK_BUTTON_PRESS_MASK |
+                          GDK_BUTTON_RELEASE_MASK |
+                          GDK_BUTTON_MOTION_MASK);
+    gtk_widget_set_double_buffered(s->drawing_area, FALSE);
 
     qemu_add_vm_change_state_handler(gd_change_runstate, s);
     gd_update_caption(s);
