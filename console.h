@@ -397,4 +397,7 @@ static inline int vnc_display_pw_expire(DisplayState *ds, time_t expires)
 /* curses.c */
 void curses_display_init(DisplayState *ds, int full_screen);
 
+/* gtk.c */
+void gtk_display_init(DisplayState *ds);
+
 #endif
