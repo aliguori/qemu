@@ -2,6 +2,7 @@
 #include "qemu-common.h"
 #include "console.h"
 #include "sysemu.h"
+#include "qmp.h"
 
 typedef struct GtkDisplayState
 {
@@ -29,8 +30,7 @@ static gboolean gd_window_close(GtkWidget *widget, GdkEvent *event,
                                 void *opaque)
 {
     if (!no_quit) {
-        no_shutdown = 0;
-        qemu_system_shutdown_request();
+        qmp_quit(NULL);
         return FALSE;
     }
 
