@@ -356,13 +356,17 @@ void vga_hw_text_update(console_ch_t *chardata);
 
 int is_graphic_console(void);
 int is_fixedsize_console(void);
-int text_console_init(QemuOpts *opts, CharDriverState **_chr);
 void text_consoles_set_display(DisplayState *ds);
 void console_select(unsigned int index);
 void console_color_init(DisplayState *ds);
 void qemu_console_resize(DisplayState *ds, int width, int height);
 void qemu_console_copy(DisplayState *ds, int src_x, int src_y,
                        int dst_x, int dst_y, int w, int h);
+
+typedef int (VcHandler)(QemuOpts *, CharDriverState **);
+
+int vc_init(QemuOpts *opts, CharDriverState **_chr);
+void register_vc_handler(VcHandler *handler);
 
 /* sdl.c */
 void sdl_display_init(DisplayState *ds, int full_screen, int no_frame);
@@ -395,6 +399,7 @@ static inline int vnc_display_pw_expire(DisplayState *ds, time_t expires)
 void curses_display_init(DisplayState *ds, int full_screen);
 
 /* gtk.c */
+void early_gtk_display_init(void);
 void gtk_display_init(DisplayState *ds);
 
 #endif

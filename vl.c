@@ -3181,6 +3181,25 @@ int main(int argc, char **argv, char **envp)
     if (default_vga)
         vga_interface_type = VGA_CIRRUS;
 
+    if (display_type == DT_DEFAULT) {
+#if defined(CONFIG_GTK)
+        display_type = DT_GTK;
+#elif defined(CONFIG_SDL) || defined(CONFIG_COCOA)
+        display_type = DT_SDL;
+#elif defined(CONFIG_VNC)
+        vnc_display = "localhost:0,to=99";
+        show_vnc_port = 1;
+#else
+        display_type = DT_NONE;
+#endif
+    }
+
+#if defined(CONFIG_GTK)
+    if (display_type == DT_GTK) {
+        early_gtk_display_init();
+    }
+#endif
+
     socket_init();
 
     if (qemu_opts_foreach(qemu_find_opts("chardev"), chardev_init_func, NULL, 1) != 0)
@@ -3369,22 +3388,6 @@ int main(int argc, char **argv, char **envp)
 
     /* just use the first displaystate for the moment */
     ds = get_displaystate();
-
-    if (using_spice)
-        display_remote++;
-    if (display_type == DT_DEFAULT && !display_remote) {
-#if defined(CONFIG_GTK)
-        display_type = DT_GTK;
-#elif defined(CONFIG_SDL) || defined(CONFIG_COCOA)
-        display_type = DT_SDL;
-#elif defined(CONFIG_VNC)
-        vnc_display = "localhost:0,to=99";
-        show_vnc_port = 1;
-#else
-        display_type = DT_NONE;
-#endif
-    }
-
 
     /* init local displays */
     switch (display_type) {

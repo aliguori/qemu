@@ -1474,10 +1474,13 @@ fi
 # GTK probe
 
 if test "$gtk" != "no"; then
-    if $pkg_config gtk+-2.0 --modversion >/dev/null 2>/dev/null; then
+    if $pkg_config gtk+-2.0 --modversion >/dev/null 2>/dev/null && \
+       $pkg_config vte --modversion >/dev/null 2>/dev/null; then
 	gtk_cflags=`$pkg_config --cflags gtk+-2.0 2>/dev/null`
 	gtk_libs=`$pkg_config --libs gtk+-2.0 2>/dev/null`
-	libs_softmmu="$gtk_libs $libs_softmmu"
+	vte_cflags=`$pkg_config --cflags vte 2>/dev/null`
+	vte_libs=`$pkg_config --libs vte 2>/dev/null`
+	libs_softmmu="$gtk_libs $vte_libs $libs_softmmu"
 	gtk="yes"
     else
 	gtk="no"
@@ -3117,6 +3120,7 @@ echo "GLIB_CFLAGS=$glib_cflags" >> $config_host_mak
 if test "$gtk" = "yes" ; then
   echo "CONFIG_GTK=y" >> $config_host_mak
   echo "GTK_CFLAGS=$gtk_cflags" >> $config_host_mak
+  echo "VTE_CFLAGS=$vte_cflags" >> $config_host_mak
 fi
 if test "$xen" = "yes" ; then
   echo "CONFIG_XEN_BACKEND=y" >> $config_host_mak
