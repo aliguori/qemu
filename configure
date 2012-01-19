@@ -241,7 +241,7 @@ sdl_config="${SDL_CONFIG-${cross_prefix}sdl-config}"
 QEMU_CFLAGS="-fno-strict-aliasing $QEMU_CFLAGS"
 CFLAGS="-g $CFLAGS"
 QEMU_CFLAGS="-Wall -Wundef -Wwrite-strings -Wmissing-prototypes $QEMU_CFLAGS"
-QEMU_CFLAGS="-Wstrict-prototypes -Wredundant-decls $QEMU_CFLAGS"
+QEMU_CFLAGS="-Wredundant-decls $QEMU_CFLAGS"
 QEMU_CFLAGS="-D_GNU_SOURCE -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE $QEMU_CFLAGS"
 QEMU_CFLAGS="-D_FORTIFY_SOURCE=2 $QEMU_CFLAGS"
 QEMU_INCLUDES="-I. -I\$(SRC_PATH) -I\$(SRC_PATH)/fpu"
@@ -1468,6 +1468,20 @@ if test "$sparse" != "no" ; then
     fi
     sparse=no
   fi
+fi
+
+##########################################
+# GTK probe
+
+if test "$gtk" != "no"; then
+    if $pkg_config gtk+-2.0 --modversion >/dev/null 2>/dev/null; then
+	gtk_cflags=`$pkg_config --cflags gtk+-2.0 2>/dev/null`
+	gtk_libs=`$pkg_config --libs gtk+-2.0 2>/dev/null`
+	libs_softmmu="$gtk_libs $libs_softmmu"
+	gtk="yes"
+    else
+	gtk="no"
+    fi
 fi
 
 ##########################################
@@ -2823,6 +2837,7 @@ if test "$darwin" = "yes" ; then
     echo "Cocoa support     $cocoa"
 fi
 echo "SDL support       $sdl"
+echo "GTK support       $gtk"
 echo "curses support    $curses"
 echo "curl support      $curl"
 echo "mingw32 support   $mingw32"
@@ -3099,6 +3114,10 @@ if test "$bluez" = "yes" ; then
   echo "BLUEZ_CFLAGS=$bluez_cflags" >> $config_host_mak
 fi
 echo "GLIB_CFLAGS=$glib_cflags" >> $config_host_mak
+if test "$gtk" = "yes" ; then
+  echo "CONFIG_GTK=y" >> $config_host_mak
+  echo "GTK_CFLAGS=$gtk_cflags" >> $config_host_mak
+fi
 if test "$xen" = "yes" ; then
   echo "CONFIG_XEN_BACKEND=y" >> $config_host_mak
   echo "CONFIG_XEN_CTRL_INTERFACE_VERSION=$xen_ctrl_version" >> $config_host_mak
