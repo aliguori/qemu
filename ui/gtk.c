@@ -1,8 +1,12 @@
 #include <gtk/gtk.h>
+#include <gdk/gdkkeysyms.h>
+
 #include "qemu-common.h"
 #include "console.h"
 #include "sysemu.h"
-#include "qmp.h"
+#include "qmp-commands.h"
+#include "x_keymap.h"
+#include "keymaps.h"
 
 typedef struct GtkDisplayState
 {
@@ -11,14 +15,14 @@ typedef struct GtkDisplayState
     cairo_surface_t *surface;
     DisplayChangeListener dcl;
     DisplayState *ds;
-    int buttons;
+    int button_mask;
     int last_x;
     int last_y;
 } GtkDisplayState;
 
 static GtkDisplayState *global_state;
 
-//#define DEBUG_GTK
+#define DEBUG_GTK
 
 #ifdef DEBUG_GTK
 #define dprintf(fmt, ...) printf(fmt, ## __VA_ARGS__)
@@ -41,7 +45,7 @@ static void gd_update(DisplayState *ds, int x, int y, int w, int h)
 {
     GtkDisplayState *s = ds->opaque;
 
-    dprintf("update(x=%d, y=%d, w=%d, h=%d)\n", x, y, w, h);
+//    dprintf("update(x=%d, y=%d, w=%d, h=%d)\n", x, y, w, h);
 
     gtk_widget_queue_draw_area(s->drawing_area, x, y, w, h);
 }
@@ -163,13 +167,89 @@ static gboolean gd_motion_event(GtkWidget *widget, GdkEventMotion *motion,
     } else {
         dx = motion->x - s->last_x;
         dy = motion->y - s->last_y;
-
-        s->last_x = motion->x;
-        s->last_y = motion->y;
     }
 
-    kbd_mouse_event(dx, dy, 0, s->buttons);
+    s->last_x = motion->x;
+    s->last_y = motion->y;
+
+    kbd_mouse_event(dx, dy, 0, s->button_mask);
         
+    return TRUE;
+}
+
+static gboolean gd_button_event(GtkWidget *widget, GdkEventButton *button,
+                                void *opaque)
+{
+    GtkDisplayState *s = opaque;
+    int dx, dy;
+    int n;
+
+    if (button->button == 1) {
+        n = 0x01;
+    } else if (button->button == 2) {
+        n = 0x04;
+    } else if (button->button == 3) {
+        n = 0x02;
+    } else {
+        n = 0x00;
+    }
+
+    if (button->type == GDK_BUTTON_PRESS) {
+        s->button_mask |= n;
+    } else if (button->type == GDK_BUTTON_RELEASE) {
+        s->button_mask &= ~n;
+    }
+
+    if (kbd_mouse_is_absolute()) {
+        dx = s->last_x * 0x7FFF / (s->ds->surface->width - 1);
+        dy = s->last_y * 0x7FFF / (s->ds->surface->height - 1);
+    } else {
+        dx = 0;
+        dy = 0;
+    }
+
+    kbd_mouse_event(dx, dy, 0, s->button_mask);
+        
+    return TRUE;
+}
+
+static gboolean gd_key_event(GtkWidget *widget, GdkEventKey *key, void *opaque)
+{
+    int gdk_keycode;
+    int qemu_keycode;
+
+    gdk_keycode = key->hardware_keycode;
+
+    if (gdk_keycode < 9) {
+        qemu_keycode = 0;
+    } else if (gdk_keycode < 97) {
+        qemu_keycode = gdk_keycode - 8;
+    } else if (gdk_keycode < 158) {
+        qemu_keycode = translate_evdev_keycode(gdk_keycode - 97);
+    } else if (gdk_keycode == 208) { /* Hiragana_Katakana */
+        qemu_keycode = 0x70;
+    } else if (gdk_keycode == 211) { /* backslash */
+        qemu_keycode = 0x73;
+    } else {
+        qemu_keycode = 0;
+    }
+
+    dprintf("translated GDK keycode %d to QEMU keycode %d (%s)\n",
+            gdk_keycode, qemu_keycode,
+            (key->type == GDK_KEY_PRESS) ? "down" : "up");
+
+    if (qemu_keycode & SCANCODE_GREY) {
+        kbd_put_keycode(SCANCODE_EMUL0);
+    }
+
+    if (key->type == GDK_KEY_PRESS) {
+        kbd_put_keycode(qemu_keycode & SCANCODE_KEYCODEMASK);
+    } else if (key->type == GDK_KEY_RELEASE) {
+        kbd_put_keycode(qemu_keycode | SCANCODE_UP);
+    } else {
+        g_assert_not_reached();
+    }
+
     return TRUE;
 }
 
@@ -195,16 +275,26 @@ void gtk_display_init(DisplayState *ds)
 
     g_signal_connect(s->drawing_area, "expose-event",
                      G_CALLBACK(gd_expose_event), s);
-
     g_signal_connect(s->drawing_area, "motion-notify-event",
                      G_CALLBACK(gd_motion_event), s);
+    g_signal_connect(s->drawing_area, "button-press-event",
+                     G_CALLBACK(gd_button_event), s);
+    g_signal_connect(s->drawing_area, "button-release-event",
+                     G_CALLBACK(gd_button_event), s);
+    g_signal_connect(s->drawing_area, "key-press-event",
+                     G_CALLBACK(gd_key_event), s);
+    g_signal_connect(s->drawing_area, "key-release-event",
+                     G_CALLBACK(gd_key_event), s);
 
     gtk_widget_add_events(s->drawing_area,
                           GDK_POINTER_MOTION_MASK |
                           GDK_BUTTON_PRESS_MASK |
                           GDK_BUTTON_RELEASE_MASK |
-                          GDK_BUTTON_MOTION_MASK);
+                          GDK_BUTTON_MOTION_MASK |
+                          GDK_SCROLL_MASK |
+                          GDK_KEY_PRESS_MASK);
     gtk_widget_set_double_buffered(s->drawing_area, FALSE);
+    gtk_widget_set_can_focus(s->drawing_area, TRUE);
 
     qemu_add_vm_change_state_handler(gd_change_runstate, s);
     gd_update_caption(s);
