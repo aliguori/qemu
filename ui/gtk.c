@@ -344,7 +344,7 @@ static int gd_vc_chr_write(CharDriverState *chr, const uint8_t *buf, int len)
 static int nb_vcs;
 CharDriverState *vcs[MAX_VCS];
 
-static int gd_vc_init(QemuOpts *opts, CharDriverState **chrp)
+static int gd_vc_handler(QemuOpts *opts, CharDriverState **chrp)
 {
     CharDriverState *chr;
 
@@ -361,7 +361,7 @@ static int gd_vc_init(QemuOpts *opts, CharDriverState **chrp)
 
 void early_gtk_display_init(void)
 {
-    register_vc_handler(gd_vc_init);
+    register_vc_handler(gd_vc_handler);
 }
 
 static gboolean gd_vc_in(GIOChannel *chan, GIOCondition cond, void *opaque)
@@ -378,6 +378,79 @@ static gboolean gd_vc_in(GIOChannel *chan, GIOCondition cond, void *opaque)
     qemu_chr_be_write(vc->chr, buffer, len);
 
     return TRUE;
+}
+
+static GSList *gd_vc_init(GtkDisplayState *s, VirtualConsole *vc, int index, GSList *group)
+{
+    const char *label;
+    char buffer[32];
+    char path[32];
+    VtePty *pty;
+    GIOChannel *chan;
+    GtkWidget *scrolled_window;
+    GtkAdjustment *adjustment;
+    int master_fd, slave_fd, ret;
+    struct termios tty;
+
+    snprintf(buffer, sizeof(buffer), "vc%d", index);
+    snprintf(path, sizeof(path), "<QEMU>/View/VC%d", index);
+
+    vc->chr = vcs[index];
+
+    if (vc->chr->label) {
+        label = vc->chr->label;
+    } else {
+        label = buffer;
+    }
+
+    vc->menu_item = gtk_radio_menu_item_new_with_mnemonic(group, label);
+    group = gtk_radio_menu_item_get_group(GTK_RADIO_MENU_ITEM(vc->menu_item));
+    gtk_menu_item_set_accel_path(GTK_MENU_ITEM(vc->menu_item), path);
+    gtk_accel_map_add_entry(path, GDK_KEY_2 + index, GDK_CONTROL_MASK | GDK_MOD1_MASK);
+
+    vc->terminal = vte_terminal_new();
+
+    ret = openpty(&master_fd, &slave_fd, NULL, NULL, NULL);
+    g_assert(ret != -1);
+
+    /* Set raw attributes on the pty. */
+    tcgetattr(slave_fd, &tty);
+    cfmakeraw(&tty);
+    tcsetattr(slave_fd, TCSAFLUSH, &tty);
+
+    pty = vte_pty_new_foreign(master_fd, NULL);
+
+    vte_terminal_set_pty_object(VTE_TERMINAL(vc->terminal), pty);
+
+    vte_terminal_set_scrollback_lines(VTE_TERMINAL(vc->terminal), -1);
+
+    adjustment = vte_terminal_get_adjustment(VTE_TERMINAL(vc->terminal));
+
+    scrolled_window = gtk_scrolled_window_new(NULL, adjustment);
+
+    gtk_container_add(GTK_CONTAINER(scrolled_window), vc->terminal);
+
+    vc->fd = slave_fd;
+    vc->chr->opaque = vc;
+    vc->scrolled_window = scrolled_window;
+
+    gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(vc->scrolled_window), GTK_POLICY_NEVER, GTK_POLICY_AUTOMATIC);
+
+    gtk_notebook_append_page(GTK_NOTEBOOK(s->notebook), scrolled_window, gtk_label_new(label));
+    g_signal_connect(vc->menu_item, "activate",
+                     G_CALLBACK(gd_menu_switch_vc), s);
+
+    gtk_menu_append(GTK_MENU(s->view_menu), vc->menu_item);
+
+    qemu_chr_generic_open(vc->chr);
+    if (vc->chr->init) {
+        vc->chr->init(vc->chr);
+    }
+
+    chan = g_io_channel_unix_new(vc->fd);
+    g_io_add_watch(chan, G_IO_IN, gd_vc_in, vc);
+
+    return group;
 }
 
 void gtk_display_init(DisplayState *ds)
@@ -429,75 +502,9 @@ void gtk_display_init(DisplayState *ds)
     gtk_menu_append(GTK_MENU(s->view_menu), s->vga_item);
 
     for (i = 0; i < nb_vcs; i++) {
-        const char *label;
-        char buffer[32];
-        char path[32];
         VirtualConsole *vc = &s->vc[i];
-        VtePty *pty;
-        GIOChannel *chan;
-        GtkWidget *scrolled_window;
-        GtkAdjustment *adjustment;
-        int master_fd, slave_fd, ret;
-        struct termios tty;
 
-        snprintf(buffer, sizeof(buffer), "vc%d", i);
-        snprintf(path, sizeof(path), "<QEMU>/View/VC%d", i);
-
-        vc->chr = vcs[i];
-
-        if (vc->chr->label) {
-            label = vc->chr->label;
-        } else {
-            label = buffer;
-        }
-
-        vc->menu_item = gtk_radio_menu_item_new_with_mnemonic(group, label);
-        group = gtk_radio_menu_item_get_group(GTK_RADIO_MENU_ITEM(vc->menu_item));
-        gtk_menu_item_set_accel_path(GTK_MENU_ITEM(vc->menu_item), path);
-        gtk_accel_map_add_entry(path, GDK_KEY_2 + i, GDK_CONTROL_MASK | GDK_MOD1_MASK);
-
-        vc->terminal = vte_terminal_new();
-
-        ret = openpty(&master_fd, &slave_fd, NULL, NULL, NULL);
-        g_assert(ret != -1);
-
-        /* Set raw attributes on the pty. */
-        tcgetattr(slave_fd, &tty);
-        cfmakeraw(&tty);
-        tcsetattr(slave_fd, TCSAFLUSH, &tty);
-
-        pty = vte_pty_new_foreign(master_fd, NULL);
-
-        vte_terminal_set_pty_object(VTE_TERMINAL(vc->terminal), pty);
-
-        vte_terminal_set_scrollback_lines(VTE_TERMINAL(vc->terminal), -1);
-
-        adjustment = vte_terminal_get_adjustment(VTE_TERMINAL(vc->terminal));
-
-        scrolled_window = gtk_scrolled_window_new(NULL, adjustment);
-
-        gtk_container_add(GTK_CONTAINER(scrolled_window), vc->terminal);
-
-        vc->fd = slave_fd;
-        vc->chr->opaque = vc;
-        vc->scrolled_window = scrolled_window;
-
-        gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(vc->scrolled_window), GTK_POLICY_NEVER, GTK_POLICY_AUTOMATIC);
-
-        gtk_notebook_append_page(GTK_NOTEBOOK(s->notebook), scrolled_window, gtk_label_new(label));
-        g_signal_connect(vc->menu_item, "activate",
-                         G_CALLBACK(gd_menu_switch_vc), s);
-
-        gtk_menu_append(GTK_MENU(s->view_menu), vc->menu_item);
-
-        qemu_chr_generic_open(vc->chr);
-        if (vc->chr->init) {
-            vc->chr->init(vc->chr);
-        }
-
-        chan = g_io_channel_unix_new(vc->fd);
-        g_io_add_watch(chan, G_IO_IN, gd_vc_in, vc);
-
+        group = gd_vc_init(s, vc, i, group);
         s->nb_vcs++;
     }
 
