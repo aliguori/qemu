@@ -11,6 +11,8 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/un.h>
+#include <sys/wait.h>
+#include <pty.h>
 
 #define MAX_VCS 10
 
@@ -362,49 +364,6 @@ void early_gtk_display_init(void)
     register_vc_handler(gd_vc_init);
 }
 
-static void feed_vte(int fd)
-{
-    do {
-        fd_set readfds;
-        char buffer[1024];
-        ssize_t len;
-        int ret;
-
-        FD_ZERO(&readfds);
-        FD_SET(fd, &readfds);
-        FD_SET(STDIN_FILENO, &readfds);
-
-        ret = select(fd + 1, &readfds, NULL, NULL, NULL);
-        if (ret <= 0) {
-            break;
-        }
-
-        if (FD_ISSET(fd, &readfds)) {
-            len = read(fd, buffer, sizeof(buffer));
-            if (len <= 0) {
-                break;
-            }
-
-            len = write(STDOUT_FILENO, buffer, len);
-            if (len <= 0) {
-                break;
-            }
-        }
-
-        if (FD_ISSET(STDIN_FILENO, &readfds)) {
-            len = read(STDIN_FILENO, buffer, sizeof(buffer));
-            if (len <= 0) {
-                break;
-            }
-
-            len = write(fd, buffer, len);
-            if (len <= 0) {
-                break;
-            }
-        }
-    } while (1);
-}
-
 static gboolean gd_vc_in(GIOChannel *chan, GIOCondition cond, void *opaque)
 {
     VirtualConsole *vc = opaque;
@@ -473,13 +432,13 @@ void gtk_display_init(DisplayState *ds)
         const char *label;
         char buffer[32];
         char path[32];
-        pid_t pid;
-        int sv[2];
         VirtualConsole *vc = &s->vc[i];
         VtePty *pty;
         GIOChannel *chan;
         GtkWidget *scrolled_window;
         GtkAdjustment *adjustment;
+        int master_fd, slave_fd, ret;
+        struct termios tty;
 
         snprintf(buffer, sizeof(buffer), "vc%d", i);
         snprintf(path, sizeof(path), "<QEMU>/View/VC%d", i);
@@ -498,17 +457,18 @@ void gtk_display_init(DisplayState *ds)
         gtk_accel_map_add_entry(path, GDK_KEY_2 + i, GDK_CONTROL_MASK | GDK_MOD1_MASK);
 
         vc->terminal = vte_terminal_new();
-        socketpair(AF_UNIX, SOCK_STREAM, 0, sv);
 
-        pty = vte_pty_new(0, NULL);
-        pid = fork();
-        if (pid == 0) {
-            vte_pty_child_setup(pty);
-            feed_vte(sv[1]);
-            exit(1);
-        }
+        ret = openpty(&master_fd, &slave_fd, NULL, NULL, NULL);
+        g_assert(ret != -1);
+
+        /* Set raw attributes on the pty. */
+        tcgetattr(slave_fd, &tty);
+        cfmakeraw(&tty);
+        tcsetattr(slave_fd, TCSAFLUSH, &tty);
+
+        pty = vte_pty_new_foreign(master_fd, NULL);
+
         vte_terminal_set_pty_object(VTE_TERMINAL(vc->terminal), pty);
-        vte_terminal_watch_child(VTE_TERMINAL(vc->terminal), pid);
 
         vte_terminal_set_scrollback_lines(VTE_TERMINAL(vc->terminal), -1);
 
@@ -518,9 +478,11 @@ void gtk_display_init(DisplayState *ds)
 
         gtk_container_add(GTK_CONTAINER(scrolled_window), vc->terminal);
 
-        vc->fd = sv[0];
+        vc->fd = slave_fd;
         vc->chr->opaque = vc;
         vc->scrolled_window = scrolled_window;
+
+        gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(vc->scrolled_window), GTK_POLICY_NEVER, GTK_POLICY_AUTOMATIC);
 
         gtk_notebook_append_page(GTK_NOTEBOOK(s->notebook), scrolled_window, gtk_label_new(label));
         g_signal_connect(vc->menu_item, "activate",
