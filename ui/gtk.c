@@ -37,6 +37,7 @@ typedef struct GtkDisplayState
 
     GtkWidget *view_menu_item;
     GtkWidget *view_menu;
+    GtkWidget *full_screen_item;
     GtkWidget *vga_item;
 
     int nb_vcs;
@@ -330,8 +331,19 @@ static void gd_menu_show_tabs(GtkMenuItem *item, void *opaque)
 
 }
 
-static void gd_vc_set_echo(CharDriverState *chr, bool echo)
+static void gd_menu_full_screen(GtkMenuItem *item, void *opaque)
 {
+    GtkDisplayState *s = opaque;
+
+    if (gtk_check_menu_item_get_active(GTK_CHECK_MENU_ITEM(s->full_screen_item))) {
+        gtk_notebook_set_show_tabs(GTK_NOTEBOOK(s->notebook), FALSE);
+        gtk_widget_set_size_request(s->menu_bar, 0, 0);
+        gtk_window_fullscreen(GTK_WINDOW(s->window));
+    } else {
+        gtk_window_unfullscreen(GTK_WINDOW(s->window));
+        gd_menu_show_tabs(GTK_MENU_ITEM(s->show_tabs_item), s);
+        gtk_widget_set_size_request(s->menu_bar, -1, -1);
+    }
 }
 
 static int gd_vc_chr_write(CharDriverState *chr, const uint8_t *buf, int len)
@@ -349,7 +361,6 @@ static int gd_vc_handler(QemuOpts *opts, CharDriverState **chrp)
     CharDriverState *chr;
 
     chr = g_malloc0(sizeof(*chr));
-    chr->chr_set_echo = gd_vc_set_echo;
     chr->chr_write = gd_vc_chr_write;
 
     *chrp = chr;
@@ -492,14 +503,23 @@ void gtk_display_init(DisplayState *ds)
     gtk_menu_set_accel_group(GTK_MENU(s->view_menu), accel_group);
     s->view_menu_item = gtk_menu_item_new_with_mnemonic("_View");
 
+    s->full_screen_item = gtk_check_menu_item_new_with_mnemonic("_Full Screen");
+    gtk_menu_item_set_accel_path(GTK_MENU_ITEM(s->full_screen_item),
+                                 "<QEMU>/View/Full Screen");
+    gtk_accel_map_add_entry("<QEMU>/View/Full Screen", GDK_KEY_f, GDK_CONTROL_MASK | GDK_MOD1_MASK);
+    gtk_menu_append(GTK_MENU(s->view_menu), s->full_screen_item);
+
+    separator = gtk_separator_menu_item_new();
+    gtk_menu_append(GTK_MENU(s->view_menu), separator);
+
     s->vga_item = gtk_radio_menu_item_new_with_mnemonic(group, "_VGA");
     group = gtk_radio_menu_item_get_group(GTK_RADIO_MENU_ITEM(s->vga_item));
     gtk_menu_item_set_accel_path(GTK_MENU_ITEM(s->vga_item),
                                  "<QEMU>/View/VGA");
     gtk_accel_map_add_entry("<QEMU>/View/VGA", GDK_KEY_1, GDK_CONTROL_MASK | GDK_MOD1_MASK);
+    gtk_menu_append(GTK_MENU(s->view_menu), s->vga_item);
 
     gtk_notebook_append_page(GTK_NOTEBOOK(s->notebook), s->drawing_area, gtk_label_new("VGA"));
-    gtk_menu_append(GTK_MENU(s->view_menu), s->vga_item);
 
     for (i = 0; i < nb_vcs; i++) {
         VirtualConsole *vc = &s->vc[i];
@@ -518,7 +538,6 @@ void gtk_display_init(DisplayState *ds)
 
     g_object_set_data(G_OBJECT(s->window), "accel_group", accel_group);
     gtk_window_add_accel_group(GTK_WINDOW(s->window), accel_group);
-
 
     gtk_window_set_resizable(GTK_WINDOW(s->window), FALSE);
     g_signal_connect(s->window, "delete-event",
@@ -539,6 +558,8 @@ void gtk_display_init(DisplayState *ds)
 
     g_signal_connect(s->quit_item, "activate",
                      G_CALLBACK(gd_menu_quit), s);
+    g_signal_connect(s->full_screen_item, "activate",
+                     G_CALLBACK(gd_menu_full_screen), s);
     g_signal_connect(s->vga_item, "activate",
                      G_CALLBACK(gd_menu_switch_vc), s);
 
