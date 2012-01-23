@@ -54,6 +54,8 @@ typedef struct GtkDisplayState
     int button_mask;
     int last_x;
     int last_y;
+
+    double scale;
 } GtkDisplayState;
 
 static GtkDisplayState *global_state;
@@ -130,12 +132,12 @@ static void gd_resize(DisplayState *ds)
                                                      ds->surface->linesize);
 
     gtk_widget_set_size_request(s->drawing_area,
-                                ds->surface->width,
-                                ds->surface->height);
+                                ds->surface->width * s->scale,
+                                ds->surface->height * s->scale);
     for (i = 0; i < s->nb_vcs; i++) {
         gtk_widget_set_size_request(s->vc[i].scrolled_window,
-                                    ds->surface->width,
-                                    ds->surface->height);
+                                    ds->surface->width * s->scale,
+                                    ds->surface->height * s->scale);
     }
         
 }
@@ -328,7 +330,6 @@ static void gd_menu_show_tabs(GtkMenuItem *item, void *opaque)
     } else {
         gtk_notebook_set_show_tabs(GTK_NOTEBOOK(s->notebook), FALSE);
     }
-
 }
 
 static void gd_menu_full_screen(GtkMenuItem *item, void *opaque)
@@ -476,6 +477,7 @@ void gtk_display_init(DisplayState *ds)
     gtk_init(NULL, NULL);
 
     ds->opaque = s;
+    s->scale = 1.0;
     s->ds = ds;
     s->dcl.dpy_update = gd_update;
     s->dcl.dpy_resize = gd_resize;
@@ -508,6 +510,18 @@ void gtk_display_init(DisplayState *ds)
                                  "<QEMU>/View/Full Screen");
     gtk_accel_map_add_entry("<QEMU>/View/Full Screen", GDK_KEY_f, GDK_CONTROL_MASK | GDK_MOD1_MASK);
     gtk_menu_append(GTK_MENU(s->view_menu), s->full_screen_item);
+
+    /* TODO
+     * 1) disable scaling
+     *    - how does this interact with full screen mode?
+     *    - this isn't a toggle
+     *    - it's more like, scale to guest size
+     * 2) zoom in
+     *    - ctrl alt +
+     * 3) zoom out
+     *    - ctrl alt -
+     * 4) actually scale the guest image to the window size
+     */
 
     separator = gtk_separator_menu_item_new();
     gtk_menu_append(GTK_MENU(s->view_menu), separator);
