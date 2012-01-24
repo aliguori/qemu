@@ -315,7 +315,6 @@ void object_initialize_with_type(void *data, TypeImpl *type)
     Object *obj = data;
 
     g_assert(type != NULL);
-    printf("%s\n", type->name);
     g_assert(type->instance_size >= sizeof(ObjectClass));
 
     type_class_init(type);
@@ -795,8 +794,6 @@ static void object_set_link_property(Object *obj, Visitor *v, void *opaque,
 
             target_type = g_strdup(&type[5]);
             target_type[strlen(target_type) - 1] = 0;
-
-            printf("target_type is %s\n", target_type);
 
             if (object_dynamic_cast(target, target_type)) {
                 object_ref(target);

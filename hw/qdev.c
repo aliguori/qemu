@@ -57,7 +57,7 @@ const char *qdev_fw_name(DeviceState *dev)
 
 bool qdev_exists(const char *name)
 {
-    return false; /* FIXME */
+    return !!object_class_by_name(name);
 }
 
 static void qdev_property_add_legacy(DeviceState *dev, Property *prop,
