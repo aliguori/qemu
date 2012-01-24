@@ -160,7 +160,7 @@ static TypeInfo grackle_pci_host_info = {
 static void grackle_register_devices(void)
 {
     type_register_static(&grackle_pci_info);
-    type_register_static(&pci_grackle_device_info);
+    type_register_static(&grackle_pci_host_info);
 }
 
 device_init(grackle_register_devices)

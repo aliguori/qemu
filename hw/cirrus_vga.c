@@ -2908,20 +2908,22 @@ static int vga_initfn(ISADevice *dev)
 static void isa_cirrus_vga_class_init(ObjectClass *klass, void *data)
 {
     ISADeviceClass *k = ISA_DEVICE_CLASS(klass);
+    DeviceClass *dc = DEVICE_CLASS(klass);
 
-    k->init          = vga_initfn;
+    dc->vmsd  = &vmstate_cirrus_vga;
+    k->init   = vga_initfn;
 }
 
-static DeviceInfo isa_cirrus_vga_info = {
-    .name     = "isa-cirrus-vga",
-    .size     = sizeof(ISACirrusVGAState),
-    .vmsd     = &vmstate_cirrus_vga,
+static TypeInfo isa_cirrus_vga_info = {
+    .name          = "isa-cirrus-vga",
+    .parent        = TYPE_ISA_DEVICE,
+    .instance_size = sizeof(ISACirrusVGAState),
     .class_init = isa_cirrus_vga_class_init,
 };
 
 static void isa_cirrus_vga_register(void)
 {
-    isa_qdev_register(&isa_cirrus_vga_info);
+    type_register_static(&isa_cirrus_vga_info);
 }
 device_init(isa_cirrus_vga_register)
 
