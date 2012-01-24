@@ -776,6 +776,7 @@ static void apic_class_init(ObjectClass *klass, void *data)
 
 static TypeInfo apic_info = {
     .name          = "apic",
+    .instance_size = sizeof(APICCommonState),
     .parent        = TYPE_APIC_COMMON,
     .class_init    = apic_class_init,
 };

@@ -247,6 +247,7 @@ static void ioapic_class_init(ObjectClass *klass, void *data)
 static TypeInfo ioapic_info = {
     .name          = "ioapic",
     .parent        = TYPE_IOAPIC_COMMON,
+    .instance_size = sizeof(IOAPICCommonState),
     .class_init    = ioapic_class_init,
 };
 

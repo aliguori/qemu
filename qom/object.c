@@ -315,6 +315,7 @@ void object_initialize_with_type(void *data, TypeImpl *type)
     Object *obj = data;
 
     g_assert(type != NULL);
+    printf("%s\n", type->name);
     g_assert(type->instance_size >= sizeof(ObjectClass));
 
     type_class_init(type);
