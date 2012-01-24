@@ -483,6 +483,7 @@ static void i8259_class_init(ObjectClass *klass, void *data)
 
 static TypeInfo i8259_info = {
     .name       = "isa-i8259",
+    .instance_size = sizeof(PICCommonState),
     .parent     = TYPE_PIC_COMMON,
     .class_init = i8259_class_init,
 };
