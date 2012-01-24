@@ -391,7 +391,7 @@ static int armv7m_nvic_init(SysBusDevice *dev)
     return 0;
 }
 
-static Propery armv7m_nvic_properties[] = {
+static Property armv7m_nvic_properties[] = {
     /* The ARM v7m may have anything from 0 to 496 external interrupt
      * IRQ lines. We default to 64. Other boards may differ and should
      * set this property appropriately.
@@ -407,6 +407,7 @@ static void armv7m_nvic_class_init(ObjectClass *klass, void *data)
 
     sdc->init = armv7m_nvic_init;
     dc->vmsd  = &vmstate_nvic;
+    dc->props = armv7m_nvic_properties;
 }
 
 static TypeInfo armv7m_nvic_info = {
