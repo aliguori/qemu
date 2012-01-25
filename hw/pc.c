@@ -101,7 +101,7 @@ static const int ide_irq[MAX_IDE_BUS] = { 14, 15 };
 static struct e820_table e820_table;
 struct hpet_fw_config hpet_cfg = {.count = UINT8_MAX};
 
-void gsi_handler(void *opaque, int n, int level)
+static void gsi_handler(void *opaque, int n, int level)
 {
     GSIState *s = opaque;
 
@@ -119,7 +119,7 @@ static void ioport80_write(void *opaque, uint32_t addr, uint32_t data)
 /* MSDOS compatibility mode FPU exception support */
 static qemu_irq ferr_irq;
 
-void pc_register_ferr_irq(qemu_irq irq)
+static void pc_register_ferr_irq(qemu_irq irq)
 {
     ferr_irq = irq;
 }
@@ -342,7 +342,7 @@ static void pc_cmos_init_late(void *opaque)
     qemu_unregister_reset(pc_cmos_init_late, opaque);
 }
 
-void pc_cmos_init(ram_addr_t ram_size, ram_addr_t above_4g_mem_size,
+static void pc_cmos_init(ram_addr_t ram_size, ram_addr_t above_4g_mem_size,
                   const char *boot_device,
                   ISADevice *floppy, BusState *idebus0, BusState *idebus1,
                   ISADevice *s)
@@ -870,7 +870,7 @@ static const int ne2000_irq[NE2000_NB_MAX] = { 9, 10, 11, 3, 4, 5 };
 static const int parallel_io[MAX_PARALLEL_PORTS] = { 0x378, 0x278, 0x3bc };
 static const int parallel_irq[MAX_PARALLEL_PORTS] = { 7, 7, 7 };
 
-void pc_init_ne2k_isa(ISABus *bus, NICInfo *nd)
+static void pc_init_ne2k_isa(ISABus *bus, NICInfo *nd)
 {
     static int nb_ne2k = 0;
 
@@ -938,7 +938,7 @@ void pc_cmos_set_s3_resume(void *opaque, int irq, int level)
     }
 }
 
-void pc_acpi_smi_interrupt(void *opaque, int irq, int level)
+static void pc_acpi_smi_interrupt(void *opaque, int irq, int level)
 {
     CPUState *s = opaque;
 
@@ -972,7 +972,7 @@ static CPUState *pc_new_cpu(const char *cpu_model)
     return env;
 }
 
-void pc_cpus_init(const char *cpu_model)
+static void pc_cpus_init(const char *cpu_model)
 {
     int i;
 
@@ -990,7 +990,7 @@ void pc_cpus_init(const char *cpu_model)
     }
 }
 
-void pc_memory_init(MemoryRegion *system_memory,
+static void pc_memory_init(MemoryRegion *system_memory,
                     const char *kernel_filename,
                     const char *kernel_cmdline,
                     const char *initrd_filename,
@@ -1093,12 +1093,12 @@ void pc_memory_init(MemoryRegion *system_memory,
     }
 }
 
-qemu_irq *pc_allocate_cpu_irq(void)
+static qemu_irq *pc_allocate_cpu_irq(void)
 {
     return qemu_allocate_irqs(pic_irq_request, NULL, 1);
 }
 
-DeviceState *pc_vga_init(ISABus *isa_bus, PCIBus *pci_bus)
+static DeviceState *pc_vga_init(ISABus *isa_bus, PCIBus *pci_bus)
 {
     DeviceState *dev = NULL;
 
@@ -1142,7 +1142,7 @@ static void cpu_request_exit(void *opaque, int irq, int level)
     }
 }
 
-void pc_basic_device_init(ISABus *isa_bus, qemu_irq *gsi,
+static void pc_basic_device_init(ISABus *isa_bus, qemu_irq *gsi,
                           ISADevice **rtc_state,
                           ISADevice **floppy,
                           bool no_vmport)
@@ -1212,7 +1212,7 @@ void pc_basic_device_init(ISABus *isa_bus, qemu_irq *gsi,
     *floppy = fdctrl_init_isa(isa_bus, fd);
 }
 
-void pc_pci_device_init(PCIBus *pci_bus)
+static void pc_pci_device_init(PCIBus *pci_bus)
 {
     int max_bus;
     int bus;
@@ -1316,7 +1316,7 @@ static void pc_init1(MemoryRegion *system_memory,
     BusState *idebus[MAX_IDE_BUS];
     ISADevice *rtc_state;
     ISADevice *floppy;
-    MemoryRegion *ram_memory;
+    MemoryRegion *ram_memory = NULL;
     MemoryRegion *pci_memory;
     MemoryRegion *rom_memory;
     DeviceState *dev;
