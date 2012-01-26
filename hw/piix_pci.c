@@ -263,19 +263,17 @@ static int i440fx_initfn(PCIDevice *dev)
     return 0;
 }
 
-static PCIBus *i440fx_common_init(const char *device_name,
-                                  PCII440FXState **pi440fx_state,
-                                  int *piix3_devfn,
-                                  ISABus **isa_bus, qemu_irq *pic,
-                                  MemoryRegion *address_space_mem,
-                                  MemoryRegion *address_space_io,
-                                  ram_addr_t ram_size,
-                                  target_phys_addr_t pci_hole_start,
-                                  target_phys_addr_t pci_hole_size,
-                                  target_phys_addr_t pci_hole64_start,
-                                  target_phys_addr_t pci_hole64_size,
-                                  MemoryRegion *pci_address_space,
-                                  MemoryRegion *ram_memory)
+PCIBus *i440fx_init(PCII440FXState **pi440fx_state, int *piix3_devfn,
+                    ISABus **isa_bus, qemu_irq *pic,
+                    MemoryRegion *address_space_mem,
+                    MemoryRegion *address_space_io,
+                    ram_addr_t ram_size,
+                    target_phys_addr_t pci_hole_start,
+                    target_phys_addr_t pci_hole_size,
+                    target_phys_addr_t pci_hole64_start,
+                    target_phys_addr_t pci_hole64_size,
+                    MemoryRegion *pci_address_space, MemoryRegion *ram_memory)
+
 {
     DeviceState *dev;
     PCIBus *b;
@@ -293,7 +291,7 @@ static PCIBus *i440fx_common_init(const char *device_name,
     qdev_init_nofail(dev);
     object_property_add_child(object_get_root(), "i440fx", OBJECT(dev), NULL);
 
-    d = pci_create_simple(b, 0, device_name);
+    d = pci_create_simple(b, 0, "i440FX");
     *pi440fx_state = DO_UPCAST(PCII440FXState, dev, d);
     f = *pi440fx_state;
     f->system_memory = address_space_mem;
@@ -352,28 +350,6 @@ static PCIBus *i440fx_common_init(const char *device_name,
 
     i440fx_update_memory_mappings(f);
 
-    return b;
-}
-
-PCIBus *i440fx_init(PCII440FXState **pi440fx_state, int *piix3_devfn,
-                    ISABus **isa_bus, qemu_irq *pic,
-                    MemoryRegion *address_space_mem,
-                    MemoryRegion *address_space_io,
-                    ram_addr_t ram_size,
-                    target_phys_addr_t pci_hole_start,
-                    target_phys_addr_t pci_hole_size,
-                    target_phys_addr_t pci_hole64_start,
-                    target_phys_addr_t pci_hole64_size,
-                    MemoryRegion *pci_memory, MemoryRegion *ram_memory)
-
-{
-    PCIBus *b;
-
-    b = i440fx_common_init("i440FX", pi440fx_state, piix3_devfn, isa_bus, pic,
-                           address_space_mem, address_space_io, ram_size,
-                           pci_hole_start, pci_hole_size,
-                           pci_hole64_size, pci_hole64_size,
-                           pci_memory, ram_memory);
     return b;
 }
 
