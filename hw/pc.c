@@ -1285,7 +1285,7 @@ static void pc_init1(MemoryRegion *system_memory,
     ram_addr_t below_4g_mem_size, above_4g_mem_size;
     PCIBus *pci_bus;
     ISABus *isa_bus;
-    PCII440FXState *i440fx_state;
+    I440FXPMCState *i440fx_state;
     int piix3_devfn = -1;
     qemu_irq *cpu_irq;
     qemu_irq *gsi;
