@@ -1143,13 +1143,11 @@ static void cpu_request_exit(void *opaque, int irq, int level)
 }
 
 static void pc_basic_device_init(ISABus *isa_bus, qemu_irq *gsi,
-                          ISADevice **rtc_state,
-                          ISADevice **floppy,
-                          bool no_vmport)
+                                 ISADevice **floppy,
+                                 bool no_vmport)
 {
     int i;
     DriveInfo *fd[MAX_FD];
-    qemu_irq rtc_irq = NULL;
     qemu_irq *a20_line;
     ISADevice *i8042, *port92, *vmmouse, *pit;
     qemu_irq *cpu_exit_irq;
@@ -1157,20 +1155,6 @@ static void pc_basic_device_init(ISABus *isa_bus, qemu_irq *gsi,
     register_ioport_write(0x80, 1, 1, ioport80_write, NULL);
 
     register_ioport_write(0xf0, 1, 1, ioportF0_write, NULL);
-
-    if (!no_hpet) {
-        DeviceState *hpet = sysbus_try_create_simple("hpet", HPET_BASE, NULL);
-
-        if (hpet) {
-            for (i = 0; i < GSI_NUM_PINS; i++) {
-                sysbus_connect_irq(sysbus_from_qdev(hpet), i, gsi[i]);
-            }
-            rtc_irq = qdev_get_gpio_in(hpet, 0);
-        }
-    }
-    *rtc_state = rtc_init(isa_bus, 2000, rtc_irq);
-
-    qemu_register_boot_set(pc_boot_set, *rtc_state);
 
     pit = pit_init(isa_bus, 0x40, 0);
     pcspk_init(pit);
@@ -1377,7 +1361,6 @@ static void pc_init1(MemoryRegion *system_memory,
         isa_bus = isa_bus_new(NULL, system_io);
         no_hpet = 1;
     }
-    isa_bus_irqs(isa_bus, gsi);
 
     if (kvm_enabled() && kvm_irqchip_in_kernel()) {
         i8259 = kvm_i8259_init(isa_bus);
@@ -1407,7 +1390,7 @@ static void pc_init1(MemoryRegion *system_memory,
     }
 
     /* init basic PC hardware */
-    pc_basic_device_init(isa_bus, gsi, &rtc_state, &floppy, xen_enabled());
+    pc_basic_device_init(isa_bus, gsi, &floppy, xen_enabled());
 
     for(i = 0; i < nb_nics; i++) {
         NICInfo *nd = &nd_table[i];
@@ -1428,17 +1411,6 @@ static void pc_init1(MemoryRegion *system_memory,
         }
         idebus[0] = qdev_get_child_bus(&dev->qdev, "ide.0");
         idebus[1] = qdev_get_child_bus(&dev->qdev, "ide.1");
-
-        /* FIXME there's some major spaghetti here.  Somehow we create the
-         * devices on the PIIX before we actually create it.  We create the
-         * PIIX3 deep in the recess of the i440fx creation too and then lose
-         * the DeviceState.
-         *
-         * For now, let's "fix" this by making judicious use of paths.  This
-         * is not generally the right way to do this.
-         */
-        object_property_add_child(object_resolve_path("/i440fx/piix3", NULL),
-                                  "rtc", (Object *)rtc_state, NULL);
     } else {
         for(i = 0; i < MAX_IDE_BUS; i++) {
             ISADevice *dev;
@@ -1448,6 +1420,10 @@ static void pc_init1(MemoryRegion *system_memory,
             idebus[i] = qdev_get_child_bus(&dev->qdev, "ide.0");
         }
     }
+
+    /* FIXME */
+    rtc_state = ISA_DEVICE(object_resolve_path("rtc", NULL));
+    qemu_register_boot_set(pc_boot_set, rtc_state);
 
     audio_init(isa_bus, pci_enabled ? pci_bus : NULL);
 
