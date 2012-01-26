@@ -30,6 +30,8 @@
 #include "sysbus.h"
 #include "range.h"
 #include "xen.h"
+#include "hpet_emul.h"
+#include "mc146818rtc.h"
 
 /*
  * I440FX chipset data sheet.
@@ -62,6 +64,13 @@ typedef struct PIIX3State {
 #error "unable to encode pic state in 64bit in pic_levels."
 #endif
     uint64_t pic_levels;
+
+    bool hpet_enable;
+
+    HPETState hpet;
+    RTCState rtc;
+
+    ISABus *bus;
 
     qemu_irq *pic;
 
@@ -309,20 +318,28 @@ static PCIBus *i440fx_common_init(const char *device_name,
      * connected to the IOAPIC directly.
      * These additional routes can be discovered through ACPI. */
     if (xen_enabled()) {
-        piix3 = DO_UPCAST(PIIX3State, dev,
-                pci_create_simple_multifunction(b, -1, true, "PIIX3-xen"));
-        pci_bus_irqs(b, xen_piix3_set_irq, xen_pci_slot_get_pirq,
-                piix3, XEN_PIIX_NUM_PIRQS);
+        piix3 = PIIX3(object_new("PIIX3-xen"));
     } else {
-        piix3 = DO_UPCAST(PIIX3State, dev,
-                pci_create_simple_multifunction(b, -1, true, "PIIX3"));
+        piix3 = PIIX3(object_new("PIIX3"));
+    }
+
+    /* FIXME make this a property */
+    piix3->pic = pic;
+    qdev_prop_set_uint32(DEVICE(piix3), "addr", PCI_DEVFN(1, 0));
+    qdev_prop_set_bit(DEVICE(piix3), "multifunction", true);
+    qdev_set_parent_bus(DEVICE(piix3), BUS(s->bus));
+    qdev_init_nofail(DEVICE(piix3));
+
+    if (xen_enabled()) {
+        pci_bus_irqs(b, xen_piix3_set_irq, xen_pci_slot_get_pirq,
+                     piix3, XEN_PIIX_NUM_PIRQS);
+    } else {
         pci_bus_irqs(b, piix3_set_irq, pci_slot_get_pirq, piix3,
                 PIIX_NUM_PIRQS);
     }
+    
     object_property_add_child(OBJECT(dev), "piix3", OBJECT(piix3), NULL);
-    piix3->pic = pic;
-    *isa_bus = DO_UPCAST(ISABus, qbus,
-                         qdev_get_child_bus(&piix3->dev.qdev, "isa.0"));
+    *isa_bus = piix3->bus;
 
     *piix3_devfn = piix3->dev.devfn;
 
@@ -498,14 +515,53 @@ static const VMStateDescription vmstate_piix3 = {
 
 static int piix3_realize(PCIDevice *dev)
 {
-    PIIX3State *d = DO_UPCAST(PIIX3State, dev, dev);
+    PIIX3State *s = PIIX3(dev);
+    qemu_irq rtc_irq;
 
-    isa_bus_new(&d->dev.qdev, pci_address_space_io(dev));
+    /* Initialize ISA Bus */
+    s->bus = isa_bus_new(DEVICE(dev), pci_address_space_io(dev));
+    isa_bus_irqs(s->bus, s->pic);
+
+    /* Realize the RTC */
+    qdev_set_parent_bus(DEVICE(&s->rtc), BUS(s->bus));
+    qdev_init_nofail(DEVICE(&s->rtc));
+
+    /* Realize HPET */
+    if (s->hpet_enable) {
+        int i;
+
+        /* We need to introduce a proper IRQ and Memory QOM infrastructure
+         * so that the HPET isn't a sysbus device */
+        qdev_set_parent_bus(DEVICE(&s->hpet), sysbus_get_default());
+        qdev_init_nofail(DEVICE(&s->hpet));
+
+        sysbus_mmio_map(SYS_BUS_DEVICE(&s->hpet), 0, HPET_BASE);
+        for (i = 0; i < GSI_NUM_PINS; i++) {
+            sysbus_connect_irq(SYS_BUS_DEVICE(&s->hpet), i, s->pic[i]);
+        }
+
+        rtc_irq = qdev_get_gpio_in(DEVICE(&s->hpet), 0);
+    } else {
+        isa_init_irq(ISA_DEVICE(&s->rtc), &rtc_irq, RTC_ISA_IRQ);
+    }
+
+    /* Setup the RTC IRQ */
+    s->rtc.irq = rtc_irq;
+
     return 0;
 }
 
 static void piix3_initfn(Object *obj)
 {
+    PIIX3State *s = PIIX3(obj);
+
+    object_initialize(&s->hpet, TYPE_HPET);
+    object_property_add_child(obj, "hpet", OBJECT(&s->hpet), NULL);
+
+    object_initialize(&s->rtc, TYPE_RTC);
+    object_property_add_child(obj, "rtc", OBJECT(&s->rtc), NULL);
+
+    qdev_prop_set_int32(DEVICE(&s->rtc), "base_year", 2000);
 }
 
 static void piix3_class_init(ObjectClass *klass, void *data)

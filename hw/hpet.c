@@ -41,40 +41,6 @@
 
 #define HPET_MSI_SUPPORT        0
 
-struct HPETState;
-typedef struct HPETTimer {  /* timers */
-    uint8_t tn;             /*timer number*/
-    QEMUTimer *qemu_timer;
-    struct HPETState *state;
-    /* Memory-mapped, software visible timer registers */
-    uint64_t config;        /* configuration/cap */
-    uint64_t cmp;           /* comparator */
-    uint64_t fsb;           /* FSB route */
-    /* Hidden register state */
-    uint64_t period;        /* Last value written to comparator */
-    uint8_t wrap_flag;      /* timer pop will indicate wrap for one-shot 32-bit
-                             * mode. Next pop will be actual timer expiration.
-                             */
-} HPETTimer;
-
-typedef struct HPETState {
-    SysBusDevice busdev;
-    MemoryRegion iomem;
-    uint64_t hpet_offset;
-    qemu_irq irqs[HPET_NUM_IRQ_ROUTES];
-    uint32_t flags;
-    uint8_t rtc_irq_level;
-    uint8_t num_timers;
-    HPETTimer timer[HPET_MAX_TIMERS];
-
-    /* Memory-mapped, software visible registers */
-    uint64_t capability;        /* capabilities */
-    uint64_t config;            /* configuration */
-    uint64_t isr;               /* interrupt status reg */
-    uint64_t hpet_counter;      /* main counter */
-    uint8_t  hpet_id;           /* instance id */
-} HPETState;
-
 static uint32_t hpet_in_legacy_mode(HPETState *s)
 {
     return s->config & HPET_CFG_LEGACY;
@@ -258,7 +224,7 @@ static const VMStateDescription vmstate_hpet_timer = {
 };
 
 static const VMStateDescription vmstate_hpet = {
-    .name = "hpet",
+    .name = TYPE_HPET,
     .version_id = 2,
     .minimum_version_id = 1,
     .minimum_version_id_old = 1,
@@ -714,7 +680,7 @@ static void hpet_device_class_init(ObjectClass *klass, void *data)
 }
 
 static TypeInfo hpet_device_info = {
-    .name          = "hpet",
+    .name          = TYPE_HPET,
     .parent        = TYPE_SYS_BUS_DEVICE,
     .instance_size = sizeof(HPETState),
     .class_init    = hpet_device_class_init,

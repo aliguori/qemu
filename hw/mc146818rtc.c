@@ -79,30 +79,6 @@
 #define REG_C_PF   0x40
 #define REG_C_AF   0x20
 
-typedef struct RTCState {
-    ISADevice dev;
-    MemoryRegion io;
-    uint8_t cmos_data[128];
-    uint8_t cmos_index;
-    struct tm current_tm;
-    int32_t base_year;
-    qemu_irq irq;
-    qemu_irq sqw_irq;
-    int it_shift;
-    /* periodic timer */
-    QEMUTimer *periodic_timer;
-    int64_t next_periodic_time;
-    /* second update */
-    int64_t next_second_time;
-    uint16_t irq_reinject_on_ack_count;
-    uint32_t irq_coalesced;
-    uint32_t period;
-    QEMUTimer *coalesced_timer;
-    QEMUTimer *second_timer;
-    QEMUTimer *second_timer2;
-    Notifier clock_reset_notifier;
-} RTCState;
-
 static void rtc_set_time(RTCState *s);
 static void rtc_copy_date(RTCState *s);
 
@@ -553,7 +529,7 @@ static int rtc_post_load(void *opaque, int version_id)
 }
 
 static const VMStateDescription vmstate_rtc = {
-    .name = "mc146818rtc",
+    .name = TYPE_RTC,
     .version_id = 2,
     .minimum_version_id = 1,
     .minimum_version_id_old = 1,
@@ -687,7 +663,7 @@ ISADevice *rtc_init(ISABus *bus, int base_year, qemu_irq intercept_irq)
     ISADevice *dev;
     RTCState *s;
 
-    dev = isa_create(bus, "mc146818rtc");
+    dev = isa_create(bus, TYPE_RTC);
     s = DO_UPCAST(RTCState, dev, dev);
     qdev_prop_set_int32(&dev->qdev, "base_year", base_year);
     qdev_init_nofail(&dev->qdev);
@@ -715,7 +691,7 @@ static void rtc_class_initfn(ObjectClass *klass, void *data)
 }
 
 static TypeInfo mc146818rtc_info = {
-    .name          = "mc146818rtc",
+    .name          = TYPE_RTC,
     .parent        = TYPE_ISA_DEVICE,
     .instance_size = sizeof(RTCState),
     .class_init    = rtc_class_initfn,

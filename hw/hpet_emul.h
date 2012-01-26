@@ -13,6 +13,9 @@
 #ifndef QEMU_HPET_EMUL_H
 #define QEMU_HPET_EMUL_H
 
+#include "hw.h"
+#include "sysbus.h"
+
 #define HPET_BASE               0xfed00000
 #define HPET_CLK_PERIOD         10000000ULL /* 10000000 femtoseconds == 10ns*/
 
@@ -68,4 +71,41 @@ struct hpet_fw_config
 } QEMU_PACKED;
 
 extern struct hpet_fw_config hpet_cfg;
+
+#define TYPE_HPET "hpet"
+
+struct HPETState;
+typedef struct HPETTimer {  /* timers */
+    uint8_t tn;             /*timer number*/
+    QEMUTimer *qemu_timer;
+    struct HPETState *state;
+    /* Memory-mapped, software visible timer registers */
+    uint64_t config;        /* configuration/cap */
+    uint64_t cmp;           /* comparator */
+    uint64_t fsb;           /* FSB route */
+    /* Hidden register state */
+    uint64_t period;        /* Last value written to comparator */
+    uint8_t wrap_flag;      /* timer pop will indicate wrap for one-shot 32-bit
+                             * mode. Next pop will be actual timer expiration.
+                             */
+} HPETTimer;
+
+typedef struct HPETState {
+    SysBusDevice busdev;
+    MemoryRegion iomem;
+    uint64_t hpet_offset;
+    qemu_irq irqs[HPET_NUM_IRQ_ROUTES];
+    uint32_t flags;
+    uint8_t rtc_irq_level;
+    uint8_t num_timers;
+    HPETTimer timer[HPET_MAX_TIMERS];
+
+    /* Memory-mapped, software visible registers */
+    uint64_t capability;        /* capabilities */
+    uint64_t config;            /* configuration */
+    uint64_t isr;               /* interrupt status reg */
+    uint64_t hpet_counter;      /* main counter */
+    uint8_t  hpet_id;           /* instance id */
+} HPETState;
+
 #endif
