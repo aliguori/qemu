@@ -162,4 +162,15 @@ const MemoryRegionOps pci_host_data_be_ops = {
     .endianness = DEVICE_BIG_ENDIAN,
 };
 
+static TypeInfo pci_host_type = {
+    .name = TYPE_PCI_HOST,
+    .parent = TYPE_SYS_BUS_DEVICE,
+    .instance_size = sizeof(PCIHostState),
+};
 
+static void register_devices(void)
+{
+    type_register_static(&pci_host_type);
+}
+
+device_init(register_devices);
