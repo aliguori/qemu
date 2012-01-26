@@ -43,6 +43,9 @@ typedef PCIHostState I440FXState;
 #define XEN_PIIX_NUM_PIRQS      128ULL
 #define PIIX_PIRQC              0x60
 
+#define TYPE_PIIX3 "PIIX3"
+#define PIIX3(obj) OBJECT_CHECK(PIIX3State, (obj), TYPE_PIIX3)
+
 typedef struct PIIX3State {
     PCIDevice dev;
 
@@ -420,9 +423,9 @@ static void piix3_write_config_xen(PCIDevice *dev,
     piix3_write_config(dev, address, val, len);
 }
 
-static void piix3_reset(void *opaque)
+static void piix3_reset(DeviceState *dev)
 {
-    PIIX3State *d = opaque;
+    PIIX3State *d = PIIX3(dev);
     uint8_t *pci_conf = d->dev.config;
 
     pci_conf[0x04] = 0x07; // master, memory and I/O
@@ -479,7 +482,7 @@ static void piix3_pre_save(void *opaque)
 }
 
 static const VMStateDescription vmstate_piix3 = {
-    .name = "PIIX3",
+    .name = TYPE_PIIX3,
     .version_id = 3,
     .minimum_version_id = 2,
     .minimum_version_id_old = 2,
@@ -493,13 +496,16 @@ static const VMStateDescription vmstate_piix3 = {
     }
 };
 
-static int piix3_initfn(PCIDevice *dev)
+static int piix3_realize(PCIDevice *dev)
 {
     PIIX3State *d = DO_UPCAST(PIIX3State, dev, dev);
 
     isa_bus_new(&d->dev.qdev, pci_address_space_io(dev));
-    qemu_register_reset(piix3_reset, d);
     return 0;
+}
+
+static void piix3_initfn(Object *obj)
+{
 }
 
 static void piix3_class_init(ObjectClass *klass, void *data)
@@ -509,9 +515,10 @@ static void piix3_class_init(ObjectClass *klass, void *data)
 
     dc->desc        = "ISA bridge";
     dc->vmsd        = &vmstate_piix3;
-    dc->no_user     = 1,
+    dc->no_user     = 1;
+    dc->reset       = piix3_reset;
     k->no_hotplug   = 1;
-    k->init         = piix3_initfn;
+    k->init         = piix3_realize;
     k->config_write = piix3_write_config;
     k->vendor_id    = PCI_VENDOR_ID_INTEL;
     k->device_id    = PCI_DEVICE_ID_INTEL_82371SB_0; // 82371SB PIIX3 PCI-to-ISA bridge (Step A1)
@@ -519,9 +526,10 @@ static void piix3_class_init(ObjectClass *klass, void *data)
 }
 
 static TypeInfo piix3_info = {
-    .name          = "PIIX3",
+    .name          = TYPE_PIIX3,
     .parent        = TYPE_PCI_DEVICE,
     .instance_size = sizeof(PIIX3State),
+    .instance_init = piix3_initfn,
     .class_init    = piix3_class_init,
 };
 
@@ -534,7 +542,7 @@ static void piix3_xen_class_init(ObjectClass *klass, void *data)
 
 static TypeInfo piix3_xen_info = {
     .name          = "PIIX3-xen",
-    .parent        = "PIIX3",
+    .parent        = TYPE_PIIX3,
     .instance_size = sizeof(PIIX3State),
     .class_init    = piix3_xen_class_init,
 };
