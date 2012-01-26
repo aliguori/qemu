@@ -1149,15 +1149,12 @@ static void pc_basic_device_init(ISABus *isa_bus, qemu_irq *gsi,
     int i;
     DriveInfo *fd[MAX_FD];
     qemu_irq *a20_line;
-    ISADevice *i8042, *port92, *vmmouse, *pit;
+    ISADevice *i8042, *port92, *vmmouse;
     qemu_irq *cpu_exit_irq;
 
     register_ioport_write(0x80, 1, 1, ioport80_write, NULL);
 
     register_ioport_write(0xf0, 1, 1, ioportF0_write, NULL);
-
-    pit = pit_init(isa_bus, 0x40, 0);
-    pcspk_init(pit);
 
     for(i = 0; i < MAX_SERIAL_PORTS; i++) {
         if (serial_hds[i]) {

@@ -32,6 +32,7 @@
 #include "xen.h"
 #include "hpet_emul.h"
 #include "mc146818rtc.h"
+#include "i8254.h"
 
 /*
  * I440FX chipset data sheet.
@@ -69,6 +70,7 @@ typedef struct PIIX3State {
 
     HPETState hpet;
     RTCState rtc;
+    PITState pit;
 
     ISABus *bus;
 
@@ -548,6 +550,13 @@ static int piix3_realize(PCIDevice *dev)
     /* Setup the RTC IRQ */
     s->rtc.irq = rtc_irq;
 
+    /* Realize the PIT */
+    qdev_set_parent_bus(DEVICE(&s->pit), BUS(s->bus));
+    qdev_init_nofail(DEVICE(&s->pit));
+
+    /* FIXME this should be refactored */
+    pcspk_init(ISA_DEVICE(&s->pit));
+
     return 0;
 }
 
@@ -560,8 +569,12 @@ static void piix3_initfn(Object *obj)
 
     object_initialize(&s->rtc, TYPE_RTC);
     object_property_add_child(obj, "rtc", OBJECT(&s->rtc), NULL);
-
     qdev_prop_set_int32(DEVICE(&s->rtc), "base_year", 2000);
+
+    object_initialize(&s->pit, TYPE_PIT);
+    object_property_add_child(obj, "pit", OBJECT(&s->pit), NULL);
+    qdev_prop_set_uint32(DEVICE(&s->pit), "iobase", 0x40);
+    qdev_prop_set_uint32(DEVICE(&s->pit), "irq", 0);
 }
 
 static void piix3_class_init(ObjectClass *klass, void *data)
