@@ -386,11 +386,7 @@ PCIBus *i440fx_init(I440FXPMCState **pi440fx_state, int *piix3_devfn,
                     MemoryRegion *address_space_mem,
                     MemoryRegion *address_space_io,
                     ram_addr_t ram_size,
-                    target_phys_addr_t pci_hole_start,
-                    target_phys_addr_t pci_hole_size,
-                    target_phys_addr_t pci_hole64_start,
-                    target_phys_addr_t pci_hole64_size,
-                    MemoryRegion *pci_address_space, MemoryRegion *ram_memory)
+                    MemoryRegion *ram_memory)
 
 {
     I440FXState *s;

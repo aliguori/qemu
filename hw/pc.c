@@ -1345,13 +1345,7 @@ static void pc_init1(MemoryRegion *system_memory,
     if (pci_enabled) {
         pci_bus = i440fx_init(&i440fx_state, &piix3_devfn, &isa_bus, gsi,
                               system_memory, system_io, ram_size,
-                              below_4g_mem_size,
-                              0x100000000ULL - below_4g_mem_size,
-                              0x100000000ULL + above_4g_mem_size,
-                              (sizeof(target_phys_addr_t) == 4
-                               ? 0
-                               : ((uint64_t)1 << 62)),
-                              pci_memory, ram_memory);
+                              ram_memory);
     } else {
         pci_bus = NULL;
         i440fx_state = NULL;
