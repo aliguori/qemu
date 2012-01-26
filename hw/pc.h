@@ -153,10 +153,10 @@ void pcspk_init(ISADevice *pit);
 int pcspk_audio_init(ISABus *bus);
 
 /* piix_pci.c */
-struct PCII440FXState;
-typedef struct PCII440FXState PCII440FXState;
+struct I440FXPMCState;
+typedef struct I440FXPMCState I440FXPMCState;
 
-PCIBus *i440fx_init(PCII440FXState **pi440fx_state, int *piix_devfn,
+PCIBus *i440fx_init(I440FXPMCState **pi440fx_state, int *piix_devfn,
                     ISABus **isa_bus, qemu_irq *pic,
                     MemoryRegion *address_space_mem,
                     MemoryRegion *address_space_io,
