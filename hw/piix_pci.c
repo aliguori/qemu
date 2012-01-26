@@ -111,13 +111,10 @@ struct I440FXPMCState {
 
 typedef struct I440FXState
 {
-    SysBusDevice busdev;
-    MemoryRegion conf_mem;
-    MemoryRegion data_mem;
-    MemoryRegion mmcfg;
-    MemoryRegion *address_space;
-    uint32_t config_reg;
-    PCIBus *bus;
+    PCIHostState parent;
+
+    MemoryRegion *address_space_io;
+    MemoryRegion *pci_address_space;
     I440FXPMCState pmc;
 } I440FXState;
 
@@ -261,17 +258,28 @@ static const VMStateDescription vmstate_i440fx_pmc = {
 
 static int i440fx_realize(SysBusDevice *dev)
 {
-    I440FXState *s = FROM_SYSBUS(I440FXState, dev);
+    I440FXState *s = I440FX(dev);
+    PCIHostState *h = PCI_HOST(s);
 
-    memory_region_init_io(&s->conf_mem, &pci_host_conf_le_ops, s,
+    g_assert(s->pci_address_space != NULL);
+    g_assert(h->address_space != NULL);
+    g_assert(s->address_space_io != NULL);
+
+    h->bus = pci_bus_new(DEVICE(s), NULL, s->pci_address_space,
+                         s->address_space_io, 0);
+
+    memory_region_init_io(&h->conf_mem, &pci_host_conf_le_ops, s,
                           "pci-conf-idx", 4);
-    sysbus_add_io(dev, 0xcf8, &s->conf_mem);
-    sysbus_init_ioports(&s->busdev, 0xcf8, 4);
+    sysbus_add_io(dev, 0xcf8, &h->conf_mem);
+    sysbus_init_ioports(&h->busdev, 0xcf8, 4);
 
-    memory_region_init_io(&s->data_mem, &pci_host_data_le_ops, s,
+    memory_region_init_io(&h->data_mem, &pci_host_data_le_ops, s,
                           "pci-conf-data", 4);
-    sysbus_add_io(dev, 0xcfc, &s->data_mem);
-    sysbus_init_ioports(&s->busdev, 0xcfc, 4);
+    sysbus_add_io(dev, 0xcfc, &h->data_mem);
+    sysbus_init_ioports(&h->busdev, 0xcfc, 4);
+
+    qdev_set_parent_bus(DEVICE(&s->pmc), BUS(h->bus));
+    qdev_init_nofail(DEVICE(&s->pmc));
 
     return 0;
 }
@@ -307,22 +315,22 @@ PCIBus *i440fx_init(I440FXPMCState **pi440fx_state, int *piix3_devfn,
                     MemoryRegion *pci_address_space, MemoryRegion *ram_memory)
 
 {
-    DeviceState *dev;
-    PCIBus *b;
     I440FXState *s;
+    PCIHostState *h;
     PIIX3State *piix3;
 
-    dev = qdev_create(NULL, TYPE_I440FX);
-    s = FROM_SYSBUS(I440FXState, sysbus_from_qdev(dev));
-    s->address_space = address_space_mem;
-    b = pci_bus_new(&s->busdev.qdev, NULL, pci_address_space,
-                    address_space_io, 0);
-    s->bus = b;
-    qdev_init_nofail(dev);
-    object_property_add_child(object_get_root(), "i440fx", OBJECT(dev), NULL);
+    s = I440FX(object_new(TYPE_I440FX));
+    h = PCI_HOST(s);
 
-    qdev_set_parent_bus(DEVICE(&s->pmc), BUS(s->bus));
-    qdev_init_nofail(DEVICE(&s->pmc));
+    /* FIXME make a properties */
+    h->address_space = address_space_mem;
+    s->address_space_io = address_space_io;
+    s->pci_address_space = pci_address_space;
+
+    qdev_set_parent_bus(DEVICE(s), sysbus_get_default());
+    qdev_init_nofail(DEVICE(s));
+
+    object_property_add_child(object_get_root(), "i440fx", OBJECT(s), NULL);
 
     *pi440fx_state = &s->pmc;
     s->pmc.system_memory = address_space_mem;
@@ -358,18 +366,18 @@ PCIBus *i440fx_init(I440FXPMCState **pi440fx_state, int *piix3_devfn,
     piix3->pic = pic;
     qdev_prop_set_uint32(DEVICE(piix3), "addr", PCI_DEVFN(1, 0));
     qdev_prop_set_bit(DEVICE(piix3), "multifunction", true);
-    qdev_set_parent_bus(DEVICE(piix3), BUS(s->bus));
+    qdev_set_parent_bus(DEVICE(piix3), BUS(h->bus));
     qdev_init_nofail(DEVICE(piix3));
 
     if (xen_enabled()) {
-        pci_bus_irqs(b, xen_piix3_set_irq, xen_pci_slot_get_pirq,
+        pci_bus_irqs(h->bus, xen_piix3_set_irq, xen_pci_slot_get_pirq,
                      piix3, XEN_PIIX_NUM_PIRQS);
     } else {
-        pci_bus_irqs(b, piix3_set_irq, pci_slot_get_pirq, piix3,
+        pci_bus_irqs(h->bus, piix3_set_irq, pci_slot_get_pirq, piix3,
                 PIIX_NUM_PIRQS);
     }
     
-    object_property_add_child(OBJECT(dev), "piix3", OBJECT(piix3), NULL);
+    object_property_add_child(OBJECT(s), "piix3", OBJECT(piix3), NULL);
     *isa_bus = piix3->bus;
 
     *piix3_devfn = piix3->dev.devfn;
@@ -381,7 +389,7 @@ PCIBus *i440fx_init(I440FXPMCState **pi440fx_state, int *piix3_devfn,
 
     i440fx_pmc_update_memory_mappings(&s->pmc);
 
-    return b;
+   return h->bus;
 }
 
 /* PIIX3 PCI to ISA bridge */
@@ -659,7 +667,7 @@ static void i440fx_class_init(ObjectClass *klass, void *data)
 
 static TypeInfo i440fx_info = {
     .name          = TYPE_I440FX,
-    .parent        = TYPE_SYS_BUS_DEVICE,
+    .parent        = TYPE_PCI_HOST,
     .instance_size = sizeof(I440FXState),
     .instance_init = i440fx_initfn,
     .class_init    = i440fx_class_init,
