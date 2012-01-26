@@ -52,6 +52,9 @@
 #define XEN_PIIX_NUM_PIRQS      128ULL
 #define PIIX_PIRQC              0x60
 
+#define I440FX_PMC_PCI_HOLE     0xE0000000ULL
+#define I440FX_PMC_PCI_HOLE_END 0x100000000ULL
+
 #define TYPE_PIIX3 "PIIX3"
 #define PIIX3(obj) OBJECT_CHECK(PIIX3State, (obj), TYPE_PIIX3)
 
@@ -105,10 +108,6 @@ struct I440FXPMCState {
     MemoryRegion smram_region;
     uint8_t smm_enabled;
     ram_addr_t ram_size;
-    target_phys_addr_t pci_hole_start;
-    target_phys_addr_t pci_hole_size;
-    target_phys_addr_t pci_hole64_start;
-    target_phys_addr_t pci_hole64_size;
 };
 
 #define TYPE_I440FX "i440FX"
@@ -285,6 +284,9 @@ static int i440fx_realize(SysBusDevice *dev)
     sysbus_add_io(dev, 0xcfc, &h->data_mem);
     sysbus_init_ioports(&h->busdev, 0xcfc, 4);
 
+    s->pmc.system_memory = h->address_space;
+    s->pmc.pci_address_space = s->pci_address_space;
+
     qdev_set_parent_bus(DEVICE(&s->pmc), BUS(h->bus));
     qdev_init_nofail(DEVICE(&s->pmc));
 
@@ -326,19 +328,37 @@ static int i440fx_pmc_initfn(PCIDevice *dev)
 {
     I440FXPMCState *d = DO_UPCAST(I440FXPMCState, dev, dev);
     ram_addr_t ram_size;
+    uint64_t pci_hole_start, pci_hole_size;
+    uint64_t pci_hole64_start, pci_hole64_size;
 
+    g_assert(d->ram_size != 0);
     g_assert(d->system_memory != NULL);
     g_assert(d->pci_address_space != NULL);
     g_assert(d->ram_memory != NULL);
 
+    /* Calculate PCI geometry from RAM size */
+    if (d->ram_size > I440FX_PMC_PCI_HOLE) {
+        pci_hole_start = I440FX_PMC_PCI_HOLE;
+    } else {
+        pci_hole_start = d->ram_size;
+    }
+    pci_hole_size = I440FX_PMC_PCI_HOLE_END - pci_hole_start;
+
+    pci_hole64_start = I440FX_PMC_PCI_HOLE_END + d->ram_size - pci_hole_start;
+    if (sizeof(target_phys_addr_t) == 4) {
+        pci_hole64_size = 0;
+    } else {
+        pci_hole64_size = (1ULL << 62);
+    }
+
     memory_region_init_alias(&d->pci_hole, "pci-hole", d->pci_address_space,
-                             d->pci_hole_start, d->pci_hole_size);
-    memory_region_add_subregion(d->system_memory, d->pci_hole_start, &d->pci_hole);
+                             pci_hole_start, pci_hole_size);
+    memory_region_add_subregion(d->system_memory, pci_hole_start, &d->pci_hole);
     memory_region_init_alias(&d->pci_hole_64bit, "pci-hole64",
                              d->pci_address_space,
-                             d->pci_hole64_start, d->pci_hole64_size);
-    if (d->pci_hole64_size) {
-        memory_region_add_subregion(d->system_memory, d->pci_hole64_start,
+                             pci_hole64_start, pci_hole64_size);
+    if (pci_hole64_size) {
+        memory_region_add_subregion(d->system_memory, pci_hole64_start,
                                     &d->pci_hole_64bit);
     }
     memory_region_init_alias(&d->smram_region, "smram-region",
@@ -385,17 +405,8 @@ PCIBus *i440fx_init(I440FXPMCState **pi440fx_state, int *piix3_devfn,
 
     s->piix3.pic = pic;
 
-    s->pmc.system_memory = address_space_mem;
-    s->pmc.pci_address_space = pci_address_space;
     s->pmc.ram_memory = ram_memory;
-
     s->pmc.ram_size = ram_size;
-
-    /* FIXME these should be derived */
-    s->pmc.pci_hole_start = pci_hole_start;
-    s->pmc.pci_hole_size = pci_hole_size;
-    s->pmc.pci_hole64_start = pci_hole64_start;
-    s->pmc.pci_hole64_size = pci_hole64_size;
 
     qdev_set_parent_bus(DEVICE(s), sysbus_get_default());
     qdev_init_nofail(DEVICE(s));
