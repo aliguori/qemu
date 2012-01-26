@@ -30,6 +30,9 @@
 
 #include "sysbus.h"
 
+#define TYPE_PCI_HOST "pci-host"
+#define PCI_HOST(obj) OBJECT_CHECK(PCIHostState, (obj), TYPE_PCI_HOST)
+
 struct PCIHostState {
     SysBusDevice busdev;
     MemoryRegion conf_mem;
