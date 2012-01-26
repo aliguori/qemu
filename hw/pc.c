@@ -993,35 +993,12 @@ static void pc_memory_init(MemoryRegion *system_memory,
                     const char *kernel_cmdline,
                     const char *initrd_filename,
                     ram_addr_t below_4g_mem_size,
-                    ram_addr_t above_4g_mem_size,
-                    MemoryRegion **ram_memory)
+                    ram_addr_t above_4g_mem_size)
 {
     int linux_boot, i;
-    MemoryRegion *ram, *ram_below_4g, *ram_above_4g;
     void *fw_cfg;
 
     linux_boot = (kernel_filename != NULL);
-
-    /* Allocate RAM.  We allocate it as a single memory region and use
-     * aliases to address portions of it, mostly for backwards compatibility
-     * with older qemus that used qemu_ram_alloc().
-     */
-    ram = g_malloc(sizeof(*ram));
-    memory_region_init_ram(ram, "pc.ram",
-                           below_4g_mem_size + above_4g_mem_size);
-    vmstate_register_ram_global(ram);
-    *ram_memory = ram;
-    ram_below_4g = g_malloc(sizeof(*ram_below_4g));
-    memory_region_init_alias(ram_below_4g, "ram-below-4g", ram,
-                             0, below_4g_mem_size);
-    memory_region_add_subregion(system_memory, 0, ram_below_4g);
-    if (above_4g_mem_size > 0) {
-        ram_above_4g = g_malloc(sizeof(*ram_above_4g));
-        memory_region_init_alias(ram_above_4g, "ram-above-4g", ram,
-                                 below_4g_mem_size, above_4g_mem_size);
-        memory_region_add_subregion(system_memory, 0x100000000ULL,
-                                    ram_above_4g);
-    }
 
     fw_cfg = bochs_bios_init();
     rom_set_fw(fw_cfg);
@@ -1239,8 +1216,6 @@ static void pc_init1(MemoryRegion *system_memory,
     BusState *idebus[MAX_IDE_BUS];
     ISADevice *rtc_state;
     ISADevice *floppy;
-    MemoryRegion *ram_memory = NULL;
-    MemoryRegion *pci_memory;
     DeviceState *dev;
 
     pc_cpus_init(cpu_model);
@@ -1257,19 +1232,11 @@ static void pc_init1(MemoryRegion *system_memory,
         below_4g_mem_size = ram_size;
     }
 
-    if (pci_enabled) {
-        pci_memory = g_new(MemoryRegion, 1);
-        memory_region_init(pci_memory, "pci", INT64_MAX);
-    } else {
-        pci_memory = NULL;
-    }
-
     /* allocate ram and load rom/bios */
     if (!xen_enabled()) {
         pc_memory_init(system_memory,
                        kernel_filename, kernel_cmdline, initrd_filename,
-                       below_4g_mem_size, above_4g_mem_size,
-                       &ram_memory);
+                       below_4g_mem_size, above_4g_mem_size);
     }
 
     gsi_state = g_malloc0(sizeof(*gsi_state));
@@ -1284,13 +1251,6 @@ static void pc_init1(MemoryRegion *system_memory,
     if (pci_enabled) {
         pci_bus = i440fx_init(&i440fx_state, &piix3_devfn, &isa_bus, gsi,
                               system_memory, system_io, ram_size,
-                              below_4g_mem_size,
-                              0x100000000ULL - below_4g_mem_size,
-                              0x100000000ULL + above_4g_mem_size,
-                              (sizeof(target_phys_addr_t) == 4
-                               ? 0
-                               : ((uint64_t)1 << 62)),
-                              pci_memory, ram_memory,
                               bios_name);
     } else {
         pci_bus = NULL;
