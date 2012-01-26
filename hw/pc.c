@@ -64,8 +64,6 @@
 #define DPRINTF(fmt, ...)
 #endif
 
-#define BIOS_FILENAME "bios.bin"
-
 #define PC_MAX_BIOS_SIZE (4 * 1024 * 1024)
 
 /* Leave a chunk of memory at the top of RAM for the BIOS ACPI tables.  */
@@ -996,14 +994,10 @@ static void pc_memory_init(MemoryRegion *system_memory,
                     const char *initrd_filename,
                     ram_addr_t below_4g_mem_size,
                     ram_addr_t above_4g_mem_size,
-                    MemoryRegion *rom_memory,
                     MemoryRegion **ram_memory)
 {
-    char *filename;
-    int ret, linux_boot, i;
-    MemoryRegion *ram, *bios, *isa_bios, *option_rom_mr;
-    MemoryRegion *ram_below_4g, *ram_above_4g;
-    int bios_size, isa_bios_size;
+    int linux_boot, i;
+    MemoryRegion *ram, *ram_below_4g, *ram_above_4g;
     void *fw_cfg;
 
     linux_boot = (kernel_filename != NULL);
@@ -1028,58 +1022,6 @@ static void pc_memory_init(MemoryRegion *system_memory,
         memory_region_add_subregion(system_memory, 0x100000000ULL,
                                     ram_above_4g);
     }
-
-    /* BIOS load */
-    if (bios_name == NULL)
-        bios_name = BIOS_FILENAME;
-    filename = qemu_find_file(QEMU_FILE_TYPE_BIOS, bios_name);
-    if (filename) {
-        bios_size = get_image_size(filename);
-    } else {
-        bios_size = -1;
-    }
-    if (bios_size <= 0 ||
-        (bios_size % 65536) != 0) {
-        goto bios_error;
-    }
-    bios = g_malloc(sizeof(*bios));
-    memory_region_init_ram(bios, "pc.bios", bios_size);
-    vmstate_register_ram_global(bios);
-    memory_region_set_readonly(bios, true);
-    ret = rom_add_file_fixed(bios_name, (uint32_t)(-bios_size), -1);
-    if (ret != 0) {
-    bios_error:
-        fprintf(stderr, "qemu: could not load PC BIOS '%s'\n", bios_name);
-        exit(1);
-    }
-    if (filename) {
-        g_free(filename);
-    }
-    /* map the last 128KB of the BIOS in ISA space */
-    isa_bios_size = bios_size;
-    if (isa_bios_size > (128 * 1024))
-        isa_bios_size = 128 * 1024;
-    isa_bios = g_malloc(sizeof(*isa_bios));
-    memory_region_init_alias(isa_bios, "isa-bios", bios,
-                             bios_size - isa_bios_size, isa_bios_size);
-    memory_region_add_subregion_overlap(rom_memory,
-                                        0x100000 - isa_bios_size,
-                                        isa_bios,
-                                        1);
-    memory_region_set_readonly(isa_bios, true);
-
-    option_rom_mr = g_malloc(sizeof(*option_rom_mr));
-    memory_region_init_ram(option_rom_mr, "pc.rom", PC_ROM_SIZE);
-    vmstate_register_ram_global(option_rom_mr);
-    memory_region_add_subregion_overlap(rom_memory,
-                                        PC_ROM_MIN_VGA,
-                                        option_rom_mr,
-                                        1);
-
-    /* map all the bios at the top of memory */
-    memory_region_add_subregion(rom_memory,
-                                (uint32_t)(-bios_size),
-                                bios);
 
     fw_cfg = bochs_bios_init();
     rom_set_fw(fw_cfg);
@@ -1299,7 +1241,6 @@ static void pc_init1(MemoryRegion *system_memory,
     ISADevice *floppy;
     MemoryRegion *ram_memory = NULL;
     MemoryRegion *pci_memory;
-    MemoryRegion *rom_memory;
     DeviceState *dev;
 
     pc_cpus_init(cpu_model);
@@ -1319,10 +1260,8 @@ static void pc_init1(MemoryRegion *system_memory,
     if (pci_enabled) {
         pci_memory = g_new(MemoryRegion, 1);
         memory_region_init(pci_memory, "pci", INT64_MAX);
-        rom_memory = pci_memory;
     } else {
         pci_memory = NULL;
-        rom_memory = system_memory;
     }
 
     /* allocate ram and load rom/bios */
@@ -1330,7 +1269,7 @@ static void pc_init1(MemoryRegion *system_memory,
         pc_memory_init(system_memory,
                        kernel_filename, kernel_cmdline, initrd_filename,
                        below_4g_mem_size, above_4g_mem_size,
-                       pci_enabled ? rom_memory : system_memory, &ram_memory);
+                       &ram_memory);
     }
 
     gsi_state = g_malloc0(sizeof(*gsi_state));
@@ -1351,7 +1290,8 @@ static void pc_init1(MemoryRegion *system_memory,
                               (sizeof(target_phys_addr_t) == 4
                                ? 0
                                : ((uint64_t)1 << 62)),
-                              pci_memory, ram_memory);
+                              pci_memory, ram_memory,
+                              bios_name);
     } else {
         pci_bus = NULL;
         i440fx_state = NULL;

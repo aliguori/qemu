@@ -33,6 +33,10 @@
 #include "hpet_emul.h"
 #include "mc146818rtc.h"
 #include "i8254.h"
+#include "loader.h"
+#include "sysemu.h"
+
+#define BIOS_FILENAME "bios.bin"
 
 /*
  * I440FX chipset data sheet.
@@ -122,6 +126,13 @@ typedef struct I440FXState
 
     I440FXPMCState pmc;
     PIIX3State piix3;
+
+    /* Is this more appropriate for the PMC? */
+    MemoryRegion bios;
+    MemoryRegion isa_bios;
+    MemoryRegion option_roms;
+
+    char *bios_name;
 } I440FXState;
 
 #define I440FX_PAM      0x59
@@ -266,6 +277,9 @@ static int i440fx_realize(SysBusDevice *dev)
 {
     I440FXState *s = I440FX(dev);
     PCIHostState *h = PCI_HOST(s);
+    int bios_size, isa_bios_size;
+    char *filename;
+    int ret;
 
     g_assert(h->address_space != NULL);
     g_assert(s->address_space_io != NULL);
@@ -300,6 +314,55 @@ static int i440fx_realize(SysBusDevice *dev)
                 PIIX_NUM_PIRQS);
     }
 
+    /* BIOS load */
+    filename = qemu_find_file(QEMU_FILE_TYPE_BIOS, s->bios_name);
+    if (filename) {
+        bios_size = get_image_size(filename);
+    } else {
+        bios_size = -1;
+    }
+    if (bios_size <= 0 ||
+        (bios_size % 65536) != 0) {
+        goto bios_error;
+    }
+    memory_region_init_ram(&s->bios, "pc.bios", bios_size);
+    vmstate_register_ram_global(&s->bios);
+    memory_region_set_readonly(&s->bios, true);
+    ret = rom_add_file_fixed(s->bios_name, (uint32_t)(-bios_size), -1);
+    if (ret != 0) {
+    bios_error:
+        fprintf(stderr, "qemu: could not load PC BIOS '%s'\n", s->bios_name);
+        exit(1);
+    }
+    if (filename) {
+        g_free(filename);
+    }
+
+    /* map the last 128KB of the BIOS in ISA space */
+    isa_bios_size = bios_size;
+    if (isa_bios_size > (128 * 1024)) {
+        isa_bios_size = 128 * 1024;
+    }
+    memory_region_init_alias(&s->isa_bios, "isa-bios", &s->bios,
+                             bios_size - isa_bios_size, isa_bios_size);
+    memory_region_add_subregion_overlap(&s->pci_address_space,
+                                        0x100000 - isa_bios_size,
+                                        &s->isa_bios,
+                                        1);
+    memory_region_set_readonly(&s->isa_bios, true);
+
+    memory_region_init_ram(&s->option_roms, "pc.rom", PC_ROM_SIZE);
+    vmstate_register_ram_global(&s->option_roms);
+    memory_region_add_subregion_overlap(&s->pci_address_space,
+                                        PC_ROM_MIN_VGA,
+                                        &s->option_roms,
+                                        1);
+
+    /* map all the bios at the top of memory */
+    memory_region_add_subregion(&s->pci_address_space,
+                                (uint32_t)(-bios_size),
+                                &s->bios);
+
     return 0;
 }
 
@@ -321,6 +384,8 @@ static void i440fx_initfn(Object *obj)
         object_initialize(&s->piix3, "PIIX3");
     }
     object_property_add_child(OBJECT(s), "piix3", OBJECT(&s->piix3), NULL);
+
+    s->bios_name = g_strdup(BIOS_FILENAME);
 
     memory_region_init(&s->pci_address_space, "pci", INT64_MAX);
 }
@@ -390,8 +455,8 @@ PCIBus *i440fx_init(I440FXPMCState **pi440fx_state, int *piix3_devfn,
                     target_phys_addr_t pci_hole_size,
                     target_phys_addr_t pci_hole64_start,
                     target_phys_addr_t pci_hole64_size,
-                    MemoryRegion *pci_address_space, MemoryRegion *ram_memory)
-
+                    MemoryRegion *pci_address_space, MemoryRegion *ram_memory,
+                    const char *bios_name)
 {
     I440FXState *s;
     PCIHostState *h;
@@ -403,6 +468,11 @@ PCIBus *i440fx_init(I440FXPMCState **pi440fx_state, int *piix3_devfn,
     h->address_space = address_space_mem;
     s->address_space_io = address_space_io;
     s->piix3.pic = pic;
+    if (bios_name) {
+        g_free(s->bios_name);
+        s->bios_name = g_strdup(bios_name);
+    }
+
     /* FIXME pmc should create ram_memory */
     s->pmc.ram_memory = ram_memory;
     s->pmc.ram_size = ram_size;

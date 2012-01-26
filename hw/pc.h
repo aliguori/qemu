@@ -166,7 +166,8 @@ PCIBus *i440fx_init(I440FXPMCState **pi440fx_state, int *piix_devfn,
                     target_phys_addr_t pci_hole64_start,
                     target_phys_addr_t pci_hole64_size,
                     MemoryRegion *pci_memory,
-                    MemoryRegion *ram_memory);
+                    MemoryRegion *ram_memory,
+                    const char *bios_name);
 
 /* piix4.c */
 extern PCIDevice *piix4_dev;
