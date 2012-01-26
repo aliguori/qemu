@@ -118,7 +118,7 @@ typedef struct I440FXState
     PCIHostState parent;
 
     MemoryRegion *address_space_io;
-    MemoryRegion *pci_address_space;
+    MemoryRegion pci_address_space;
 
     I440FXPMCState pmc;
     PIIX3State piix3;
@@ -267,11 +267,10 @@ static int i440fx_realize(SysBusDevice *dev)
     I440FXState *s = I440FX(dev);
     PCIHostState *h = PCI_HOST(s);
 
-    g_assert(s->pci_address_space != NULL);
     g_assert(h->address_space != NULL);
     g_assert(s->address_space_io != NULL);
 
-    h->bus = pci_bus_new(DEVICE(s), NULL, s->pci_address_space,
+    h->bus = pci_bus_new(DEVICE(s), NULL, &s->pci_address_space,
                          s->address_space_io, 0);
 
     memory_region_init_io(&h->conf_mem, &pci_host_conf_le_ops, s,
@@ -285,7 +284,7 @@ static int i440fx_realize(SysBusDevice *dev)
     sysbus_init_ioports(&h->busdev, 0xcfc, 4);
 
     s->pmc.system_memory = h->address_space;
-    s->pmc.pci_address_space = s->pci_address_space;
+    s->pmc.pci_address_space = &s->pci_address_space;
 
     qdev_set_parent_bus(DEVICE(&s->pmc), BUS(h->bus));
     qdev_init_nofail(DEVICE(&s->pmc));
@@ -322,6 +321,8 @@ static void i440fx_initfn(Object *obj)
         object_initialize(&s->piix3, "PIIX3");
     }
     object_property_add_child(OBJECT(s), "piix3", OBJECT(&s->piix3), NULL);
+
+    memory_region_init(&s->pci_address_space, "pci", INT64_MAX);
 }
 
 static int i440fx_pmc_initfn(PCIDevice *dev)
@@ -401,10 +402,8 @@ PCIBus *i440fx_init(I440FXPMCState **pi440fx_state, int *piix3_devfn,
     /* FIXME make a properties */
     h->address_space = address_space_mem;
     s->address_space_io = address_space_io;
-    s->pci_address_space = pci_address_space;
-
     s->piix3.pic = pic;
-
+    /* FIXME pmc should create ram_memory */
     s->pmc.ram_memory = ram_memory;
     s->pmc.ram_size = ram_size;
 
