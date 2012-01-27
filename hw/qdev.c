@@ -637,12 +637,6 @@ static void device_finalize(Object *obj)
             prop->info->free(dev, prop);
         }
     }
-    if (dev->parent) {
-        qdev_property_del_child(dev->parent, dev, NULL);
-    }
-    if (dev->ref != 0) {
-        qerror_report(QERR_DEVICE_IN_USE, dev->id?:"");
-    }
 }
 
 void device_reset(DeviceState *dev)
