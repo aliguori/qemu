@@ -747,7 +747,7 @@ static void object_set_link_property(Object *obj, Visitor *v, void *opaque,
             gchar *target_type;
 
             target_type = g_strdup(&type[5]);
-            target_type[strlen(target_type) - 2] = 0;
+            target_type[strlen(target_type) - 1] = 0;
 
             if (object_dynamic_cast(target, target_type)) {
                 object_ref(target);
