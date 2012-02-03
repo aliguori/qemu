@@ -914,5 +914,31 @@ void object_property_add_str(Object *obj, const char *name,
  */
 Object *container_get(const char *path);
 
+/**
+ * ObjectPropertyEnumerator:
+ * @obj: the object the property belongs to
+ * @name: the name of the property
+ * @typename: the string typename the property was created with
+ * @read_only: if #true, the property is read-only
+ * @opaque: the opaque handle passed to @object_property_foreach
+ *
+ * Callback function type for @object_property_foreach
+ */
+typedef void (ObjectPropertyEnumerator)(Object *obj,
+                                        const char *name,
+                                        const char *typename,
+                                        bool read_only,
+                                        void *opaque);
+
+/**
+ * object_property_foreach:
+ * @path: object to enumerate properties in
+ * @fn: callback function that will be invoked for each property
+ * @opaque: opaque to pass to @fn
+ *
+ * Enumerate all properties in an existing object.
+ */
+void object_property_foreach(Object *obj, ObjectPropertyEnumerator *fn,
+                             void *opaque);
 
 #endif

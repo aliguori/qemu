@@ -1194,3 +1194,13 @@ void object_property_add_str(Object *obj, const char *name,
                         property_release_str,
                         prop, errp);
 }
+
+void object_property_foreach(Object *obj, ObjectPropertyEnumerator *fn,
+                             void *opaque)
+{
+    ObjectProperty *prop;
+
+    QTAILQ_FOREACH(prop, &obj->properties, node) {
+        fn(obj, prop->name, prop->type, !prop->set, opaque);
+    }
+}
