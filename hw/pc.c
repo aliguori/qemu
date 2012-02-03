@@ -1188,6 +1188,41 @@ static void ioapic_init(GSIState *gsi_state)
     }
 }
 
+static PCIBus *i440fx_init(I440FXPMCState **pi440fx_state, int *piix3_devfn,
+                           ISABus **isa_bus, qemu_irq *pic,
+                           MemoryRegion *address_space_mem,
+                           MemoryRegion *address_space_io,
+                           ram_addr_t ram_size,
+                           const char *bios_name)
+{
+    I440FXState *s;
+    PCIHostState *h;
+
+    s = I440FX(object_new(TYPE_I440FX));
+    h = PCI_HOST(s);
+
+    /* FIXME make a properties */
+    h->address_space = address_space_mem;
+    s->address_space_io = address_space_io;
+    s->piix3.pic = pic;
+    if (bios_name) {
+        g_free(s->bios_name);
+        s->bios_name = g_strdup(bios_name);
+    }
+    s->pmc.ram_size = ram_size;
+
+    qdev_set_parent_bus(DEVICE(s), sysbus_get_default());
+    qdev_init_nofail(DEVICE(s));
+
+    object_property_add_child(object_get_root(), "i440fx", OBJECT(s), NULL);
+
+    *isa_bus = s->piix3.bus;
+    *pi440fx_state = &s->pmc;
+    *piix3_devfn = s->piix3.dev.devfn;
+
+    return h->bus;
+}
+
 /* PC hardware initialisation */
 static void pc_init1(MemoryRegion *system_memory,
                      MemoryRegion *system_io,

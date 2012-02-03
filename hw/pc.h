@@ -9,6 +9,7 @@
 #include "net.h"
 #include "memory.h"
 #include "ioapic.h"
+#include "i440fx.h"
 
 /* PC-style peripherals (also used by other machines).  */
 
@@ -151,17 +152,6 @@ extern int no_hpet;
 /* pcspk.c */
 void pcspk_init(ISADevice *pit);
 int pcspk_audio_init(ISABus *bus);
-
-/* piix_pci.c */
-struct I440FXPMCState;
-typedef struct I440FXPMCState I440FXPMCState;
-
-PCIBus *i440fx_init(I440FXPMCState **pi440fx_state, int *piix_devfn,
-                    ISABus **isa_bus, qemu_irq *pic,
-                    MemoryRegion *address_space_mem,
-                    MemoryRegion *address_space_io,
-                    ram_addr_t ram_size,
-                    const char *bios_name);
 
 /* piix4.c */
 extern PCIDevice *piix4_dev;

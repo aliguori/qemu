@@ -22,17 +22,12 @@
  * THE SOFTWARE.
  */
 
-#include "hw.h"
-#include "pc.h"
-#include "pci.h"
-#include "pci_host.h"
-#include "isa.h"
-#include "sysbus.h"
+#include "i440fx.h"
 #include "range.h"
 #include "xen.h"
 #include "loader.h"
 #include "sysemu.h"
-#include "piix3.h"
+#include "pc.h"
 
 #define BIOS_FILENAME "bios.bin"
 
@@ -51,52 +46,6 @@
 
 #define I440FX_PMC_PCI_HOLE     0xE0000000ULL
 #define I440FX_PMC_PCI_HOLE_END 0x100000000ULL
-
-#define TYPE_I440FX_PMC "i440FX-PMC"
-#define I440FX_PMC(obj) OBJECT_CHECK(I440FXPMCState, (obj), TYPE_I440FX_PMC)
-
-typedef struct PAMMemoryRegion {
-    MemoryRegion mem;
-    bool initialized;
-} PAMMemoryRegion;
-
-struct I440FXPMCState {
-    PCIDevice dev;
-    MemoryRegion *system_memory;
-    MemoryRegion *pci_address_space;
-    MemoryRegion *ram_memory;
-    MemoryRegion pci_hole;
-    MemoryRegion pci_hole_64bit;
-    PAMMemoryRegion pam_regions[13];
-    MemoryRegion smram_region;
-    uint8_t smm_enabled;
-
-    ram_addr_t ram_size;
-    MemoryRegion ram;
-    MemoryRegion ram_below_4g;
-    MemoryRegion ram_above_4g;
-};
-
-#define TYPE_I440FX "i440FX"
-#define I440FX(obj) OBJECT_CHECK(I440FXState, (obj), TYPE_I440FX)
-
-typedef struct I440FXState
-{
-    PCIHostState parent;
-
-    MemoryRegion *address_space_io;
-    MemoryRegion pci_address_space;
-
-    I440FXPMCState pmc;
-    PIIX3State piix3;
-
-    /* Is this more appropriate for the PMC? */
-    MemoryRegion bios;
-    MemoryRegion isa_bios;
-    MemoryRegion option_roms;
-
-    char *bios_name;
-} I440FXState;
 
 #define I440FX_PAM      0x59
 #define I440FX_PAM_SIZE 7
@@ -431,41 +380,6 @@ static int i440fx_pmc_realize(PCIDevice *dev)
 
     cpu_smm_register(&i440fx_pmc_set_smm, d);
     return 0;
-}
-
-PCIBus *i440fx_init(I440FXPMCState **pi440fx_state, int *piix3_devfn,
-                    ISABus **isa_bus, qemu_irq *pic,
-                    MemoryRegion *address_space_mem,
-                    MemoryRegion *address_space_io,
-                    ram_addr_t ram_size,
-                    const char *bios_name)
-{
-    I440FXState *s;
-    PCIHostState *h;
-
-    s = I440FX(object_new(TYPE_I440FX));
-    h = PCI_HOST(s);
-
-    /* FIXME make a properties */
-    h->address_space = address_space_mem;
-    s->address_space_io = address_space_io;
-    s->piix3.pic = pic;
-    if (bios_name) {
-        g_free(s->bios_name);
-        s->bios_name = g_strdup(bios_name);
-    }
-    s->pmc.ram_size = ram_size;
-
-    qdev_set_parent_bus(DEVICE(s), sysbus_get_default());
-    qdev_init_nofail(DEVICE(s));
-
-    object_property_add_child(object_get_root(), "i440fx", OBJECT(s), NULL);
-
-    *isa_bus = s->piix3.bus;
-    *pi440fx_state = &s->pmc;
-    *piix3_devfn = s->piix3.dev.devfn;
-
-    return h->bus;
 }
 
 static void i440fx_pmc_class_init(ObjectClass *klass, void *data)
