@@ -25,6 +25,7 @@
 #include "iorange.h"
 #include "ioport.h"
 #include "int128.h"
+#include "qemu/object.h"
 
 typedef struct MemoryRegionOps MemoryRegionOps;
 typedef struct MemoryRegion MemoryRegion;
@@ -108,7 +109,12 @@ struct MemoryRegionOps {
 typedef struct CoalescedMemoryRange CoalescedMemoryRange;
 typedef struct MemoryRegionIoeventfd MemoryRegionIoeventfd;
 
+#define TYPE_MEMORY_REGION "memory-region"
+#define MEMORY_REGION(obj) OBJECT_CHECK(MemoryRegion, (obj), TYPE_MEMORY_REGION)
+
 struct MemoryRegion {
+    Object obj_parent;
+
     /* All fields are private - violators will be prosecuted */
     const MemoryRegionOps *ops;
     void *opaque;
@@ -327,7 +333,7 @@ bool memory_region_is_ram(MemoryRegion *mr);
  *
  * @mr: the memory region being queried
  */
-const char *memory_region_name(MemoryRegion *mr);
+const char *memory_region_name(const MemoryRegion *mr);
 
 /**
  * memory_region_is_logging: return whether a memory region is logging writes
@@ -706,6 +712,10 @@ void memory_global_dirty_log_start(void);
 void memory_global_dirty_log_stop(void);
 
 void mtree_info(fprintf_function mon_printf, void *f);
+
+void memory_region_set_name(MemoryRegion *mr, const char *name);
+
+void memory_region_set_size(MemoryRegion *mr, uint64_t size);
 
 #endif
 

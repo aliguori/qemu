@@ -852,36 +852,26 @@ static bool memory_region_wrong_endianness(MemoryRegion *mr)
 #endif
 }
 
-void memory_region_init(MemoryRegion *mr,
-                        const char *name,
-                        uint64_t size)
+void memory_region_set_name(MemoryRegion *mr, const char *name)
 {
-    mr->ops = NULL;
-    mr->parent = NULL;
+    mr->name = g_strdup(name);
+}
+
+void memory_region_set_size(MemoryRegion *mr, uint64_t size)
+{
     mr->size = int128_make64(size);
     if (size == UINT64_MAX) {
         mr->size = int128_2_64();
     }
-    mr->addr = 0;
-    mr->offset = 0;
-    mr->subpage = false;
-    mr->enabled = true;
-    mr->terminates = false;
-    mr->ram = false;
-    mr->readable = true;
-    mr->readonly = false;
-    mr->rom_device = false;
-    mr->destructor = memory_region_destructor_none;
-    mr->priority = 0;
-    mr->may_overlap = false;
-    mr->alias = NULL;
-    QTAILQ_INIT(&mr->subregions);
-    memset(&mr->subregions_link, 0, sizeof mr->subregions_link);
-    QTAILQ_INIT(&mr->coalesced);
-    mr->name = g_strdup(name);
-    mr->dirty_log_mask = 0;
-    mr->ioeventfd_nb = 0;
-    mr->ioeventfds = NULL;
+}
+
+void memory_region_init(MemoryRegion *mr,
+                        const char *name,
+                        uint64_t size)
+{
+    object_initialize(mr, TYPE_MEMORY_REGION);
+    memory_region_set_name(mr, name);
+    memory_region_set_size(mr, size);
 }
 
 static bool memory_region_access_valid(MemoryRegion *mr,
@@ -1055,7 +1045,8 @@ static uint64_t invalid_read(void *opaque, target_phys_addr_t addr,
     MemoryRegion *mr = opaque;
 
     if (!mr->warning_printed) {
-        fprintf(stderr, "Invalid read from memory region %s\n", mr->name);
+        fprintf(stderr, "Invalid read from memory region %s\n",
+                memory_region_name(mr));
         mr->warning_printed = true;
     }
     return -1U;
@@ -1067,7 +1058,8 @@ static void invalid_write(void *opaque, target_phys_addr_t addr, uint64_t data,
     MemoryRegion *mr = opaque;
 
     if (!mr->warning_printed) {
-        fprintf(stderr, "Invalid write to memory region %s\n", mr->name);
+        fprintf(stderr, "Invalid write to memory region %s\n",
+                memory_region_name(mr));
         mr->warning_printed = true;
     }
 }
@@ -1087,11 +1079,7 @@ void memory_region_init_reservation(MemoryRegion *mr,
 
 void memory_region_destroy(MemoryRegion *mr)
 {
-    assert(QTAILQ_EMPTY(&mr->subregions));
-    mr->destructor(mr);
-    memory_region_clear_coalescing(mr);
-    g_free((char *)mr->name);
-    g_free(mr->ioeventfds);
+    object_finalize(mr);
 }
 
 uint64_t memory_region_size(MemoryRegion *mr)
@@ -1102,9 +1090,9 @@ uint64_t memory_region_size(MemoryRegion *mr)
     return int128_get64(mr->size);
 }
 
-const char *memory_region_name(MemoryRegion *mr)
+const char *memory_region_name(const MemoryRegion *mr)
 {
-    return mr->name;
+    return mr->name ?: "(null)";
 }
 
 bool memory_region_is_ram(MemoryRegion *mr)
@@ -1614,7 +1602,7 @@ static void mtree_print_mr(fprintf_function mon_printf, void *f,
                    base + mr->addr
                    + (target_phys_addr_t)int128_get64(mr->size) - 1,
                    mr->priority,
-                   mr->name,
+                   memory_region_name(mr),
                    mr->alias->name,
                    mr->alias_offset,
                    mr->alias_offset
@@ -1625,7 +1613,7 @@ static void mtree_print_mr(fprintf_function mon_printf, void *f,
                    base + mr->addr
                    + (target_phys_addr_t)int128_get64(mr->size) - 1,
                    mr->priority,
-                   mr->name);
+                   memory_region_name(mr));
     }
 
     QTAILQ_INIT(&submr_print_queue);
@@ -1670,7 +1658,7 @@ void mtree_info(fprintf_function mon_printf, void *f)
     /* print aliased regions */
     QTAILQ_FOREACH(ml, &ml_head, queue) {
         if (!ml->printed) {
-            mon_printf(f, "%s\n", ml->mr->name);
+            mon_printf(f, "%s\n", memory_region_name(ml->mr));
             mtree_print_mr(mon_printf, f, ml->mr, 0, 0, &ml_head);
         }
     }
@@ -1686,3 +1674,59 @@ void mtree_info(fprintf_function mon_printf, void *f)
         mtree_print_mr(mon_printf, f, address_space_io.root, 0, 0, &ml_head);
     }
 }
+
+static void memory_region_initfn(Object *obj)
+{
+    MemoryRegion *mr = MEMORY_REGION(obj);
+    mr->ops = NULL;
+    mr->parent = NULL;
+    mr->size = int128_2_64();
+    mr->addr = 0;
+    mr->offset = 0;
+    mr->subpage = false;
+    mr->enabled = true;
+    mr->terminates = false;
+    mr->ram = false;
+    mr->readable = true;
+    mr->readonly = false;
+    mr->rom_device = false;
+    mr->destructor = memory_region_destructor_none;
+    mr->priority = 0;
+    mr->may_overlap = false;
+    mr->alias = NULL;
+    mr->name = NULL;
+    QTAILQ_INIT(&mr->subregions);
+    memset(&mr->subregions_link, 0, sizeof mr->subregions_link);
+    QTAILQ_INIT(&mr->coalesced);
+    mr->dirty_log_mask = 0;
+    mr->ioeventfd_nb = 0;
+    mr->ioeventfds = NULL;
+}
+
+static void memory_region_finalize(Object *obj)
+{
+    MemoryRegion *mr = MEMORY_REGION(obj);
+
+    assert(QTAILQ_EMPTY(&mr->subregions));
+    mr->destructor(mr);
+    memory_region_clear_coalescing(mr);
+    if (mr->name) {
+        g_free((char *)mr->name);
+    }
+    g_free(mr->ioeventfds);
+}
+
+static TypeInfo memory_region_type = {
+    .name = TYPE_MEMORY_REGION,
+    .parent = TYPE_OBJECT,
+    .instance_size = sizeof(MemoryRegion),
+    .instance_init = memory_region_initfn,
+    .instance_finalize = memory_region_finalize,
+};
+
+static void register_devices(void)
+{
+    type_register_static(&memory_region_type);
+}
+
+device_init(register_devices);

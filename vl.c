@@ -3280,6 +3280,8 @@ int main(int argc, char **argv, char **envp)
         }
     }
 
+    module_call_init(MODULE_INIT_DEVICE);
+
     cpu_exec_init_all();
 
     bdrv_init_with_whitelist();
@@ -3356,8 +3358,6 @@ int main(int argc, char **argv, char **envp)
         exit(1);
     if (foreach_device_config(DEV_DEBUGCON, debugcon_parse) < 0)
         exit(1);
-
-    module_call_init(MODULE_INIT_DEVICE);
 
     /* must be after qdev registration but before machine init */
     if (vga_model) {
