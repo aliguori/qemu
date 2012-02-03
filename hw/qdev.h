@@ -370,4 +370,6 @@ extern int qdev_hotplug;
 
 void qdev_add_properties(DeviceState *dev, Property *props);
 
+char *qdev_get_dev_path(DeviceState *dev);
+
 #endif
