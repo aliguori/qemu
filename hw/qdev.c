@@ -416,40 +416,35 @@ DeviceState *qdev_find_recursive(BusState *bus, const char *id)
     return NULL;
 }
 
-/* FIXME move this logic into instance_init */
-static void do_qbus_create_inplace(BusState *bus, const char *typename,
-                                   DeviceState *parent, const char *name)
+static void qbus_realize(BusState *bus)
 {
+    const char *typename = object_get_typename(OBJECT(bus));
     char *buf;
     int i,len;
 
-    bus->parent = parent;
-
-    if (name) {
+    if (bus->name) {
         /* use supplied name */
-        bus->name = g_strdup(name);
-    } else if (parent && parent->id) {
+    } else if (bus->parent && bus->parent->id) {
         /* parent device has id -> use it for bus name */
-        len = strlen(parent->id) + 16;
+        len = strlen(bus->parent->id) + 16;
         buf = g_malloc(len);
-        snprintf(buf, len, "%s.%d", parent->id, parent->num_child_bus);
+        snprintf(buf, len, "%s.%d", bus->parent->id, bus->parent->num_child_bus);
         bus->name = buf;
     } else {
         /* no id -> use lowercase bus type for bus name */
         len = strlen(typename) + 16;
         buf = g_malloc(len);
         len = snprintf(buf, len, "%s.%d", typename,
-                       parent ? parent->num_child_bus : 0);
+                       bus->parent ? bus->parent->num_child_bus : 0);
         for (i = 0; i < len; i++)
             buf[i] = qemu_tolower(buf[i]);
         bus->name = buf;
     }
 
-    QTAILQ_INIT(&bus->children);
-    if (parent) {
-        QLIST_INSERT_HEAD(&parent->child_bus, bus, sibling);
-        parent->num_child_bus++;
-        object_property_add_child(OBJECT(parent), bus->name, OBJECT(bus), NULL);
+    if (bus->parent) {
+        QLIST_INSERT_HEAD(&bus->parent->child_bus, bus, sibling);
+        bus->parent->num_child_bus++;
+        object_property_add_child(OBJECT(bus->parent), bus->name, OBJECT(bus), NULL);
     } else if (bus != main_system_bus) {
         /* TODO: once all bus devices are qdevified,
            only reset handler for main_system_bus should be registered here. */
@@ -461,7 +456,10 @@ void qbus_create_inplace(BusState *bus, const char *typename,
                          DeviceState *parent, const char *name)
 {
     object_initialize(bus, typename);
-    do_qbus_create_inplace(bus, typename, parent, name);
+
+    bus->parent = parent;
+    bus->name = name ? g_strdup(name) : NULL;
+    qbus_realize(bus);
 }
 
 BusState *qbus_create(const char *typename, DeviceState *parent, const char *name)
@@ -470,7 +468,11 @@ BusState *qbus_create(const char *typename, DeviceState *parent, const char *nam
 
     bus = BUS(object_new(typename));
     bus->qdev_allocated = 1;
-    do_qbus_create_inplace(bus, typename, parent, name);
+
+    bus->parent = parent;
+    bus->name = name ? g_strdup(name) : NULL;
+    qbus_realize(bus);
+
     return bus;
 }
 
@@ -485,22 +487,10 @@ static void main_system_bus_create(void)
 
 void qbus_free(BusState *bus)
 {
-    BusChild *kid;
-
-    while ((kid = QTAILQ_FIRST(&bus->children)) != NULL) {
-        DeviceState *dev = kid->child;
-        qdev_free(dev);
-    }
-    if (bus->parent) {
-        QLIST_REMOVE(bus, sibling);
-        bus->parent->num_child_bus--;
-    } else {
-        assert(bus != main_system_bus); /* main_system_bus is never freed */
-        qemu_unregister_reset(qbus_reset_all_fn, bus);
-    }
-    g_free((void*)bus->name);
     if (bus->qdev_allocated) {
-        g_free(bus);
+        object_delete(OBJECT(bus));
+    } else {
+        object_finalize(OBJECT(bus));
     }
 }
 
@@ -718,12 +708,40 @@ static TypeInfo device_type_info = {
     .class_size = sizeof(DeviceClass),
 };
 
+static void qbus_initfn(Object *obj)
+{
+    BusState *bus = BUS(obj);
+
+    QTAILQ_INIT(&bus->children);
+}
+
+static void qbus_finalize(Object *obj)
+{
+    BusState *bus = BUS(obj);
+    BusChild *kid;
+
+    while ((kid = QTAILQ_FIRST(&bus->children)) != NULL) {
+        DeviceState *dev = kid->child;
+        qdev_free(dev);
+    }
+    if (bus->parent) {
+        QLIST_REMOVE(bus, sibling);
+        bus->parent->num_child_bus--;
+    } else {
+        assert(bus != main_system_bus); /* main_system_bus is never freed */
+        qemu_unregister_reset(qbus_reset_all_fn, bus);
+    }
+    g_free((void*)bus->name);
+}
+
 static TypeInfo bus_info = {
     .name = TYPE_BUS,
     .parent = TYPE_OBJECT,
     .instance_size = sizeof(BusState),
     .abstract = true,
     .class_size = sizeof(BusClass),
+    .instance_init = qbus_initfn,
+    .instance_finalize = qbus_finalize,
 };
 
 static void init_qdev(void)
