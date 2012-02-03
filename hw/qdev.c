@@ -518,6 +518,22 @@ char* qdev_get_fw_dev_path(DeviceState *dev)
     return strdup(path);
 }
 
+char *qdev_get_dev_path(DeviceState *dev)
+{
+    BusClass *bc;
+
+    if (!dev->parent_bus) {
+        return NULL;
+    }
+
+    bc = BUS_GET_CLASS(dev->parent_bus);
+    if (bc->get_dev_path) {
+        return bc->get_dev_path(dev);
+    }
+
+    return NULL;
+}
+
 static char *qdev_get_type(Object *obj, Error **errp)
 {
     return g_strdup(object_get_typename(obj));
