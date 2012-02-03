@@ -162,10 +162,19 @@ const MemoryRegionOps pci_host_data_be_ops = {
     .endianness = DEVICE_BIG_ENDIAN,
 };
 
+static void pci_host_initfn(Object *obj)
+{
+    PCIHostState *s = PCI_HOST(obj);
+
+    object_property_add_link(obj, "mmio", TYPE_MEMORY_REGION,
+                             (Object **)&s->address_space, NULL);
+}
+
 static TypeInfo pci_host_type = {
     .name = TYPE_PCI_HOST,
     .parent = TYPE_SYS_BUS_DEVICE,
     .instance_size = sizeof(PCIHostState),
+    .instance_init = pci_host_initfn,
 };
 
 static void register_devices(void)
