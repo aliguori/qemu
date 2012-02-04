@@ -668,4 +668,16 @@ typedef void (ObjectPropertyEnumerator)(Object *obj,
 void object_property_foreach(Object *obj, ObjectPropertyEnumerator *fn,
                              void *opaque);
 
+void object_property_set_int(Object *obj, const char *name,
+                             int64_t value, Error **errp);
+
+void object_property_set_str(Object *obj, const char *name,
+                             const char *value, Error **errp);
+
+void object_property_set_bool(Object *obj, const char *name,
+                              bool value, Error **errp);
+
+void object_property_set_link(Object *obj, const char *name,
+                              Object *target, Error **errp);
+
 #endif

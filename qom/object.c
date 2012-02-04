@@ -13,6 +13,7 @@
 #include "qemu/object.h"
 #include "qemu-common.h"
 #include "qapi/qapi-visit-core.h"
+#include "qemu/variant-visitor.h"
 #include "hw/qdev.h"
 // FIXME remove above
 
@@ -1011,3 +1012,48 @@ void object_property_foreach(Object *obj, ObjectPropertyEnumerator *fn,
         fn(obj, prop->name, prop->type, !prop->set, opaque);
     }
 }
+
+void object_property_set_int(Object *obj, const char *name,
+                             int64_t value, Error **errp)
+{
+    VariantVisitor vv;
+
+    variant_visitor_init(&vv);
+    variant_visitor_set_int(&vv, value);
+    object_property_set(obj, &vv.parent, name, errp);
+    variant_visitor_finalize(&vv);
+}
+
+void object_property_set_str(Object *obj, const char *name,
+                             const char *value, Error **errp)
+{
+    VariantVisitor vv;
+
+    variant_visitor_init(&vv);
+    variant_visitor_set_string(&vv, value);
+    object_property_set(obj, &vv.parent, name, errp);
+    variant_visitor_finalize(&vv);
+}
+
+void object_property_set_bool(Object *obj, const char *name,
+                              bool value, Error **errp)
+{
+    VariantVisitor vv;
+
+    variant_visitor_init(&vv);
+    variant_visitor_set_bool(&vv, value);
+    object_property_set(obj, &vv.parent, name, errp);
+    variant_visitor_finalize(&vv);
+}
+
+void object_property_set_link(Object *obj, const char *name,
+                              Object *target, Error **errp)
+{
+    gchar *path = object_get_canonical_path(target);
+
+    g_assert(path != NULL);
+
+    object_property_set_str(obj, name, path, errp);
+    g_free(path);
+}
+
