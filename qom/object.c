@@ -949,7 +949,7 @@ typedef struct StringProperty
     void (*set)(Object *, const char *, Error **);
 } StringProperty;
 
-static void object_property_get_str(Object *obj, Visitor *v, void *opaque,
+static void object_property_str_get(Object *obj, Visitor *v, void *opaque,
                                     const char *name, Error **errp)
 {
     StringProperty *prop = opaque;
@@ -962,8 +962,8 @@ static void object_property_get_str(Object *obj, Visitor *v, void *opaque,
     }
 }
 
-static void object_property_set_str(Object *obj, Visitor *v, void *opaque,
-                                  const char *name, Error **errp)
+static void object_property_str_set(Object *obj, Visitor *v, void *opaque,
+                                    const char *name, Error **errp)
 {
     StringProperty *prop = opaque;
     char *value;
@@ -979,8 +979,8 @@ static void object_property_set_str(Object *obj, Visitor *v, void *opaque,
     g_free(value);
 }
 
-static void object_property_release_str(Object *obj, const char *name,
-                                      void *opaque)
+static void object_property_str_release(Object *obj, const char *name,
+                                        void *opaque)
 {
     StringProperty *prop = opaque;
     g_free(prop);
@@ -997,9 +997,9 @@ void object_property_add_str(Object *obj, const char *name,
     prop->set = set;
 
     object_property_add(obj, name, "string",
-                        get ? object_property_get_str : NULL,
-                        set ? object_property_set_str : NULL,
-                        object_property_release_str,
+                        get ? object_property_str_get : NULL,
+                        set ? object_property_str_set : NULL,
+                        object_property_str_release,
                         prop, errp);
 }
 

@@ -1196,13 +1196,11 @@ static PCIBus *i440fx_init(I440FXPMCState **pi440fx_state, int *piix3_devfn,
                            const char *bios_name)
 {
     I440FXState *s;
-    PCIHostState *h;
 
     s = I440FX(object_new(TYPE_I440FX));
-    h = PCI_HOST(s);
 
     /* FIXME make a properties */
-    h->address_space = address_space_mem;
+    pci_host_set_mmio(PCI_HOST(s), address_space_mem);
     s->address_space_io = address_space_io;
     s->piix3.pic = pic;
     if (bios_name) {

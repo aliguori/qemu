@@ -162,6 +162,11 @@ const MemoryRegionOps pci_host_data_be_ops = {
     .endianness = DEVICE_BIG_ENDIAN,
 };
 
+void pci_host_set_mmio(PCIHostState *s, MemoryRegion *value)
+{
+    object_property_set_link(OBJECT(s), "mmio", OBJECT(value), NULL);
+}
+
 static void pci_host_initfn(Object *obj)
 {
     PCIHostState *s = PCI_HOST(obj);
