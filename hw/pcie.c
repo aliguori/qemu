@@ -235,6 +235,7 @@ static int pcie_cap_slot_hotplug(DeviceState *qdev,
                                    PCI_EXP_SLTSTA_PDS);
         pcie_cap_slot_event(d, PCI_EXP_HP_EV_PDC);
     } else {
+        object_unparent(OBJECT(pci_dev));
         qdev_free(&pci_dev->qdev);
         pci_word_test_and_clear_mask(exp_cap + PCI_EXP_SLTSTA,
                                      PCI_EXP_SLTSTA_PDS);

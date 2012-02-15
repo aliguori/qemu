@@ -502,6 +502,7 @@ static void pciej_write(void *opaque, uint32_t addr, uint32_t val)
         PCIDevice *dev = PCI_DEVICE(qdev);
         PCIDeviceClass *pc = PCI_DEVICE_GET_CLASS(dev);
         if (PCI_SLOT(dev->devfn) == slot && !pc->no_hotplug) {
+            object_unparent(OBJECT(qdev));
             qdev_free(qdev);
         }
     }

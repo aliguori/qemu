@@ -221,7 +221,6 @@ void qbus_reset_all_fn(void *opaque)
 /* can be used as ->unplug() callback for the simple cases */
 int qdev_simple_unplug_cb(DeviceState *dev)
 {
-    /* just zap it */
     object_unparent(OBJECT(dev));
     qdev_free(dev);
     return 0;
