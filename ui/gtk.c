@@ -55,7 +55,9 @@ typedef struct GtkDisplayState
     int last_x;
     int last_y;
 
-    double scale;
+    double scale_x;
+    double scale_y;
+    gboolean full_screen;
 } GtkDisplayState;
 
 static GtkDisplayState *global_state;
@@ -85,7 +87,11 @@ static void gd_update(DisplayState *ds, int x, int y, int w, int h)
 
 //    dprintf("update(x=%d, y=%d, w=%d, h=%d)\n", x, y, w, h);
 
-    gtk_widget_queue_draw_area(s->drawing_area, x, y, w, h);
+    gtk_widget_queue_draw_area(s->drawing_area,
+                               x * s->scale_x,
+                               y * s->scale_y,
+                               w * s->scale_x,
+                               h * s->scale_y);
 }
 
 static void gd_refresh(DisplayState *ds)
@@ -98,7 +104,6 @@ static void gd_resize(DisplayState *ds)
     GtkDisplayState *s = ds->opaque;
     cairo_format_t kind;
     int stride;
-    int i;
 
     dprintf("resize(width=%d, height=%d)\n",
             ds->surface->width, ds->surface->height);
@@ -131,15 +136,11 @@ static void gd_resize(DisplayState *ds)
                                                      ds->surface->height,
                                                      ds->surface->linesize);
 
-    gtk_widget_set_size_request(s->drawing_area,
-                                ds->surface->width * s->scale,
-                                ds->surface->height * s->scale);
-    for (i = 0; i < s->nb_vcs; i++) {
-        gtk_widget_set_size_request(s->vc[i].scrolled_window,
-                                    ds->surface->width * s->scale,
-                                    ds->surface->height * s->scale);
+    if (!s->full_screen) {
+        gtk_widget_set_size_request(s->drawing_area,
+                                    ds->surface->width,
+                                    ds->surface->height);
     }
-        
 }
 
 static void gd_update_caption(GtkDisplayState *s)
@@ -172,6 +173,24 @@ static void gd_change_runstate(void *opaque, int running, RunState state)
 static gboolean gd_draw_event(GtkWidget *widget, cairo_t *cr, void *opaque)
 {
     GtkDisplayState *s = opaque;
+    int ww, wh;
+    int fbw, fbh;
+
+    fbw = s->ds->surface->width;
+    fbh = s->ds->surface->height;
+
+    gdk_drawable_get_size(gtk_widget_get_window(widget), &ww, &wh);
+
+    cairo_rectangle(cr, 0, 0, ww, wh);
+
+    if (ww > fbw || wh > fbh) {
+        s->scale_x = (double)ww / fbw;
+        s->scale_y = (double)wh / fbh;
+        cairo_scale(cr, s->scale_x, s->scale_y);
+    } else {
+        s->scale_x = 1.0;
+        s->scale_y = 1.0;
+    }
 
     cairo_set_source_surface(cr, s->surface, 0, 0);
     cairo_paint(cr);
@@ -339,11 +358,17 @@ static void gd_menu_full_screen(GtkMenuItem *item, void *opaque)
     if (gtk_check_menu_item_get_active(GTK_CHECK_MENU_ITEM(s->full_screen_item))) {
         gtk_notebook_set_show_tabs(GTK_NOTEBOOK(s->notebook), FALSE);
         gtk_widget_set_size_request(s->menu_bar, 0, 0);
+        gtk_widget_set_size_request(s->drawing_area, -1, -1);
+        gtk_window_set_resizable(GTK_WINDOW(s->window), TRUE);
         gtk_window_fullscreen(GTK_WINDOW(s->window));
+        s->full_screen = TRUE;
     } else {
         gtk_window_unfullscreen(GTK_WINDOW(s->window));
         gd_menu_show_tabs(GTK_MENU_ITEM(s->show_tabs_item), s);
         gtk_widget_set_size_request(s->menu_bar, -1, -1);
+        gtk_widget_set_size_request(s->drawing_area, s->ds->surface->width, s->ds->surface->height);
+        gtk_window_set_resizable(GTK_WINDOW(s->window), FALSE);
+        s->full_screen = FALSE;
     }
 }
 
@@ -446,7 +471,7 @@ static GSList *gd_vc_init(GtkDisplayState *s, VirtualConsole *vc, int index, GSL
     vc->chr->opaque = vc;
     vc->scrolled_window = scrolled_window;
 
-    gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(vc->scrolled_window), GTK_POLICY_NEVER, GTK_POLICY_AUTOMATIC);
+    gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(vc->scrolled_window), GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC);
 
     gtk_notebook_append_page(GTK_NOTEBOOK(s->notebook), scrolled_window, gtk_label_new(label));
     g_signal_connect(vc->menu_item, "activate",
@@ -477,7 +502,6 @@ void gtk_display_init(DisplayState *ds)
     gtk_init(NULL, NULL);
 
     ds->opaque = s;
-    s->scale = 1.0;
     s->ds = ds;
     s->dcl.dpy_update = gd_update;
     s->dcl.dpy_resize = gd_resize;
@@ -489,6 +513,9 @@ void gtk_display_init(DisplayState *ds)
     s->notebook = gtk_notebook_new();
     s->drawing_area = gtk_drawing_area_new();
     s->menu_bar = gtk_menu_bar_new();
+
+    s->scale_x = 1.0;
+    s->scale_y = 1.0;
 
     accel_group = gtk_accel_group_new();
     s->file_menu = gtk_menu_new();
@@ -601,7 +628,7 @@ void gtk_display_init(DisplayState *ds)
     gtk_menu_shell_append(GTK_MENU_SHELL(s->menu_bar), s->view_menu_item);
 
     gtk_box_pack_start(GTK_BOX(s->vbox), s->menu_bar, FALSE, TRUE, 0);
-    gtk_box_pack_start(GTK_BOX(s->vbox), s->notebook, FALSE, TRUE, 0);
+    gtk_box_pack_start(GTK_BOX(s->vbox), s->notebook, TRUE, TRUE, 0);
 
     gtk_container_add(GTK_CONTAINER(s->window), s->vbox);
 
