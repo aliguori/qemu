@@ -18,9 +18,8 @@
 /*
  * TODO
  *
- * 1) hide mouse
- * 2) mouse grab
- * 3) zoom in/out
+ * 1) warp mouse to avoid invisible wall
+ * 2) cleanup code
  */
 
 #define MAX_VCS 10
@@ -49,6 +48,7 @@ typedef struct GtkDisplayState
     GtkWidget *full_screen_item;
     GtkWidget *zoom_in_item;
     GtkWidget *zoom_out_item;
+    GtkWidget *grab_item;
     GtkWidget *vga_item;
 
     int nb_vcs;
@@ -76,7 +76,7 @@ typedef struct GtkDisplayState
 
 static GtkDisplayState *global_state;
 
-#define DEBUG_GTK
+//#define DEBUG_GTK
 
 #ifdef DEBUG_GTK
 #define dprintf(fmt, ...) printf(fmt, ## __VA_ARGS__)
@@ -95,14 +95,20 @@ static gboolean gd_window_close(GtkWidget *widget, GdkEvent *event,
     return TRUE;
 }
 
-static void gd_update_cursor(GtkDisplayState *s)
+static void gd_update_cursor(GtkDisplayState *s, gboolean override)
 {
-    if (s->full_screen || kbd_mouse_is_absolute()) {
-	gdk_window_set_cursor(gtk_widget_get_window(GTK_WIDGET(s->drawing_area)),
-			      s->null_cursor);
+    GdkWindow *window;
+    bool on_vga;
+
+    window = gtk_widget_get_window(GTK_WIDGET(s->drawing_area));
+
+    on_vga = (gtk_notebook_get_current_page(GTK_NOTEBOOK(s->notebook)) == 0);
+
+    if ((override || on_vga) && (s->full_screen || kbd_mouse_is_absolute() ||
+         gtk_check_menu_item_get_active(GTK_CHECK_MENU_ITEM(s->grab_item)))) {
+	gdk_window_set_cursor(window, s->null_cursor);
     } else {
-	gdk_window_set_cursor(gtk_widget_get_window(GTK_WIDGET(s->drawing_area)),
-			      NULL);
+	gdk_window_set_cursor(window, NULL);
     }
 }
 
@@ -111,7 +117,7 @@ static void gd_update(DisplayState *ds, int x, int y, int w, int h)
     GtkDisplayState *s = ds->opaque;
     int x1, x2, y1, y2;
 
-//    dprintf("update(x=%d, y=%d, w=%d, h=%d)\n", x, y, w, h);
+    dprintf("update(x=%d, y=%d, w=%d, h=%d)\n", x, y, w, h);
 
     x1 = floor(x * s->scale_x);
     y1 = floor(y * s->scale_y);
@@ -268,7 +274,10 @@ static gboolean gd_motion_event(GtkWidget *widget, GdkEventMotion *motion,
     s->last_x = x;
     s->last_y = y;
 
-    kbd_mouse_event(dx, dy, 0, s->button_mask);
+    if (kbd_mouse_is_absolute() ||
+        gtk_check_menu_item_get_active(GTK_CHECK_MENU_ITEM(s->grab_item))) {
+        kbd_mouse_event(dx, dy, 0, s->button_mask);
+    }
         
     return TRUE;
 }
@@ -393,6 +402,7 @@ static void gd_menu_full_screen(GtkMenuItem *item, void *opaque)
         gtk_widget_set_size_request(s->drawing_area, -1, -1);
         gtk_window_set_resizable(GTK_WINDOW(s->window), TRUE);
         gtk_window_fullscreen(GTK_WINDOW(s->window));
+        gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(s->grab_item), TRUE);
         s->full_screen = TRUE;
     } else {
         gtk_window_unfullscreen(GTK_WINDOW(s->window));
@@ -400,10 +410,11 @@ static void gd_menu_full_screen(GtkMenuItem *item, void *opaque)
         gtk_widget_set_size_request(s->menu_bar, -1, -1);
         gtk_widget_set_size_request(s->drawing_area, s->ds->surface->width, s->ds->surface->height);
         gtk_window_set_resizable(GTK_WINDOW(s->window), FALSE);
+        gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(s->grab_item), FALSE);
         s->full_screen = FALSE;
     }
 
-    gd_update_cursor(s);
+    gd_update_cursor(s, FALSE);
 }
 
 static void gd_menu_zoom_in(GtkMenuItem *item, void *opaque)
@@ -424,6 +435,37 @@ static void gd_menu_zoom_out(GtkMenuItem *item, void *opaque)
     s->scale_y *= .75;
 
     gd_resize(s->ds);
+}
+
+static void gd_menu_grab_input(GtkMenuItem *item, void *opaque)
+{
+    GtkDisplayState *s = opaque;
+
+    if (gtk_check_menu_item_get_active(GTK_CHECK_MENU_ITEM(s->grab_item))) {
+        gtk_window_set_title(GTK_WINDOW(s->window),
+                             "QEMU - Press Ctrl+Alt+G to release grab");
+
+	gdk_keyboard_grab(gtk_widget_get_window(GTK_WIDGET(s->drawing_area)),
+			  FALSE,
+			  GDK_CURRENT_TIME);
+	gdk_pointer_grab(gtk_widget_get_window(GTK_WIDGET(s->drawing_area)),
+			 FALSE, /* All events to come to our window directly */
+			 GDK_POINTER_MOTION_MASK |
+			 GDK_BUTTON_PRESS_MASK |
+			 GDK_BUTTON_RELEASE_MASK |
+			 GDK_BUTTON_MOTION_MASK |
+			 GDK_SCROLL_MASK,
+			 NULL, /* Allow cursor to move over entire desktop */
+                         s->null_cursor,
+			 GDK_CURRENT_TIME);
+    } else {
+        gtk_window_set_title(GTK_WINDOW(s->window), "QEMU");
+
+	gdk_keyboard_ungrab(GDK_CURRENT_TIME);
+	gdk_pointer_ungrab(GDK_CURRENT_TIME);
+    }
+
+    gd_update_cursor(s, FALSE);
 }
 
 static int gd_vc_chr_write(CharDriverState *chr, const uint8_t *buf, int len)
@@ -546,7 +588,33 @@ static GSList *gd_vc_init(GtkDisplayState *s, VirtualConsole *vc, int index, GSL
 
 static void gd_mouse_mode_change(Notifier *notify, void *data)
 {
-    gd_update_cursor(container_of(notify, GtkDisplayState, mouse_mode_notifier));
+    gd_update_cursor(container_of(notify, GtkDisplayState, mouse_mode_notifier),
+                     FALSE);
+}
+
+static void gd_change_page(GtkNotebook *nb, gpointer arg1, guint arg2,
+                           gpointer data)
+{
+    GtkDisplayState *s = data;
+    gboolean on_vga;
+
+    if (!gtk_widget_get_realized(s->notebook)) {
+        return;
+    }
+
+    on_vga = arg2 == 0;
+
+    if (!on_vga) {
+        gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(s->grab_item),
+                                       FALSE);
+    } else if (s->full_screen) {
+        gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(s->grab_item),
+                                       TRUE);
+    }
+
+    gtk_widget_set_sensitive(s->grab_item, on_vga);
+
+    gd_update_cursor(s, TRUE);
 }
 
 void gtk_display_init(DisplayState *ds)
@@ -617,17 +685,14 @@ void gtk_display_init(DisplayState *ds)
     gtk_accel_map_add_entry("<QEMU>/View/Zoom Out", GDK_KEY_minus, GDK_CONTROL_MASK | GDK_MOD1_MASK);
     gtk_menu_append(GTK_MENU(s->view_menu), s->zoom_out_item);
 
-    /* TODO
-     * 1) disable scaling
-     *    - how does this interact with full screen mode?
-     *    - this isn't a toggle
-     *    - it's more like, scale to guest size
-     * 2) zoom in
-     *    - ctrl alt +
-     * 3) zoom out
-     *    - ctrl alt -
-     * 4) actually scale the guest image to the window size
-     */
+    separator = gtk_separator_menu_item_new();
+    gtk_menu_append(GTK_MENU(s->view_menu), separator);
+
+    s->grab_item = gtk_check_menu_item_new_with_mnemonic("_Grab Input");
+    gtk_menu_item_set_accel_path(GTK_MENU_ITEM(s->grab_item),
+                                 "<QEMU>/View/Grab Input");
+    gtk_accel_map_add_entry("<QEMU>/View/Grab Input", GDK_KEY_g, GDK_CONTROL_MASK | GDK_MOD1_MASK);
+    gtk_menu_append(GTK_MENU(s->view_menu), s->grab_item);
 
     separator = gtk_separator_menu_item_new();
     gtk_menu_append(GTK_MENU(s->view_menu), separator);
@@ -686,6 +751,10 @@ void gtk_display_init(DisplayState *ds)
                      G_CALLBACK(gd_menu_zoom_out), s);
     g_signal_connect(s->vga_item, "activate",
                      G_CALLBACK(gd_menu_switch_vc), s);
+    g_signal_connect(s->grab_item, "activate",
+                     G_CALLBACK(gd_menu_grab_input), s);
+    g_signal_connect(s->notebook, "switch-page",
+                     G_CALLBACK(gd_change_page), s);
 
     gtk_widget_add_events(s->drawing_area,
                           GDK_POINTER_MOTION_MASK |
