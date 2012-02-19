@@ -1551,9 +1551,9 @@ static CharDriverState *text_console_init(QemuOpts *opts)
 
 static VcHandler *vc_handler = text_console_init;
 
-int vc_init(QemuOpts *opts, CharDriverState **_chr)
+CharDriverState *vc_init(QemuOpts *opts)
 {
-    return vc_handler(opts, _chr);
+    return vc_handler(opts);
 }
 
 void register_vc_handler(VcHandler *handler)
