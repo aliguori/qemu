@@ -18,7 +18,6 @@
 /*
  * TODO
  *
- * 1) warp mouse to avoid invisible wall
  * 2) cleanup code
  */
 
@@ -266,6 +265,9 @@ static gboolean gd_motion_event(GtkWidget *widget, GdkEventMotion *motion,
     if (kbd_mouse_is_absolute()) {
         dx = x * 0x7FFF / (s->ds->surface->width - 1);
         dy = y * 0x7FFF / (s->ds->surface->height - 1);
+    } else if (s->last_x == -1 || s->last_y == -1) {
+        dx = 0;
+        dy = 0;
     } else {
         dx = x - s->last_x;
         dy = y - s->last_y;
@@ -278,7 +280,42 @@ static gboolean gd_motion_event(GtkWidget *widget, GdkEventMotion *motion,
         gtk_check_menu_item_get_active(GTK_CHECK_MENU_ITEM(s->grab_item))) {
         kbd_mouse_event(dx, dy, 0, s->button_mask);
     }
-        
+
+    if (!kbd_mouse_is_absolute() &&
+        gtk_check_menu_item_get_active(GTK_CHECK_MENU_ITEM(s->grab_item))) {
+        GdkDrawable *drawable = GDK_DRAWABLE(gtk_widget_get_window(s->drawing_area));
+        GdkDisplay *display = gdk_drawable_get_display(drawable);
+        GdkScreen *screen = gdk_drawable_get_screen(drawable);
+        int x = (int)motion->x_root;
+        int y = (int)motion->y_root;
+
+        /* In relative mode check to see if client pointer hit
+         * one of the screen edges, and if so move it back by
+         * 200 pixels. This is important because the pointer
+         * in the server doesn't correspond 1-for-1, and so
+         * may still be only half way across the screen. Without
+         * this warp, the server pointer would thus appear to hit
+         * an invisible wall */
+        if (x == 0) {
+            x += 200;
+        }
+        if (y == 0) {
+            y += 200;
+        }
+        if (x == (gdk_screen_get_width(screen) - 1)) {
+            x -= 200;
+        }
+        if (y == (gdk_screen_get_height(screen) - 1)) {
+            y -= 200;
+        }
+
+        if (x != (int)motion->x_root || y != (int)motion->y_root) {
+            gdk_display_warp_pointer(display, screen, x, y);
+            s->last_x = -1;
+            s->last_y = -1;
+            return FALSE;
+        }
+    }        
     return TRUE;
 }
 
