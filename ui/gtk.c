@@ -79,6 +79,9 @@ typedef struct GtkDisplayState
 
     GtkWidget *view_menu_item;
     GtkWidget *view_menu;
+    GtkWidget *full_screen_item;
+    GtkWidget *zoom_in_item;
+    GtkWidget *zoom_out_item;
     GtkWidget *grab_item;
     GtkWidget *vga_item;
 
@@ -99,6 +102,7 @@ typedef struct GtkDisplayState
 
     double scale_x;
     double scale_y;
+    gboolean full_screen;
 
     GdkCursor *null_cursor;
     Notifier mouse_mode_notifier;
@@ -123,7 +127,7 @@ static void gd_update_cursor(GtkDisplayState *s, gboolean override)
     on_vga = (gtk_notebook_get_current_page(GTK_NOTEBOOK(s->notebook)) == 0);
 
     if ((override || on_vga) &&
-        (kbd_mouse_is_absolute() || gd_is_grab_active(s))) {
+        (s->full_screen || kbd_mouse_is_absolute() || gd_is_grab_active(s))) {
 	gdk_window_set_cursor(window, s->null_cursor);
     } else {
 	gdk_window_set_cursor(window, NULL);
@@ -215,9 +219,11 @@ static void gd_resize(DisplayState *ds)
                                                      ds->surface->height,
                                                      ds->surface->linesize);
 
-    gtk_widget_set_size_request(s->drawing_area,
-                                ds->surface->width * s->scale_x,
-                                ds->surface->height * s->scale_y);
+    if (!s->full_screen) {
+        gtk_widget_set_size_request(s->drawing_area,
+                                    ds->surface->width * s->scale_x,
+                                    ds->surface->height * s->scale_y);
+    }
 }
 
 /** QEMU Events **/
@@ -474,6 +480,54 @@ static void gd_menu_show_tabs(GtkMenuItem *item, void *opaque)
     }
 }
 
+static void gd_menu_full_screen(GtkMenuItem *item, void *opaque)
+{
+    GtkDisplayState *s = opaque;
+
+    if (gtk_check_menu_item_get_active(GTK_CHECK_MENU_ITEM(s->full_screen_item))) {
+        gtk_notebook_set_show_tabs(GTK_NOTEBOOK(s->notebook), FALSE);
+        gtk_widget_set_size_request(s->menu_bar, 0, 0);
+        gtk_widget_set_size_request(s->drawing_area, -1, -1);
+        gtk_window_set_resizable(GTK_WINDOW(s->window), TRUE);
+        gtk_window_fullscreen(GTK_WINDOW(s->window));
+        gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(s->grab_item), TRUE);
+        s->full_screen = TRUE;
+    } else {
+        gtk_window_unfullscreen(GTK_WINDOW(s->window));
+        gd_menu_show_tabs(GTK_MENU_ITEM(s->show_tabs_item), s);
+        gtk_widget_set_size_request(s->menu_bar, -1, -1);
+        gtk_widget_set_size_request(s->drawing_area, s->ds->surface->width, s->ds->surface->height);
+        gtk_window_set_resizable(GTK_WINDOW(s->window), FALSE);
+        gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(s->grab_item), FALSE);
+        s->full_screen = FALSE;
+    }
+
+    gd_update_cursor(s, FALSE);
+}
+
+static void gd_menu_zoom_in(GtkMenuItem *item, void *opaque)
+{
+    GtkDisplayState *s = opaque;
+
+    s->scale_x += .25;
+    s->scale_y += .25;
+
+    gd_resize(s->ds);
+}
+
+static void gd_menu_zoom_out(GtkMenuItem *item, void *opaque)
+{
+    GtkDisplayState *s = opaque;
+
+    s->scale_x -= .25;
+    s->scale_y -= .25;
+
+    s->scale_x = MAX(s->scale_x, .25);
+    s->scale_y = MAX(s->scale_y, .25);
+
+    gd_resize(s->ds);
+}
+
 static void gd_menu_grab_input(GtkMenuItem *item, void *opaque)
 {
     GtkDisplayState *s = opaque;
@@ -523,6 +577,9 @@ static void gd_change_page(GtkNotebook *nb, gpointer arg1, guint arg2,
     if (!on_vga) {
         gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(s->grab_item),
                                        FALSE);
+    } else if (s->full_screen) {
+        gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(s->grab_item),
+                                       TRUE);
     }
 
     if (arg2 == 0) {
@@ -690,6 +747,12 @@ static void gd_connect_signals(GtkDisplayState *s)
 
     g_signal_connect(s->quit_item, "activate",
                      G_CALLBACK(gd_menu_quit), s);
+    g_signal_connect(s->full_screen_item, "activate",
+                     G_CALLBACK(gd_menu_full_screen), s);
+    g_signal_connect(s->zoom_in_item, "activate",
+                     G_CALLBACK(gd_menu_zoom_in), s);
+    g_signal_connect(s->zoom_out_item, "activate",
+                     G_CALLBACK(gd_menu_zoom_out), s);
     g_signal_connect(s->vga_item, "activate",
                      G_CALLBACK(gd_menu_switch_vc), s);
     g_signal_connect(s->grab_item, "activate",
@@ -720,6 +783,27 @@ static void gd_create_menus(GtkDisplayState *s)
     s->view_menu = gtk_menu_new();
     gtk_menu_set_accel_group(GTK_MENU(s->view_menu), accel_group);
     s->view_menu_item = gtk_menu_item_new_with_mnemonic("_View");
+
+    s->full_screen_item = gtk_check_menu_item_new_with_mnemonic("_Full Screen");
+    gtk_menu_item_set_accel_path(GTK_MENU_ITEM(s->full_screen_item),
+                                 "<QEMU>/View/Full Screen");
+    gtk_accel_map_add_entry("<QEMU>/View/Full Screen", GDK_KEY_f, GDK_CONTROL_MASK | GDK_MOD1_MASK);
+    gtk_menu_append(GTK_MENU(s->view_menu), s->full_screen_item);
+
+    separator = gtk_separator_menu_item_new();
+    gtk_menu_append(GTK_MENU(s->view_menu), separator);
+
+    s->zoom_in_item = gtk_image_menu_item_new_from_stock(GTK_STOCK_ZOOM_IN, NULL);
+    gtk_menu_item_set_accel_path(GTK_MENU_ITEM(s->zoom_in_item),
+                                 "<QEMU>/View/Zoom In");
+    gtk_accel_map_add_entry("<QEMU>/View/Zoom In", GDK_KEY_plus, GDK_CONTROL_MASK | GDK_MOD1_MASK);
+    gtk_menu_append(GTK_MENU(s->view_menu), s->zoom_in_item);
+
+    s->zoom_out_item = gtk_image_menu_item_new_from_stock(GTK_STOCK_ZOOM_OUT, NULL);
+    gtk_menu_item_set_accel_path(GTK_MENU_ITEM(s->zoom_out_item),
+                                 "<QEMU>/View/Zoom Out");
+    gtk_accel_map_add_entry("<QEMU>/View/Zoom Out", GDK_KEY_minus, GDK_CONTROL_MASK | GDK_MOD1_MASK);
+    gtk_menu_append(GTK_MENU(s->view_menu), s->zoom_out_item);
 
     separator = gtk_separator_menu_item_new();
     gtk_menu_append(GTK_MENU(s->view_menu), separator);
