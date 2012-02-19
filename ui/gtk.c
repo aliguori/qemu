@@ -13,6 +13,15 @@
 #include <sys/un.h>
 #include <sys/wait.h>
 #include <pty.h>
+#include <math.h>
+
+/*
+ * TODO
+ *
+ * 1) hide mouse
+ * 2) mouse grab
+ * 3) zoom in/out
+ */
 
 #define MAX_VCS 10
 
@@ -38,6 +47,8 @@ typedef struct GtkDisplayState
     GtkWidget *view_menu_item;
     GtkWidget *view_menu;
     GtkWidget *full_screen_item;
+    GtkWidget *zoom_in_item;
+    GtkWidget *zoom_out_item;
     GtkWidget *vga_item;
 
     int nb_vcs;
@@ -58,6 +69,9 @@ typedef struct GtkDisplayState
     double scale_x;
     double scale_y;
     gboolean full_screen;
+
+    GdkCursor *null_cursor;
+    Notifier mouse_mode_notifier;
 } GtkDisplayState;
 
 static GtkDisplayState *global_state;
@@ -81,17 +95,31 @@ static gboolean gd_window_close(GtkWidget *widget, GdkEvent *event,
     return TRUE;
 }
 
+static void gd_update_cursor(GtkDisplayState *s)
+{
+    if (s->full_screen || kbd_mouse_is_absolute()) {
+	gdk_window_set_cursor(gtk_widget_get_window(GTK_WIDGET(s->drawing_area)),
+			      s->null_cursor);
+    } else {
+	gdk_window_set_cursor(gtk_widget_get_window(GTK_WIDGET(s->drawing_area)),
+			      NULL);
+    }
+}
+
 static void gd_update(DisplayState *ds, int x, int y, int w, int h)
 {
     GtkDisplayState *s = ds->opaque;
+    int x1, x2, y1, y2;
 
 //    dprintf("update(x=%d, y=%d, w=%d, h=%d)\n", x, y, w, h);
 
-    gtk_widget_queue_draw_area(s->drawing_area,
-                               x * s->scale_x,
-                               y * s->scale_y,
-                               w * s->scale_x,
-                               h * s->scale_y);
+    x1 = floor(x * s->scale_x);
+    y1 = floor(y * s->scale_y);
+
+    x2 = ceil(x * s->scale_x + w * s->scale_x);
+    y2 = ceil(y * s->scale_y + h * s->scale_y);
+
+    gtk_widget_queue_draw_area(s->drawing_area, x1, y1, (x2 - x1), (y2 - y1));
 }
 
 static void gd_refresh(DisplayState *ds)
@@ -138,8 +166,8 @@ static void gd_resize(DisplayState *ds)
 
     if (!s->full_screen) {
         gtk_widget_set_size_request(s->drawing_area,
-                                    ds->surface->width,
-                                    ds->surface->height);
+                                    ds->surface->width * s->scale_x,
+                                    ds->surface->height * s->scale_y);
     }
 }
 
@@ -183,7 +211,7 @@ static gboolean gd_draw_event(GtkWidget *widget, cairo_t *cr, void *opaque)
 
     cairo_rectangle(cr, 0, 0, ww, wh);
 
-    if (ww > fbw || wh > fbh) {
+    if (ww != fbw || wh != fbh) {
         s->scale_x = (double)ww / fbw;
         s->scale_y = (double)wh / fbh;
         cairo_scale(cr, s->scale_x, s->scale_y);
@@ -224,17 +252,21 @@ static gboolean gd_motion_event(GtkWidget *widget, GdkEventMotion *motion,
 {
     GtkDisplayState *s = opaque;
     int dx, dy;
+    int x, y;
+
+    x = motion->x / s->scale_x;
+    y = motion->y / s->scale_y;
 
     if (kbd_mouse_is_absolute()) {
-        dx = motion->x * 0x7FFF / (s->ds->surface->width - 1);
-        dy = motion->y * 0x7FFF / (s->ds->surface->height - 1);
+        dx = x * 0x7FFF / (s->ds->surface->width - 1);
+        dy = y * 0x7FFF / (s->ds->surface->height - 1);
     } else {
-        dx = motion->x - s->last_x;
-        dy = motion->y - s->last_y;
+        dx = x - s->last_x;
+        dy = y - s->last_y;
     }
 
-    s->last_x = motion->x;
-    s->last_y = motion->y;
+    s->last_x = x;
+    s->last_y = y;
 
     kbd_mouse_event(dx, dy, 0, s->button_mask);
         
@@ -370,6 +402,28 @@ static void gd_menu_full_screen(GtkMenuItem *item, void *opaque)
         gtk_window_set_resizable(GTK_WINDOW(s->window), FALSE);
         s->full_screen = FALSE;
     }
+
+    gd_update_cursor(s);
+}
+
+static void gd_menu_zoom_in(GtkMenuItem *item, void *opaque)
+{
+    GtkDisplayState *s = opaque;
+
+    s->scale_x *= 1.25;
+    s->scale_y *= 1.25;
+
+    gd_resize(s->ds);
+}
+
+static void gd_menu_zoom_out(GtkMenuItem *item, void *opaque)
+{
+    GtkDisplayState *s = opaque;
+
+    s->scale_x *= .75;
+    s->scale_y *= .75;
+
+    gd_resize(s->ds);
 }
 
 static int gd_vc_chr_write(CharDriverState *chr, const uint8_t *buf, int len)
@@ -490,6 +544,11 @@ static GSList *gd_vc_init(GtkDisplayState *s, VirtualConsole *vc, int index, GSL
     return group;
 }
 
+static void gd_mouse_mode_change(Notifier *notify, void *data)
+{
+    gd_update_cursor(container_of(notify, GtkDisplayState, mouse_mode_notifier));
+}
+
 void gtk_display_init(DisplayState *ds)
 {
     GtkDisplayState *s = g_malloc0(sizeof(*s));
@@ -517,6 +576,11 @@ void gtk_display_init(DisplayState *ds)
     s->scale_x = 1.0;
     s->scale_y = 1.0;
 
+    s->null_cursor = gdk_cursor_new(GDK_BLANK_CURSOR);
+
+    s->mouse_mode_notifier.notify = gd_mouse_mode_change;
+    qemu_add_mouse_mode_change_notifier(&s->mouse_mode_notifier);
+
     accel_group = gtk_accel_group_new();
     s->file_menu = gtk_menu_new();
     gtk_menu_set_accel_group(GTK_MENU(s->file_menu), accel_group);
@@ -537,6 +601,21 @@ void gtk_display_init(DisplayState *ds)
                                  "<QEMU>/View/Full Screen");
     gtk_accel_map_add_entry("<QEMU>/View/Full Screen", GDK_KEY_f, GDK_CONTROL_MASK | GDK_MOD1_MASK);
     gtk_menu_append(GTK_MENU(s->view_menu), s->full_screen_item);
+
+    separator = gtk_separator_menu_item_new();
+    gtk_menu_append(GTK_MENU(s->view_menu), separator);
+
+    s->zoom_in_item = gtk_image_menu_item_new_from_stock(GTK_STOCK_ZOOM_IN, NULL);
+    gtk_menu_item_set_accel_path(GTK_MENU_ITEM(s->zoom_in_item),
+                                 "<QEMU>/View/Zoom In");
+    gtk_accel_map_add_entry("<QEMU>/View/Zoom In", GDK_KEY_equal, GDK_CONTROL_MASK | GDK_MOD1_MASK);
+    gtk_menu_append(GTK_MENU(s->view_menu), s->zoom_in_item);
+
+    s->zoom_out_item = gtk_image_menu_item_new_from_stock(GTK_STOCK_ZOOM_OUT, NULL);
+    gtk_menu_item_set_accel_path(GTK_MENU_ITEM(s->zoom_out_item),
+                                 "<QEMU>/View/Zoom Out");
+    gtk_accel_map_add_entry("<QEMU>/View/Zoom Out", GDK_KEY_minus, GDK_CONTROL_MASK | GDK_MOD1_MASK);
+    gtk_menu_append(GTK_MENU(s->view_menu), s->zoom_out_item);
 
     /* TODO
      * 1) disable scaling
@@ -601,6 +680,10 @@ void gtk_display_init(DisplayState *ds)
                      G_CALLBACK(gd_menu_quit), s);
     g_signal_connect(s->full_screen_item, "activate",
                      G_CALLBACK(gd_menu_full_screen), s);
+    g_signal_connect(s->zoom_in_item, "activate",
+                     G_CALLBACK(gd_menu_zoom_in), s);
+    g_signal_connect(s->zoom_out_item, "activate",
+                     G_CALLBACK(gd_menu_zoom_out), s);
     g_signal_connect(s->vga_item, "activate",
                      G_CALLBACK(gd_menu_switch_vc), s);
 
