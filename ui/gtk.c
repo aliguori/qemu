@@ -31,8 +31,12 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301 USA
  */
 
+#define GETTEXT_PACKAGE "qemu"
+#define LOCALEDIR "po"
+
 #include <gtk/gtk.h>
 #include <gdk/gdkkeysyms.h>
+#include <glib/gi18n.h>
 #include <vte/vte.h>
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -940,7 +944,7 @@ static void gd_create_menus(GtkDisplayState *s)
     accel_group = gtk_accel_group_new();
     s->file_menu = gtk_menu_new();
     gtk_menu_set_accel_group(GTK_MENU(s->file_menu), accel_group);
-    s->file_menu_item = gtk_menu_item_new_with_mnemonic("_File");
+    s->file_menu_item = gtk_menu_item_new_with_mnemonic(_("_File"));
 
     s->quit_item = gtk_image_menu_item_new_from_stock(GTK_STOCK_QUIT, NULL);
     gtk_stock_lookup(GTK_STOCK_QUIT, &item);
@@ -950,9 +954,9 @@ static void gd_create_menus(GtkDisplayState *s)
 
     s->view_menu = gtk_menu_new();
     gtk_menu_set_accel_group(GTK_MENU(s->view_menu), accel_group);
-    s->view_menu_item = gtk_menu_item_new_with_mnemonic("_View");
+    s->view_menu_item = gtk_menu_item_new_with_mnemonic(_("_View"));
 
-    s->full_screen_item = gtk_check_menu_item_new_with_mnemonic("_Full Screen");
+    s->full_screen_item = gtk_check_menu_item_new_with_mnemonic(_("_Full Screen"));
     gtk_menu_item_set_accel_path(GTK_MENU_ITEM(s->full_screen_item),
                                  "<QEMU>/View/Full Screen");
     gtk_accel_map_add_entry("<QEMU>/View/Full Screen", GDK_KEY_f, GDK_CONTROL_MASK | GDK_MOD1_MASK);
@@ -985,10 +989,10 @@ static void gd_create_menus(GtkDisplayState *s)
     separator = gtk_separator_menu_item_new();
     gtk_menu_append(GTK_MENU(s->view_menu), separator);
 
-    s->grab_on_hover_item = gtk_check_menu_item_new_with_mnemonic("Grab On _Hover");
+    s->grab_on_hover_item = gtk_check_menu_item_new_with_mnemonic(_("Grab On _Hover"));
     gtk_menu_append(GTK_MENU(s->view_menu), s->grab_on_hover_item);
 
-    s->grab_item = gtk_check_menu_item_new_with_mnemonic("_Grab Input");
+    s->grab_item = gtk_check_menu_item_new_with_mnemonic(_("_Grab Input"));
     gtk_menu_item_set_accel_path(GTK_MENU_ITEM(s->grab_item),
                                  "<QEMU>/View/Grab Input");
     gtk_accel_map_add_entry("<QEMU>/View/Grab Input", GDK_KEY_g, GDK_CONTROL_MASK | GDK_MOD1_MASK);
@@ -1014,7 +1018,7 @@ static void gd_create_menus(GtkDisplayState *s)
     separator = gtk_separator_menu_item_new();
     gtk_menu_append(GTK_MENU(s->view_menu), separator);
 
-    s->show_tabs_item = gtk_check_menu_item_new_with_mnemonic("Show _Tabs");
+    s->show_tabs_item = gtk_check_menu_item_new_with_mnemonic(_("Show _Tabs"));
     gtk_menu_append(GTK_MENU(s->view_menu), s->show_tabs_item);
 
     g_object_set_data(G_OBJECT(s->window), "accel_group", accel_group);
@@ -1050,6 +1054,10 @@ void gtk_display_init(DisplayState *ds)
     s->scale_x = 1.0;
     s->scale_y = 1.0;
     s->free_scale = FALSE;
+
+    setlocale(LC_ALL, "");
+    bindtextdomain("qemu", CONFIG_QEMU_LOCALEDIR);
+    textdomain("qemu");
 
     s->null_cursor = gdk_cursor_new(GDK_BLANK_CURSOR);
 
