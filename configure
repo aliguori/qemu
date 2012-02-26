@@ -3916,6 +3916,10 @@ if [ "$source_path" != `pwd` ]; then
     mkdir -p libcacard
     rm -f libcacard/Makefile
     symlink "$source_path/libcacard/Makefile" libcacard/Makefile
+
+    mkdir -p po
+    rm -f po/Makefile
+    symlink "$source_path/po/Makefile" po/Makefile
 fi
 
 d=libuser
