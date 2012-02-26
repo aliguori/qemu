@@ -3055,6 +3055,7 @@ fi
 
 qemu_confdir=$sysconfdir$confsuffix
 qemu_datadir=$datadir$confsuffix
+qemu_localedir="$datadir/locale"
 
 tools=
 if test "$softmmu" = yes ; then
@@ -3207,6 +3208,7 @@ echo "sysconfdir=$sysconfdir" >> $config_host_mak
 echo "qemu_confdir=$qemu_confdir" >> $config_host_mak
 echo "qemu_datadir=$qemu_datadir" >> $config_host_mak
 echo "qemu_docdir=$qemu_docdir" >> $config_host_mak
+echo "qemu_localedir=$qemu_localedir" >> $config_host_mak
 echo "libexecdir=\${prefix}/libexec" >> $config_host_mak
 echo "CONFIG_QEMU_HELPERDIR=\"$prefix/libexec\"" >> $config_host_mak
 
@@ -4135,7 +4137,7 @@ DIRS="$DIRS qapi-generated"
 DIRS="$DIRS libcacard libcacard/libcacard libcacard/trace"
 FILES="Makefile tests/tcg/Makefile qdict-test-data.txt"
 FILES="$FILES tests/tcg/cris/Makefile tests/tcg/cris/.gdbinit"
-FILES="$FILES tests/tcg/lm32/Makefile libcacard/Makefile"
+FILES="$FILES tests/tcg/lm32/Makefile libcacard/Makefile po/Makefile"
 FILES="$FILES pc-bios/optionrom/Makefile pc-bios/keymaps"
 FILES="$FILES pc-bios/spapr-rtas/Makefile"
 FILES="$FILES roms/seabios/Makefile roms/vgabios/Makefile"
