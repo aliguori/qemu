@@ -577,6 +577,10 @@ static QemuOptsList qemu_machine_opts = {
             .type = QEMU_OPT_BOOL,
             .help = "start machine immediately",
         }, {
+            .name = "bios",
+            .type = QEMU_OPT_STRING,
+            .help = "BIOS/firmware file",
+        }, {
             .name = "kernel_irqchip",
             .type = QEMU_OPT_BOOL,
             .help = "use KVM in-kernel irqchip",
