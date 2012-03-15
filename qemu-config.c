@@ -612,6 +612,10 @@ static QemuOptsList qemu_machine_opts = {
             .name = "dump-guest-core",
             .type = QEMU_OPT_BOOL,
             .help = "Include guest memory in  a core dump",
+        }, {
+            .name = "ram_size",
+            .type = QEMU_OPT_SIZE,
+            .help = "RAM size",
         },
         { /* End of list */ }
     },
