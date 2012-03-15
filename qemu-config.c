@@ -573,6 +573,10 @@ static QemuOptsList qemu_machine_opts = {
             .type = QEMU_OPT_STRING,
             .help = "accelerator list",
         }, {
+            .name = "autostart",
+            .type = QEMU_OPT_BOOL,
+            .help = "start machine immediately",
+        }, {
             .name = "kernel_irqchip",
             .type = QEMU_OPT_BOOL,
             .help = "use KVM in-kernel irqchip",

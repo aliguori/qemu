@@ -2767,7 +2767,7 @@ int main(int argc, char **argv, char **envp)
                 singlestep = 1;
                 break;
             case QEMU_OPTION_S:
-                autostart = 0;
+                qemu_opts_set(qemu_find_opts("machine"), 0, "autostart", "off");
                 break;
 	    case QEMU_OPTION_k:
 		keyboard_layout = optarg;
@@ -3427,6 +3427,7 @@ int main(int argc, char **argv, char **envp)
     if (machine_opts) {
         uint64_t sz;
 
+        autostart = qemu_opt_get_bool(machine_opts, "autostart", true);
         kernel_filename = qemu_opt_get(machine_opts, "kernel");
         initrd_filename = qemu_opt_get(machine_opts, "initrd");
         kernel_cmdline = qemu_opt_get(machine_opts, "append");
