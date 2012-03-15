@@ -634,6 +634,36 @@ static QemuOptsList qemu_machine_opts = {
     },
 };
 
+QemuOptsList qemu_smp_opts = {
+    .name = "smp",
+    .head = QTAILQ_HEAD_INITIALIZER(qemu_smp_opts.head),
+    .implied_opt_name = "cpus",
+    .desc = {
+        {
+            .name = "cpus",
+            .type = QEMU_OPT_NUMBER,
+            .help = "Number of CPUs",
+        }, {
+            .name = "sockets",
+            .type = QEMU_OPT_NUMBER,
+            .help = "Number of sockets",
+        }, {
+            .name = "cores",
+            .type = QEMU_OPT_NUMBER,
+            .help = "Number of cores per socket",
+        }, {
+            .name = "threads",
+            .type = QEMU_OPT_NUMBER,
+            .help = "Number of simultaneous threads per core",
+        }, {
+            .name = "maxcpus",
+            .type = QEMU_OPT_NUMBER,
+            .help = "Maximum number of pluggable CPUs",
+        },
+        { /*End of list */ }
+    },
+};
+
 QemuOptsList qemu_boot_opts = {
     .name = "boot-opts",
     .head = QTAILQ_HEAD_INITIALIZER(qemu_boot_opts.head),
@@ -673,6 +703,7 @@ static QemuOptsList *vm_config_groups[32] = {
     &qemu_trace_opts,
     &qemu_option_rom_opts,
     &qemu_machine_opts,
+    &qemu_smp_opts,
     &qemu_boot_opts,
     &qemu_iscsi_opts,
     &qemu_sandbox_opts,

@@ -1026,26 +1026,15 @@ static void numa_add(const char *optarg)
     return;
 }
 
-static void smp_parse(const char *optarg)
+static int smp_init_func(QemuOpts *opts, void *opaque)
 {
     int smp, sockets = 0, threads = 0, cores = 0;
-    char *endptr;
-    char option[128];
 
-    smp = strtoul(optarg, &endptr, 10);
-    if (endptr != optarg) {
-        if (*endptr == ',') {
-            endptr++;
-        }
-    }
-    if (get_param_value(option, 128, "sockets", endptr) != 0)
-        sockets = strtoull(option, NULL, 10);
-    if (get_param_value(option, 128, "cores", endptr) != 0)
-        cores = strtoull(option, NULL, 10);
-    if (get_param_value(option, 128, "threads", endptr) != 0)
-        threads = strtoull(option, NULL, 10);
-    if (get_param_value(option, 128, "maxcpus", endptr) != 0)
-        max_cpus = strtoull(option, NULL, 10);
+    smp = qemu_opt_get_number(opts, "cpus", 0);
+    sockets = qemu_opt_get_number(opts, "sockets", 0);
+    cores = qemu_opt_get_number(opts, "cores", 0);
+    threads = qemu_opt_get_number(opts, "threads", 0);
+    max_cpus = qemu_opt_get_number(opts, "maxcpus", 0);
 
     /* compute missing values, prefer sockets over cores over threads */
     if (smp == 0 || sockets == 0) {
@@ -1066,8 +1055,22 @@ static void smp_parse(const char *optarg)
     smp_cpus = smp;
     smp_cores = cores > 0 ? cores : 1;
     smp_threads = threads > 0 ? threads : 1;
-    if (max_cpus == 0)
+    if (max_cpus == 0) {
         max_cpus = smp_cpus;
+    }
+    if (smp_cpus < 1) {
+        fprintf(stderr, "Invalid number of CPUs\n");
+        return 1;
+    }
+    if (max_cpus < smp_cpus) {
+        fprintf(stderr, "maxcpus must be equal to or greater than cpus\n");
+        return 1;
+    }
+    if (max_cpus > 255) {
+        fprintf(stderr, "Unsupported number of maxcpus\n");
+        return 1;
+    }
+    return 0;
 }
 
 /***********************************************************/
@@ -3055,20 +3058,7 @@ int main(int argc, char **argv, char **envp)
                 }
                 break;
             case QEMU_OPTION_smp:
-                smp_parse(optarg);
-                if (smp_cpus < 1) {
-                    fprintf(stderr, "Invalid number of CPUs\n");
-                    exit(1);
-                }
-                if (max_cpus < smp_cpus) {
-                    fprintf(stderr, "maxcpus must be equal to or greater than "
-                            "smp\n");
-                    exit(1);
-                }
-                if (max_cpus > 255) {
-                    fprintf(stderr, "Unsupported number of maxcpus\n");
-                    exit(1);
-                }
+                qemu_opts_parse(qemu_find_opts("smp"), optarg, 1);
                 break;
 	    case QEMU_OPTION_vnc:
 #ifdef CONFIG_VNC
@@ -3336,9 +3326,12 @@ int main(int argc, char **argv, char **envp)
      * Default to max_cpus = smp_cpus, in case the user doesn't
      * specify a max_cpus value.
      */
-    if (!max_cpus)
+    if (qemu_opts_foreach(qemu_find_opts("smp"), smp_init_func, NULL, 1) != 0) {
+        exit(1);
+    }
+    if (!max_cpus) {
         max_cpus = smp_cpus;
-
+    }
     machine->max_cpus = machine->max_cpus ?: 1; /* Default to UP */
     if (smp_cpus > machine->max_cpus) {
         fprintf(stderr, "Number of SMP cpus requested (%d), exceeds max cpus "
