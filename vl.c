@@ -3178,15 +3178,7 @@ int main(int argc, char **argv, char **envp)
                 runstate_set(RUN_STATE_INMIGRATE);
                 break;
             case QEMU_OPTION_nodefaults:
-                default_serial = 0;
-                default_parallel = 0;
-                default_virtcon = 0;
-                default_monitor = 0;
-                default_net = 0;
-                default_floppy = 0;
-                default_cdrom = 0;
-                default_sdcard = 0;
-                default_vga = 0;
+                qemu_opts_set(qemu_find_opts("machine"), 0, "default_devices", "off");
                 break;
             case QEMU_OPTION_xen_domid:
                 if (!(xen_available())) {
@@ -3362,28 +3354,33 @@ int main(int argc, char **argv, char **envp)
     if (machine->default_machine_opts) {
         qemu_opts_set_defaults(qemu_find_opts("machine"),
                                machine->default_machine_opts, 0);
+        machine_opts = qemu_opts_find(qemu_find_opts("machine"), 0);
     }
 
-    qemu_opts_foreach(qemu_find_opts("device"), default_driver_check, NULL, 0);
-    qemu_opts_foreach(qemu_find_opts("global"), default_driver_check, NULL, 0);
+    if (qemu_opt_get_bool(machine_opts, "default_devices", true)) {
+        qemu_opts_foreach(qemu_find_opts("device"), default_driver_check, NULL, 0);
+        qemu_opts_foreach(qemu_find_opts("global"), default_driver_check, NULL, 0);
 
-    if (machine->no_serial) {
+        default_serial &= !machine->no_serial;
+        default_parallel &= !machine->no_parallel;
+        default_virtcon &= machine->use_virtcon;
+        default_floppy &= !machine->no_floppy;
+        default_cdrom &= !machine->no_cdrom;
+        default_sdcard &= !machine->no_sdcard;
+
+        /* No need for machine->no_vga.  Boards can simply ignore the
+         * vga_interface_type variable (most will, indeed).
+         */
+    } else {
         default_serial = 0;
-    }
-    if (machine->no_parallel) {
         default_parallel = 0;
-    }
-    if (!machine->use_virtcon) {
         default_virtcon = 0;
-    }
-    if (machine->no_floppy) {
+        default_monitor = 0;
+        default_net = 0;
         default_floppy = 0;
-    }
-    if (machine->no_cdrom) {
         default_cdrom = 0;
-    }
-    if (machine->no_sdcard) {
         default_sdcard = 0;
+        default_vga = 0;
     }
 
     if (display_type == DT_NOGRAPHIC) {
