@@ -664,6 +664,27 @@ QemuOptsList qemu_smp_opts = {
     },
 };
 
+QemuOptsList qemu_numa_opts = {
+    .name = "numa",
+    .head = QTAILQ_HEAD_INITIALIZER(qemu_numa_opts.head),
+    .desc = {
+        {
+            .name = "nodeid",
+            .type = QEMU_OPT_NUMBER,
+            .help = "Numeric identifier for the node",
+        }, {
+            .name = "mem",
+            .type = QEMU_OPT_SIZE,
+            .help = "Amount of memory for this node",
+        }, {
+            .name = "cpus",
+            .type = QEMU_OPT_STRING,
+            .help = "Identifier or range of identifiers for CPUs in this node",
+        },
+        { /*End of list */ }
+    },
+};
+
 QemuOptsList qemu_boot_opts = {
     .name = "boot-opts",
     .head = QTAILQ_HEAD_INITIALIZER(qemu_boot_opts.head),
@@ -704,6 +725,7 @@ static QemuOptsList *vm_config_groups[32] = {
     &qemu_option_rom_opts,
     &qemu_machine_opts,
     &qemu_smp_opts,
+    &qemu_numa_opts,
     &qemu_boot_opts,
     &qemu_iscsi_opts,
     &qemu_sandbox_opts,
