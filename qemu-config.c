@@ -574,6 +574,10 @@ static QemuOptsList qemu_machine_opts = {
             .type = QEMU_OPT_STRING,
             .help = "accelerator list",
         }, {
+            .name = "default_devices",
+            .type = QEMU_OPT_BOOL,
+            .help = "create default devices",
+        }, {
             .name = "autostart",
             .type = QEMU_OPT_BOOL,
             .help = "start machine immediately",
