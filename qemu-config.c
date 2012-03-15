@@ -328,6 +328,7 @@ static QemuOptsList qemu_net_opts = {
 
 static QemuOptsList qemu_rtc_opts = {
     .name = "rtc",
+    .merge_lists = true,
     .head = QTAILQ_HEAD_INITIALIZER(qemu_rtc_opts.head),
     .desc = {
         {

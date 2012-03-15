@@ -2773,7 +2773,7 @@ int main(int argc, char **argv, char **envp)
 		keyboard_layout = optarg;
 		break;
             case QEMU_OPTION_localtime:
-                rtc_utc = 0;
+                qemu_opts_parse(qemu_find_opts("rtc"), "base=localtime", 0);
                 break;
             case QEMU_OPTION_vga:
                 vga_model = optarg;
