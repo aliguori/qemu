@@ -2761,7 +2761,7 @@ int main(int argc, char **argv, char **envp)
                 data_dir = optarg;
                 break;
             case QEMU_OPTION_bios:
-                bios_name = optarg;
+                qemu_opts_set(qemu_find_opts("machine"), 0, "bios", optarg);
                 break;
             case QEMU_OPTION_singlestep:
                 singlestep = 1;
@@ -3422,12 +3422,14 @@ int main(int argc, char **argv, char **envp)
     }
 
     machine_opts = qemu_opts_find(qemu_find_opts("machine"), 0);
+    bios_name = NULL;
     kernel_filename = initrd_filename = kernel_cmdline = NULL;
     ram_size = DEFAULT_RAM_SIZE * 1024 * 1024;
     if (machine_opts) {
         uint64_t sz;
 
         autostart = qemu_opt_get_bool(machine_opts, "autostart", true);
+        bios_name = qemu_opt_get(machine_opts, "bios");
         kernel_filename = qemu_opt_get(machine_opts, "kernel");
         initrd_filename = qemu_opt_get(machine_opts, "initrd");
         kernel_cmdline = qemu_opt_get(machine_opts, "append");
