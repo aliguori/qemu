@@ -1838,6 +1838,25 @@ static DisplayType select_display(const char *p)
     return display;
 }
 
+int qemu_uuid_parse(const char *str, uint8_t *uuid)
+{
+    int ret;
+
+    if (strlen(str) != 36) {
+        return -1;
+    }
+
+    ret = sscanf(str, UUID_FMT, &uuid[0], &uuid[1], &uuid[2], &uuid[3],
+                 &uuid[4], &uuid[5], &uuid[6], &uuid[7], &uuid[8], &uuid[9],
+                 &uuid[10], &uuid[11], &uuid[12], &uuid[13], &uuid[14],
+                 &uuid[15]);
+
+    if (ret != 16) {
+        return -1;
+    }
+    return 0;
+}
+
 static int balloon_parse(const char *arg)
 {
     QemuOpts *opts;
@@ -3025,7 +3044,7 @@ int main(int argc, char **argv, char **envp)
                 qemu_opts_parse(qemu_find_opts("acpitable"), optarg, 0);
                 break;
             case QEMU_OPTION_smbios:
-                do_smbios_option(optarg);
+                qemu_opts_parse(qemu_find_opts("smbios"), optarg, 0);
                 break;
             case QEMU_OPTION_enable_kvm:
                 olist = qemu_find_opts("machine");
@@ -3084,13 +3103,15 @@ int main(int argc, char **argv, char **envp)
             case QEMU_OPTION_show_cursor:
                 cursor_hide = 0;
                 break;
-            case QEMU_OPTION_uuid:
-                if(qemu_uuid_parse(optarg, qemu_uuid) < 0) {
-                    fprintf(stderr, "Fail to parse UUID string."
-                            " Wrong format.\n");
-                    exit(1);
-                }
+            case QEMU_OPTION_uuid: {
+                QemuOpts *smbios;
+
+                smbios = qemu_opts_create(qemu_find_opts("smbios"), NULL, 0,
+                                          NULL);
+                qemu_opt_set(smbios, "type", "1");
+                qemu_opt_set(smbios, "uuid", optarg);
                 break;
+            }
 	    case QEMU_OPTION_option_rom:
 		if (nb_option_roms >= MAX_OPTION_ROMS) {
 		    fprintf(stderr, "Too many option ROMs\n");
@@ -3319,6 +3340,11 @@ int main(int argc, char **argv, char **envp)
     if (qemu_opts_foreach(qemu_find_opts("acpitable"), acpi_table_add, NULL, 1)
         != 0) {
         fprintf(stderr, "Wrong acpi table provided\n");
+        exit(1);
+    }
+
+    if (qemu_opts_foreach(qemu_find_opts("smbios"), smbios_entry_add, NULL, 1)
+	!= 0) {
         exit(1);
     }
 

@@ -13,8 +13,8 @@
  *
  */
 
-int smbios_entry_add(const char *t);
-void smbios_add_field(int type, int offset, int len, void *data);
+int smbios_entry_add(QemuOpts *opts, void *opaque);
+void smbios_add_field(int type, int offset, int len, const void *data);
 uint8_t *smbios_get_table(size_t *length);
 
 /*
