@@ -136,7 +136,7 @@ extern char *acpi_tables;
 extern size_t acpi_tables_len;
 
 void acpi_bios_init(void);
-int acpi_table_add(const char *table_desc);
+int GCC_WEAK_DECL acpi_table_add(QemuOpts *opts, void *opaque);
 
 /* acpi_piix.c */
 

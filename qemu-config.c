@@ -711,6 +711,59 @@ QemuOptsList qemu_boot_opts = {
     },
 };
 
+static QemuOptsList qemu_acpitable_opts = {
+    .name = "acpitable",
+    .head = QTAILQ_HEAD_INITIALIZER(qemu_acpitable_opts.head),
+    .desc = {
+        {
+            .name = "data",
+            .type = QEMU_OPT_STRING,
+            .help = "colon-separated list of files, excluding header",
+        },
+        {
+            .name = "file",
+            .type = QEMU_OPT_STRING,
+            .help = "colon-separated list of files, including header",
+        },
+        {
+            .name = "sig",
+            .type = QEMU_OPT_STRING,
+            .help = "ACPI header signature field",
+        },
+        {
+            .name = "rev",
+            .type = QEMU_OPT_NUMBER,
+            .help = "ACPI header revision field",
+        },
+        {
+            .name = "oem_id",
+            .type = QEMU_OPT_STRING,
+            .help = "ACPI header OEM id field",
+        },
+        {
+            .name = "oem_table_id",
+            .type = QEMU_OPT_STRING,
+            .help = "ACPI header OEM table id field",
+        },
+        {
+            .name = "oem_rev",
+            .type = QEMU_OPT_NUMBER,
+            .help = "ACPI header OEM revision field",
+        },
+        {
+            .name = "asl_compiler_id",
+            .type = QEMU_OPT_STRING,
+            .help = "ACPI header ASL compiler id field",
+        },
+        {
+            .name = "asl_compiler_rev",
+            .type = QEMU_OPT_NUMBER,
+            .help = "ACPI header ASL compiler revision field",
+        },
+        { /* end of list */ },
+    },
+};
+
 static QemuOptsList *vm_config_groups[32] = {
     &qemu_drive_opts,
     &qemu_chardev_opts,
@@ -729,6 +782,7 @@ static QemuOptsList *vm_config_groups[32] = {
     &qemu_boot_opts,
     &qemu_iscsi_opts,
     &qemu_sandbox_opts,
+    &qemu_acpitable_opts,
     NULL,
 };
 
