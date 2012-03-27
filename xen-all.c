@@ -883,10 +883,11 @@ static void cpu_handle_ioreq(void *opaque)
          * causes Xen to powerdown the domain.
          */
         if (runstate_is_running()) {
-            if (qemu_shutdown_requested_get()) {
-                destroy_hvm_domain(false);
+            ShutdownAction a = qemu_shutdown_requested_get();
+            if (a == QEMU_ON_SHUTDOWN_QUIT) {
+                destroy_hvm_domain();
             }
-            if (qemu_reset_requested_get()) {
+            if (a == QEMU_ON_SHUTDOWN_RESET) {
                 qemu_system_reset(VMRESET_REPORT);
                 destroy_hvm_domain(true);
             }
