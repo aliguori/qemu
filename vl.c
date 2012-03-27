@@ -216,7 +216,8 @@ int acpi_enabled = 1;
 int no_hpet = 0;
 int fd_bootchk = 1;
 int no_reboot = 0;
-int no_shutdown = 0;
+ShutdownAction on_reboot = QEMU_ACTION_RESET;
+ShutdownAction on_shutdown = QEMU_ACTION_QUIT;
 int cursor_hide = 1;
 int graphic_rotate = 0;
 const char *watchdog;
@@ -1339,13 +1340,12 @@ typedef struct QEMUResetEntry {
 
 static QTAILQ_HEAD(reset_handlers, QEMUResetEntry) reset_handlers =
     QTAILQ_HEAD_INITIALIZER(reset_handlers);
-static int reset_requested;
-static int shutdown_requested, shutdown_signal = -1;
+static ShutdownAction shutdown_requested = QEMU_ACTION_NONE;
+static int shutdown_signal = -1;
 static pid_t shutdown_pid;
 static int powerdown_requested;
 static int debug_requested;
 static int suspend_requested;
-static int wakeup_requested;
 static NotifierList suspend_notifiers =
     NOTIFIER_LIST_INITIALIZER(suspend_notifiers);
 static NotifierList wakeup_notifiers =
@@ -1358,16 +1358,11 @@ int qemu_shutdown_requested_get(void)
     return shutdown_requested;
 }
 
-int qemu_reset_requested_get(void)
+ShutdownAction qemu_shutdown_requested(void)
 {
-    return reset_requested;
-}
-
-int qemu_shutdown_requested(void)
-{
-    int r = shutdown_requested;
-    shutdown_requested = 0;
-    return r;
+    ShutdownAction a = shutdown_requested;
+    shutdown_requested = QEMU_ACTION_NONE;
+    return a;
 }
 
 void qemu_kill_report(void)
@@ -1386,24 +1381,10 @@ void qemu_kill_report(void)
     }
 }
 
-int qemu_reset_requested(void)
-{
-    int r = reset_requested;
-    reset_requested = 0;
-    return r;
-}
-
 static int qemu_suspend_requested(void)
 {
     int r = suspend_requested;
     suspend_requested = 0;
-    return r;
-}
-
-static int qemu_wakeup_requested(void)
-{
-    int r = wakeup_requested;
-    wakeup_requested = 0;
     return r;
 }
 
@@ -1480,11 +1461,7 @@ void qemu_system_reset(bool report)
 
 void qemu_system_reset_request(void)
 {
-    if (no_reboot) {
-        shutdown_requested = 1;
-    } else {
-        reset_requested = 1;
-    }
+    shutdown_requested = on_reboot;
     cpu_stop_current();
     qemu_notify_event();
 }
@@ -1522,7 +1499,7 @@ void qemu_system_wakeup_request(WakeupReason reason)
     }
     runstate_set(RUN_STATE_RUNNING);
     notifier_list_notify(&wakeup_notifiers, &reason);
-    wakeup_requested = 1;
+    shutdown_requested = QEMU_ACTION_WAKEUP;
     qemu_notify_event();
 }
 
@@ -1544,13 +1521,13 @@ void qemu_system_killed(int signal, pid_t pid)
 {
     shutdown_signal = signal;
     shutdown_pid = pid;
-    no_shutdown = 0;
+    on_shutdown = QEMU_ACTION_QUIT;
     qemu_system_shutdown_request();
 }
 
 void qemu_system_shutdown_request(void)
 {
-    shutdown_requested = 1;
+    shutdown_requested = on_shutdown;
     qemu_notify_event();
 }
 
@@ -1577,22 +1554,16 @@ qemu_irq qemu_system_powerdown;
 static bool main_loop_should_exit(void)
 {
     RunState r;
+    ShutdownAction a;
+
     if (qemu_debug_requested()) {
         vm_stop(RUN_STATE_DEBUG);
     }
     if (qemu_suspend_requested()) {
         qemu_system_suspend();
     }
-    if (qemu_shutdown_requested()) {
-        qemu_kill_report();
-        monitor_protocol_event(QEVENT_SHUTDOWN, NULL);
-        if (no_shutdown) {
-            vm_stop(RUN_STATE_SHUTDOWN);
-        } else {
-            return true;
-        }
-    }
-    if (qemu_reset_requested()) {
+    a = qemu_shutdown_requested();
+    if (a == QEMU_ACTION_RESET) {
         pause_all_vcpus();
         cpu_synchronize_all_states();
         qemu_system_reset(VMRESET_REPORT);
@@ -1601,13 +1572,20 @@ static bool main_loop_should_exit(void)
             runstate_check(RUN_STATE_SHUTDOWN)) {
             runstate_set(RUN_STATE_PAUSED);
         }
-    }
-    if (qemu_wakeup_requested()) {
+    } else if (a == QEMU_ACTION_WAKEUP) {
         pause_all_vcpus();
         cpu_synchronize_all_states();
         qemu_system_reset(VMRESET_SILENT);
         resume_all_vcpus();
         monitor_protocol_event(QEVENT_WAKEUP, NULL);
+    } else if (a != QEMU_ACTION_NONE) {
+        qemu_kill_report();
+        monitor_protocol_event(QEVENT_SHUTDOWN, NULL);
+        if (a == QEMU_ACTION_STOP) {
+            vm_stop(RUN_STATE_SHUTDOWN);
+        } else {
+            return true;
+        }
     }
     if (qemu_powerdown_requested()) {
         monitor_protocol_event(QEVENT_POWERDOWN, NULL);
@@ -2356,6 +2334,7 @@ int main(int argc, char **argv, char **envp)
 {
     int i;
     int snapshot, linux_boot;
+    int no_reboot = 0;
     const char *icount_option = NULL;
     const char *initrd_filename;
     const char *kernel_filename, *kernel_cmdline;
@@ -3098,7 +3077,7 @@ int main(int argc, char **argv, char **envp)
                 no_reboot = 1;
                 break;
             case QEMU_OPTION_no_shutdown:
-                no_shutdown = 1;
+                on_shutdown = QEMU_ACTION_STOP;
                 break;
             case QEMU_OPTION_show_cursor:
                 cursor_hide = 0;
@@ -3495,6 +3474,10 @@ int main(int argc, char **argv, char **envp)
     if (qemu_opts_foreach(qemu_find_opts("device"), device_help_func,
                           NULL, 0)) {
         exit(0);
+    }
+
+    if (no_reboot) {
+        on_reboot = on_shutdown;
     }
 
     configure_accelerator();

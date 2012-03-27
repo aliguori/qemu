@@ -874,7 +874,7 @@ static void sdl_refresh(DisplayState *ds)
             break;
         case SDL_QUIT:
             if (!no_quit) {
-                no_shutdown = 0;
+                on_shutdown = QEMU_ACTION_QUIT;
                 qemu_system_shutdown_request();
             }
             break;
