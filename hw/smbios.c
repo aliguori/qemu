@@ -14,6 +14,7 @@
  */
 
 #include "sysemu.h"
+#include "arch_init.h"
 #include "smbios.h"
 #include "loader.h"
 
@@ -99,7 +100,7 @@ static void smbios_check_collision(int type, int entry)
     }
 }
 
-void smbios_add_field(int type, int offset, int len, void *data)
+void smbios_add_field(int type, int offset, int len, const void *data)
 {
     struct smbios_field *field;
 
@@ -124,21 +125,56 @@ void smbios_add_field(int type, int offset, int len, void *data)
             cpu_to_le16(le16_to_cpu(*(uint16_t *)smbios_entries) + 1);
 }
 
-static void smbios_build_type_0_fields(const char *t)
-{
-    char buf[1024];
+static QemuOptDesc smbios_type_0_desc[] = {
+    {
+        .name = "type",
+        .type = QEMU_OPT_NUMBER,
+    },
+    {
+        .name = "vendor",
+        .type = QEMU_OPT_STRING,
+    },
+    {
+        .name = "version",
+        .type = QEMU_OPT_STRING,
+    },
+    {
+        .name = "date",
+        .type = QEMU_OPT_STRING,
+    },
+    {
+        .name = "release",
+        .type = QEMU_OPT_STRING,
+    },
+    { /* end of list */ }
+};
 
-    if (get_param_value(buf, sizeof(buf), "vendor", t))
+static int smbios_build_type_0_fields(QemuOpts *opts)
+{
+    const char *buf;
+
+    if (qemu_opts_validate(opts, smbios_type_0_desc) == -1) {
+        return -1;
+    }
+
+    buf = qemu_opt_get(opts, "vendor");
+    if (buf) {
         smbios_add_field(0, offsetof(struct smbios_type_0, vendor_str),
                          strlen(buf) + 1, buf);
-    if (get_param_value(buf, sizeof(buf), "version", t))
+    }
+    buf = qemu_opt_get(opts, "version");
+    if (buf) {
         smbios_add_field(0, offsetof(struct smbios_type_0, bios_version_str),
                          strlen(buf) + 1, buf);
-    if (get_param_value(buf, sizeof(buf), "date", t))
+    }
+    buf = qemu_opt_get(opts, "date");
+    if (buf) {
         smbios_add_field(0, offsetof(struct smbios_type_0,
                                      bios_release_date_str),
                                      strlen(buf) + 1, buf);
-    if (get_param_value(buf, sizeof(buf), "release", t)) {
+    }
+    buf = qemu_opt_get(opts, "release");
+    if (buf) {
         int major, minor;
         sscanf(buf, "%d.%d", &major, &minor);
         smbios_add_field(0, offsetof(struct smbios_type_0,
@@ -146,47 +182,117 @@ static void smbios_build_type_0_fields(const char *t)
         smbios_add_field(0, offsetof(struct smbios_type_0,
                                      system_bios_minor_release), 1, &minor);
     }
+    return 0;
 }
 
-static void smbios_build_type_1_fields(const char *t)
-{
-    char buf[1024];
+static QemuOptDesc smbios_type_1_desc[] = {
+    {
+        .name = "type",
+        .type = QEMU_OPT_NUMBER,
+    },
+    {
+        .name = "manufacturer",
+        .type = QEMU_OPT_STRING,
+    },
+    {
+        .name = "product",
+        .type = QEMU_OPT_STRING,
+    },
+    {
+        .name = "version",
+        .type = QEMU_OPT_STRING,
+    },
+    {
+        .name = "serial",
+        .type = QEMU_OPT_STRING,
+    },
+    {
+        .name = "uuid",
+        .type = QEMU_OPT_STRING,
+    },
+    {
+        .name = "sku",
+        .type = QEMU_OPT_STRING,
+    },
+    {
+        .name = "family",
+        .type = QEMU_OPT_STRING,
+    },
+    { /* end of list */ }
+};
 
-    if (get_param_value(buf, sizeof(buf), "manufacturer", t))
+static int smbios_build_type_1_fields(QemuOpts *opts)
+{
+    const char *buf;
+
+    if (qemu_opts_validate(opts, smbios_type_1_desc) == -1) {
+        return -1;
+    }
+
+    buf = qemu_opt_get(opts, "manufacturer");
+    if (buf) {
         smbios_add_field(1, offsetof(struct smbios_type_1, manufacturer_str),
                          strlen(buf) + 1, buf);
-    if (get_param_value(buf, sizeof(buf), "product", t))
+    }
+    buf = qemu_opt_get(opts, "product");
+    if (buf) {
         smbios_add_field(1, offsetof(struct smbios_type_1, product_name_str),
                          strlen(buf) + 1, buf);
-    if (get_param_value(buf, sizeof(buf), "version", t))
+    }
+    buf = qemu_opt_get(opts, "version");
+    if (buf) {
         smbios_add_field(1, offsetof(struct smbios_type_1, version_str),
                          strlen(buf) + 1, buf);
-    if (get_param_value(buf, sizeof(buf), "serial", t))
+    }
+    buf = qemu_opt_get(opts, "serial");
+    if (buf) {
         smbios_add_field(1, offsetof(struct smbios_type_1, serial_number_str),
                          strlen(buf) + 1, buf);
-    if (get_param_value(buf, sizeof(buf), "uuid", t)) {
+    }
+    buf = qemu_opt_get(opts, "uuid");
+    if (buf) {
         if (qemu_uuid_parse(buf, qemu_uuid) != 0) {
             fprintf(stderr, "Invalid SMBIOS UUID string\n");
             exit(1);
         }
+        smbios_add_field(1, offsetof(struct smbios_type_1, uuid), 16, qemu_uuid);
     }
-    if (get_param_value(buf, sizeof(buf), "sku", t))
+    buf = qemu_opt_get(opts, "sku");
+    if (buf) {
         smbios_add_field(1, offsetof(struct smbios_type_1, sku_number_str),
                          strlen(buf) + 1, buf);
-    if (get_param_value(buf, sizeof(buf), "family", t))
+    }
+    buf = qemu_opt_get(opts, "family");
+    if (buf) {
         smbios_add_field(1, offsetof(struct smbios_type_1, family_str),
                          strlen(buf) + 1, buf);
+    }
+    return 0;
 }
 
-int smbios_entry_add(const char *t)
-{
-    char buf[1024];
+static QemuOptDesc smbios_file_desc[] = {
+    {
+        .name = "file",
+        .type = QEMU_OPT_STRING,
+    },
+    { /* end of list */ }
+};
 
-    if (get_param_value(buf, sizeof(buf), "file", t)) {
+int smbios_entry_add(QemuOpts *opts, void *opaque)
+{
+    const char *buf;
+
+    buf = qemu_opt_get(opts, "file");
+    if (buf) {
         struct smbios_structure_header *header;
         struct smbios_table *table;
-        int size = get_image_size(buf);
+        int size;
 
+        if (qemu_opts_validate(opts, smbios_file_desc) == -1) {
+            return -1;
+        }
+
+        size = get_image_size(buf);
         if (size == -1 || size < sizeof(struct smbios_structure_header)) {
             fprintf(stderr, "Cannot read smbios file %s\n", buf);
             exit(1);
@@ -220,15 +326,14 @@ int smbios_entry_add(const char *t)
         return 0;
     }
 
-    if (get_param_value(buf, sizeof(buf), "type", t)) {
+    buf = qemu_opt_get(opts, "type");
+    if (buf != NULL) {
         unsigned long type = strtoul(buf, NULL, 0);
         switch (type) {
         case 0:
-            smbios_build_type_0_fields(t);
-            return 0;
+            return smbios_build_type_0_fields(opts);
         case 1:
-            smbios_build_type_1_fields(t);
-            return 0;
+            return smbios_build_type_1_fields(opts);
         default:
             fprintf(stderr, "Don't know how to build fields for SMBIOS type "
                     "%ld\n", type);

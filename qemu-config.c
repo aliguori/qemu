@@ -764,6 +764,18 @@ static QemuOptsList qemu_acpitable_opts = {
     },
 };
 
+static QemuOptsList qemu_smbios_opts = {
+    .name = "smbios",
+    .head = QTAILQ_HEAD_INITIALIZER(qemu_smbios_opts.head),
+    .desc = {
+        /*
+         * no elements => accept any
+         * sanity checking will happen later
+         */
+        { /* end of list */ }
+    },
+};
+
 static QemuOptsList *vm_config_groups[32] = {
     &qemu_drive_opts,
     &qemu_chardev_opts,
@@ -783,6 +795,7 @@ static QemuOptsList *vm_config_groups[32] = {
     &qemu_iscsi_opts,
     &qemu_sandbox_opts,
     &qemu_acpitable_opts,
+    &qemu_smbios_opts,
     NULL,
 };
 

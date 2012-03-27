@@ -1001,44 +1001,23 @@ void audio_init(ISABus *isa_bus, PCIBus *pci_bus)
 }
 #endif
 
-int qemu_uuid_parse(const char *str, uint8_t *uuid)
-{
-    int ret;
-
-    if (strlen(str) != 36) {
-        return -1;
-    }
-
-    ret = sscanf(str, UUID_FMT, &uuid[0], &uuid[1], &uuid[2], &uuid[3],
-                 &uuid[4], &uuid[5], &uuid[6], &uuid[7], &uuid[8], &uuid[9],
-                 &uuid[10], &uuid[11], &uuid[12], &uuid[13], &uuid[14],
-                 &uuid[15]);
-
-    if (ret != 16) {
-        return -1;
-    }
-#ifdef TARGET_I386
-    smbios_add_field(1, offsetof(struct smbios_type_1, uuid), 16, uuid);
-#endif
-    return 0;
-}
-
 #ifndef TARGET_I386
 int acpi_table_add(QemuOpts *opts, void *opaque)
 {
     abort();
 }
-#endif
 
-void do_smbios_option(const char *optarg)
+int smbios_entry_add(QemuOpts *opts, void *opaque)
 {
-#ifdef TARGET_I386
-    if (smbios_entry_add(optarg) < 0) {
-        fprintf(stderr, "Wrong smbios provided\n");
-        exit(1);
+    const char *p;
+    p = qemu_opt_get(opts, "uuid");
+    if (p && qemu_uuid_parse(p, qemu_uuid) == -1) {
+        fprintf(stderr, "Fail to parse UUID string. Wrong format.\n");
+        return -1;
     }
-#endif
+    return 0;
 }
+#endif
 
 void cpudef_init(void)
 {
