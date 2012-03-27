@@ -61,23 +61,11 @@ static int acpi_checksum(const uint8_t *data, int len)
     return (-sum) & 0xff;
 }
 
-/* like strncpy() but zero-fills the tail of destination */
-static void strzcpy(char *dst, const char *src, size_t size)
+int acpi_table_add(QemuOpts *opts, void *opaque)
 {
-    size_t len = strlen(src);
-    if (len >= size) {
-        len = size;
-    } else {
-      memset(dst + len, 0, size - len);
-    }
-    memcpy(dst, src, len);
-}
-
-/* XXX fixme: this function uses obsolete argument parsing interface */
-int acpi_table_add(const char *t)
-{
-    char buf[1024], *p, *f;
-    unsigned long val;
+    const char *p = NULL;
+    char *buf, *f;
+    uint64_t val;
     size_t len, start, allen;
     bool has_header;
     int changed;
@@ -85,21 +73,13 @@ int acpi_table_add(const char *t)
     struct acpi_table_header hdr;
 
     r = 0;
-    r |= get_param_value(buf, sizeof(buf), "data", t) ? 1 : 0;
-    r |= get_param_value(buf, sizeof(buf), "file", t) ? 2 : 0;
-    switch (r) {
-    case 0:
-        buf[0] = '\0';
-        /* fallthrough for default behavior */
-    case 1:
-        has_header = false;
-        break;
-    case 2:
-        has_header = true;
-        break;
-    default:
-        fprintf(stderr, "acpitable: both data and file are specified\n");
-        return -1;
+    if (qemu_opt_get(opts, "data") || qemu_opt_get(opts, "file")) {
+        if (qemu_opt_get(opts, "data") && qemu_opt_get(opts, "file")) {
+            fprintf(stderr, "acpitable: both data and file are specified\n");
+            return -1;
+        }
+        has_header = qemu_opt_get(opts, "file") != NULL;
+        p = qemu_opt_get(opts, has_header ? "file" : "data");
     }
 
     if (!acpi_tables) {
@@ -115,6 +95,7 @@ int acpi_table_add(const char *t)
 
     /* now read in the data files, reallocating buffer as needed */
 
+    buf = g_strdup(p ? p : "");
     for (f = strtok(buf, ":"); f; f = strtok(NULL, ":")) {
         int fd = open(f, O_RDONLY);
 
@@ -142,6 +123,7 @@ int acpi_table_add(const char *t)
 
         close(fd);
     }
+    g_free(buf);
 
     /* now fill in the header fields */
 
@@ -156,8 +138,9 @@ int acpi_table_add(const char *t)
 
     hdr._length = cpu_to_le16(len);
 
-    if (get_param_value(buf, sizeof(buf), "sig", t)) {
-        strzcpy(hdr.sig, buf, sizeof(hdr.sig));
+    p = qemu_opt_get(opts, "sig");
+    if (p) {
+        strncpy(hdr.sig, p, sizeof(hdr.sig));
         ++changed;
     }
 
@@ -176,46 +159,48 @@ int acpi_table_add(const char *t)
     /* we may avoid putting length here if has_header is true */
     hdr.length = cpu_to_le32(len);
 
-    if (get_param_value(buf, sizeof(buf), "rev", t)) {
-        val = strtoul(buf, &p, 0);
-        if (val > 255 || *p) {
-            fprintf(stderr, "acpitable: \"rev=%s\" is invalid\n", buf);
+    if (qemu_opt_get(opts, "rev")) {
+        val = qemu_opt_get_number(opts, "rev", -1);
+        if (val > 255) {
+            fprintf(stderr, "acpitable: invalid revision\n");
             return -1;
         }
         hdr.revision = (uint8_t)val;
         ++changed;
     }
 
-    if (get_param_value(buf, sizeof(buf), "oem_id", t)) {
-        strzcpy(hdr.oem_id, buf, sizeof(hdr.oem_id));
+    p = qemu_opt_get(opts, "oem_id");
+    if (p) {
+        strncpy(hdr.oem_id, p, sizeof(hdr.oem_id));
         ++changed;
     }
 
-    if (get_param_value(buf, sizeof(buf), "oem_table_id", t)) {
-        strzcpy(hdr.oem_table_id, buf, sizeof(hdr.oem_table_id));
+    p = qemu_opt_get(opts, "oem_table_id");
+    if (p) {
+        strncpy(hdr.oem_table_id, p, sizeof(hdr.oem_table_id));
         ++changed;
     }
 
-    if (get_param_value(buf, sizeof(buf), "oem_rev", t)) {
-        val = strtol(buf, &p, 0);
-        if (*p) {
-            fprintf(stderr, "acpitable: \"oem_rev=%s\" is invalid\n", buf);
+    if (qemu_opt_get(opts, "oem_rev")) {
+        val = qemu_opt_get_number(opts, "oem_rev", -1);
+        if (val > 0xFFFFFFFFULL) {
+            fprintf(stderr, "acpitable: invalid oem_rev\n");
             return -1;
         }
         hdr.oem_revision = cpu_to_le32(val);
         ++changed;
     }
 
-    if (get_param_value(buf, sizeof(buf), "asl_compiler_id", t)) {
-        strzcpy(hdr.asl_compiler_id, buf, sizeof(hdr.asl_compiler_id));
+    p = qemu_opt_get(opts, "asl_compiler_id");
+    if (p) {
+        strncpy(hdr.asl_compiler_id, p, sizeof(hdr.asl_compiler_id));
         ++changed;
     }
 
-    if (get_param_value(buf, sizeof(buf), "asl_compiler_rev", t)) {
-        val = strtol(buf, &p, 0);
-        if (*p) {
-            fprintf(stderr, "acpitable: \"%s=%s\" is invalid\n",
-                    "asl_compiler_rev", buf);
+    if (qemu_opt_get(opts, "asl_compiler_rev")) {
+        val = qemu_opt_get_number(opts, "asl_compiler_rev", -1);
+        if (val > 0xFFFFFFFFULL) {
+            fprintf(stderr, "acpitable: invalid asl_compiler_rev\n");
             return -1;
         }
         hdr.asl_compiler_revision = cpu_to_le32(val);
@@ -234,11 +219,8 @@ int acpi_table_add(const char *t)
 
     /* put header back */
     memcpy(f, &hdr, sizeof(hdr));
-
-    if (changed || !has_header || 1) {
-        ((struct acpi_table_header *)f)->checksum =
-            acpi_checksum((uint8_t *)f + ACPI_TABLE_PFX_SIZE, len);
-    }
+    ((struct acpi_table_header *)f)->checksum =
+        acpi_checksum((uint8_t *)f + ACPI_TABLE_PFX_SIZE, len);
 
     /* increase number of tables */
     (*(uint16_t *)acpi_tables) =
