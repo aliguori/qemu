@@ -89,23 +89,20 @@ const char *get_opt_value(char *buf, int buf_size, const char *p)
     return p;
 }
 
-int get_next_param_value(char *buf, int buf_size,
-                         const char *tag, const char **pstr)
+int get_param_value(char *buf, int buf_size,
+                    const char *tag, const char *str)
 {
     const char *p;
     char option[128];
 
-    p = *pstr;
+    p = str;
     for(;;) {
         p = get_opt_name(option, sizeof(option), p, '=');
         if (*p != '=')
             break;
         p++;
         if (!strcmp(tag, option)) {
-            *pstr = get_opt_value(buf, buf_size, p);
-            if (**pstr == ',') {
-                (*pstr)++;
-            }
+            (void)get_opt_value(buf, buf_size, p);
             return strlen(buf);
         } else {
             p = get_opt_value(NULL, 0, p);
@@ -115,12 +112,6 @@ int get_next_param_value(char *buf, int buf_size,
         p++;
     }
     return 0;
-}
-
-int get_param_value(char *buf, int buf_size,
-                    const char *tag, const char *str)
-{
-    return get_next_param_value(buf, buf_size, tag, &str);
 }
 
 int check_params(char *buf, int buf_size,
