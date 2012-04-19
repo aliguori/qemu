@@ -37,6 +37,8 @@ typedef struct NotifierList
 
 void notifier_list_init(NotifierList *list);
 
+void notifier_list_destroy(NotifierList *list);
+
 void notifier_list_add(NotifierList *list, Notifier *notifier);
 
 void notifier_list_remove(NotifierList *list, Notifier *notifier);

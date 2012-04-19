@@ -21,6 +21,17 @@ void notifier_list_init(NotifierList *list)
     QLIST_INIT(&list->notifiers);
 }
 
+void notifier_list_destroy(NotifierList *list)
+{
+    Notifier *notifier, *next;
+
+    QLIST_FOREACH_SAFE(notifier, &list->notifiers, node, next) {
+        if (notifier->release) {
+            notifier->release(notifier);
+        }
+    }
+}
+
 void notifier_list_add(NotifierList *list, Notifier *notifier)
 {
     QLIST_INSERT_HEAD(&list->notifiers, notifier, node);
