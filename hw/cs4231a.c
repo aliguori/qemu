@@ -27,6 +27,7 @@
 #include "isa.h"
 #include "qdev.h"
 #include "qemu-timer.h"
+#include "qemu/pin.h"
 
 /*
   Missing features:
@@ -36,6 +37,9 @@
   ADPCM
   More...
 */
+
+#define TYPE_CS4231A "cs4231a"
+#define CS4231A(obj) OBJECT_CHECK (CSState, (obj), TYPE_CS4231A)
 
 /* #define DEBUG */
 /* #define DEBUG_XLAW */
@@ -60,7 +64,7 @@ typedef struct CSState {
     ISADevice dev;
     QEMUSoundCard card;
     MemoryRegion ioports;
-    qemu_irq pic;
+    Pin pic;
     uint32_t regs[CS_REGS];
     uint8_t dregs[CS_DREGS];
     uint32_t irq;
@@ -477,7 +481,7 @@ static void cs_write (void *opaque, target_phys_addr_t addr,
         case Alternate_Feature_Status:
             if ((s->dregs[iaddr] & PI) && !(val & PI)) {
                 /* XXX: TI CI */
-                qemu_irq_lower (s->pic);
+                pin_lower (&s->pic);
                 s->regs[Status] &= ~INT;
             }
             s->dregs[iaddr] = val;
@@ -497,7 +501,7 @@ static void cs_write (void *opaque, target_phys_addr_t addr,
 
     case Status:
         if (s->regs[Status] & INT) {
-            qemu_irq_lower (s->pic);
+            pin_lower (&s->pic);
         }
         s->regs[Status] &= ~INT;
         s->dregs[Alternate_Feature_Status] &= ~(PI | CI | TI);
@@ -582,7 +586,7 @@ static int cs_dma_read (void *opaque, int nchan, int dma_pos, int dma_len)
         s->regs[Status] |= INT;
         s->dregs[Alternate_Feature_Status] |= PI;
         s->transferred = 0;
-        qemu_irq_raise (s->pic);
+        pin_raise (&s->pic);
     }
     else {
         s->transferred += written;
@@ -641,11 +645,13 @@ static const MemoryRegionOps cs_ioport_ops = {
     }
 };
 
-static int cs4231a_initfn (ISADevice *dev)
+static int cs4231a_realize (ISADevice *dev)
 {
     CSState *s = DO_UPCAST (CSState, dev, dev);
+    qemu_irq irq;
 
-    isa_init_irq (dev, &s->pic, s->irq);
+    isa_init_irq (dev, &irq, s->irq);
+    pin_connect_qemu_irq (&s->pic, irq);
 
     memory_region_init_io (&s->ioports, &cs_ioport_ops, s, "cs4231a", 4);
     isa_register_ioport (dev, &s->ioports, s->port);
@@ -657,6 +663,14 @@ static int cs4231a_initfn (ISADevice *dev)
 
     AUD_register_card ("cs4231a", &s->card);
     return 0;
+}
+
+static void cs4231a_initfn (Object *obj)
+{
+    CSState *s = CS4231A (obj);
+
+    object_initialize (OBJECT (&s->pic), TYPE_CS4231A);
+    object_property_add_child (obj, "pic", OBJECT (&s->pic), NULL);
 }
 
 int cs4231a_init (ISABus *bus)
@@ -676,16 +690,17 @@ static void cs4231a_class_initfn (ObjectClass *klass, void *data)
 {
     DeviceClass *dc = DEVICE_CLASS (klass);
     ISADeviceClass *ic = ISA_DEVICE_CLASS (klass);
-    ic->init = cs4231a_initfn;
+    ic->init = cs4231a_realize;
     dc->desc = "Crystal Semiconductor CS4231A";
     dc->vmsd = &vmstate_cs4231a;
     dc->props = cs4231a_properties;
 }
 
 static TypeInfo cs4231a_info = {
-    .name          = "cs4231a",
+    .name          = TYPE_CS4231A,
     .parent        = TYPE_ISA_DEVICE,
     .instance_size = sizeof (CSState),
+    .instance_init = cs4231a_initfn,
     .class_init    = cs4231a_class_initfn,
 };
 
