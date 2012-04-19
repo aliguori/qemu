@@ -36,6 +36,7 @@
 #include "qdev-addr.h"
 #include "blockdev.h"
 #include "sysemu.h"
+#include "qemu/pin.h"
 
 /********************************************************/
 /* debug Floppy devices */
@@ -386,7 +387,7 @@ enum {
 
 struct FDCtrl {
     MemoryRegion iomem;
-    qemu_irq irq;
+    Pin irq;
     /* Controller state */
     QEMUTimer *result_timer;
     int dma_chann;
@@ -434,6 +435,7 @@ struct FDCtrl {
 typedef struct FDCtrlSysBus {
     SysBusDevice busdev;
     struct FDCtrl state;
+    Pin tc;
 } FDCtrlSysBus;
 
 typedef struct FDCtrlISABus {
@@ -668,23 +670,13 @@ static void fdctrl_external_reset_isa(DeviceState *d)
     fdctrl_reset(s, 0);
 }
 
-static void fdctrl_handle_tc(void *opaque, int irq, int level)
-{
-    //FDCtrl *s = opaque;
-
-    if (level) {
-        // XXX
-        FLOPPY_DPRINTF("TC pulsed\n");
-    }
-}
-
 /* Change IRQ state */
 static void fdctrl_reset_irq(FDCtrl *fdctrl)
 {
     if (!(fdctrl->sra & FD_SRA_INTPEND))
         return;
     FLOPPY_DPRINTF("Reset interrupt\n");
-    qemu_set_irq(fdctrl->irq, 0);
+    pin_lower(&fdctrl->irq);
     fdctrl->sra &= ~FD_SRA_INTPEND;
 }
 
@@ -699,7 +691,7 @@ static void fdctrl_raise_irq(FDCtrl *fdctrl, uint8_t status0)
         return;
     }
     if (!(fdctrl->sra & FD_SRA_INTPEND)) {
-        qemu_set_irq(fdctrl->irq, 1);
+        pin_raise(&fdctrl->irq);
         fdctrl->sra |= FD_SRA_INTPEND;
     }
     fdctrl->reset_sensei = 0;
@@ -1975,10 +1967,12 @@ static int isabus_fdc_init1(ISADevice *dev)
     int isairq = 6;
     int dma_chann = 2;
     int ret;
+    qemu_irq irq;
 
     isa_register_portio_list(dev, iobase, fdc_portio_list, fdctrl, "fdc");
 
-    isa_init_irq(&isa->busdev, &fdctrl->irq, isairq);
+    isa_init_irq(&isa->busdev, &irq, isairq);
+    pin_connect_qemu_irq(&fdctrl->irq, irq);
     fdctrl->dma_chann = dma_chann;
 
     qdev_set_legacy_instance_id(&dev->qdev, iobase, 2);
@@ -1994,12 +1988,13 @@ static int sysbus_fdc_init1(SysBusDevice *dev)
 {
     FDCtrlSysBus *sys = DO_UPCAST(FDCtrlSysBus, busdev, dev);
     FDCtrl *fdctrl = &sys->state;
+    qemu_irq irq;
     int ret;
 
     memory_region_init_io(&fdctrl->iomem, &fdctrl_mem_ops, fdctrl, "fdc", 0x08);
     sysbus_init_mmio(dev, &fdctrl->iomem);
-    sysbus_init_irq(dev, &fdctrl->irq);
-    qdev_init_gpio_in(&dev->qdev, fdctrl_handle_tc, 1);
+    sysbus_init_irq(dev, &irq);
+    pin_connect_qemu_irq(&fdctrl->irq, irq);
     fdctrl->dma_chann = -1;
 
     qdev_set_legacy_instance_id(&dev->qdev, 0 /* io */, 2); /* FIXME */
@@ -2011,12 +2006,13 @@ static int sysbus_fdc_init1(SysBusDevice *dev)
 static int sun4m_fdc_init1(SysBusDevice *dev)
 {
     FDCtrl *fdctrl = &(FROM_SYSBUS(FDCtrlSysBus, dev)->state);
+    qemu_irq irq;
 
     memory_region_init_io(&fdctrl->iomem, &fdctrl_mem_strict_ops, fdctrl,
                           "fdctrl", 0x08);
     sysbus_init_mmio(dev, &fdctrl->iomem);
-    sysbus_init_irq(dev, &fdctrl->irq);
-    qdev_init_gpio_in(&dev->qdev, fdctrl_handle_tc, 1);
+    sysbus_init_irq(dev, &irq);
+    pin_connect_qemu_irq(&fdctrl->irq, irq);
 
     fdctrl->sun4m = 1;
     qdev_set_legacy_instance_id(&dev->qdev, 0 /* io */, 2); /* FIXME */
@@ -2055,6 +2051,15 @@ static Property isa_fdc_properties[] = {
     DEFINE_PROP_END_OF_LIST(),
 };
 
+static void isabus_fdc_initfn(Object *obj)
+{
+    FDCtrlISABus *isa = OBJECT_CHECK(FDCtrlISABus, obj, "isa-fdc");
+    FDCtrl *fdctrl = &isa->state;
+
+    object_initialize(&fdctrl->irq, TYPE_PIN);
+    object_property_add_child(obj, "irq", OBJECT(&fdctrl->irq), NULL);
+}
+
 static void isabus_fdc_class_init1(ObjectClass *klass, void *data)
 {
     DeviceClass *dc = DEVICE_CLASS(klass);
@@ -2071,6 +2076,7 @@ static TypeInfo isa_fdc_info = {
     .name          = "isa-fdc",
     .parent        = TYPE_ISA_DEVICE,
     .instance_size = sizeof(FDCtrlISABus),
+    .instance_init = isabus_fdc_initfn,
     .class_init    = isabus_fdc_class_init1,
 };
 
@@ -2101,10 +2107,20 @@ static void sysbus_fdc_class_init(ObjectClass *klass, void *data)
     dc->props = sysbus_fdc_properties;
 }
 
+static void sysbus_fdc_initfn(Object *obj)
+{
+    FDCtrlSysBus *sys = OBJECT_CHECK(FDCtrlSysBus, obj, "sysbus-fdc");
+    FDCtrl *fdctrl = &sys->state;
+
+    object_initialize(&fdctrl->irq, TYPE_PIN);
+    object_property_add_child(obj, "irq", OBJECT(&fdctrl->irq), NULL);
+}
+
 static TypeInfo sysbus_fdc_info = {
     .name          = "sysbus-fdc",
     .parent        = TYPE_SYS_BUS_DEVICE,
     .instance_size = sizeof(FDCtrlSysBus),
+    .instance_init = sysbus_fdc_initfn,
     .class_init    = sysbus_fdc_class_init,
 };
 
@@ -2124,9 +2140,19 @@ static void sun4m_fdc_class_init(ObjectClass *klass, void *data)
     dc->props = sun4m_fdc_properties;
 }
 
+static void sun4m_fdc_initfn(Object *obj)
+{
+    FDCtrlSysBus *sys = OBJECT_CHECK(FDCtrlSysBus, obj, "SUNW,fdtwo");
+    FDCtrl *fdctrl = &sys->state;
+
+    object_initialize(&fdctrl->irq, TYPE_PIN);
+    object_property_add_child(obj, "irq", OBJECT(&fdctrl->irq), NULL);
+}
+
 static TypeInfo sun4m_fdc_info = {
     .name          = "SUNW,fdtwo",
     .parent        = TYPE_SYS_BUS_DEVICE,
+    .instance_init = sun4m_fdc_initfn,
     .instance_size = sizeof(FDCtrlSysBus),
     .class_init    = sun4m_fdc_class_init,
 };
