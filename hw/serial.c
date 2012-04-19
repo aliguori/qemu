@@ -28,8 +28,12 @@
 #include "pc.h"
 #include "qemu-timer.h"
 #include "sysemu.h"
+#include "qemu/pin.h"
 
 //#define DEBUG_SERIAL
+
+#define TYPE_ISA_SERIAL "isa-serial"
+#define ISA_SERIAL(obj) OBJECT_CHECK(ISASerialState, obj, TYPE_ISA_SERIAL)
 
 #define UART_LCR_DLAB	0x80	/* Divisor latch access bit */
 
@@ -133,7 +137,7 @@ struct SerialState {
     /* NOTE: this hidden state is necessary for tx irq generation as
        it can be reset while reading iir */
     int thr_ipending;
-    qemu_irq irq;
+    Pin irq;
     CharDriverState *chr;
     int last_break_enable;
     int it_shift;
@@ -237,9 +241,9 @@ static void serial_update_irq(SerialState *s)
     s->iir = tmp_iir | (s->iir & 0xF0);
 
     if (tmp_iir != UART_IIR_NO_INT) {
-        qemu_irq_raise(s->irq);
+        pin_raise(&s->irq);
     } else {
-        qemu_irq_lower(s->irq);
+        pin_lower(&s->irq);
     }
 }
 
@@ -733,7 +737,7 @@ static void serial_reset(void *opaque)
 
     s->thr_ipending = 0;
     s->last_break_enable = 0;
-    qemu_irq_lower(s->irq);
+    pin_lower(&s->irq);
 }
 
 static void serial_init_core(SerialState *s)
@@ -773,11 +777,12 @@ static const MemoryRegionOps serial_io_ops = {
     .old_portio = serial_portio
 };
 
-static int serial_isa_initfn(ISADevice *dev)
+static int serial_isa_realize(ISADevice *dev)
 {
     static int index;
     ISASerialState *isa = DO_UPCAST(ISASerialState, dev, dev);
     SerialState *s = &isa->state;
+    qemu_irq irq;
 
     if (isa->index == -1)
         isa->index = index;
@@ -790,7 +795,8 @@ static int serial_isa_initfn(ISADevice *dev)
     index++;
 
     s->baudbase = 115200;
-    isa_init_irq(dev, &s->irq, isa->isairq);
+    isa_init_irq(dev, &irq, isa->isairq);
+    pin_connect_qemu_irq(&s->irq, irq);
     serial_init_core(s);
     qdev_set_legacy_instance_id(&dev->qdev, isa->iobase, 3);
 
@@ -816,9 +822,10 @@ SerialState *serial_init(int base, qemu_irq irq, int baudbase,
 
     s = g_malloc0(sizeof(SerialState));
 
-    s->irq = irq;
     s->baudbase = baudbase;
     s->chr = chr;
+    object_initialize(&s->irq, TYPE_PIN);
+    pin_connect_qemu_irq(&s->irq, irq);
     serial_init_core(s);
 
     vmstate_register(NULL, base, &vmstate_serial, s);
@@ -872,10 +879,11 @@ SerialState *serial_mm_init(MemoryRegion *address_space,
     s = g_malloc0(sizeof(SerialState));
 
     s->it_shift = it_shift;
-    s->irq = irq;
     s->baudbase = baudbase;
     s->chr = chr;
 
+    object_initialize(&s->irq, TYPE_PIN);
+    pin_connect_qemu_irq(&s->irq, irq);
     serial_init_core(s);
     vmstate_register(NULL, base, &vmstate_serial, s);
 
@@ -900,14 +908,24 @@ static void serial_isa_class_initfn(ObjectClass *klass, void *data)
 {
     DeviceClass *dc = DEVICE_CLASS(klass);
     ISADeviceClass *ic = ISA_DEVICE_CLASS(klass);
-    ic->init = serial_isa_initfn;
+    ic->init = serial_isa_realize;
     dc->vmsd = &vmstate_isa_serial;
     dc->props = serial_isa_properties;
 }
 
+static void serial_isa_initfn(Object *obj)
+{
+    ISASerialState *isa = ISA_SERIAL(obj);
+    SerialState *s = &isa->state;
+
+    object_initialize(&s->irq, TYPE_PIN);
+    object_property_add_child(obj, "irq[0]", OBJECT(&s->irq), NULL);
+}
+
 static TypeInfo serial_isa_info = {
-    .name          = "isa-serial",
+    .name          = TYPE_ISA_SERIAL,
     .parent        = TYPE_ISA_DEVICE,
+    .instance_init = serial_isa_initfn,
     .instance_size = sizeof(ISASerialState),
     .class_init    = serial_isa_class_initfn,
 };
