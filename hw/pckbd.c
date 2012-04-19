@@ -26,6 +26,7 @@
 #include "pc.h"
 #include "ps2.h"
 #include "sysemu.h"
+#include "qemu/pin.h"
 
 /* debug PC keyboard */
 //#define DEBUG_KBD
@@ -136,9 +137,9 @@ typedef struct KBDState {
     void *kbd;
     void *mouse;
 
-    qemu_irq irq_kbd;
-    qemu_irq irq_mouse;
-    qemu_irq *a20_out;
+    Pin irq_kbd;
+    Pin irq_mouse;
+    Pin a20_out;
     target_phys_addr_t mask;
 } KBDState;
 
@@ -168,8 +169,8 @@ static void kbd_update_irq(KBDState *s)
                 irq_kbd_level = 1;
         }
     }
-    qemu_set_irq(s->irq_kbd, irq_kbd_level);
-    qemu_set_irq(s->irq_mouse, irq_mouse_level);
+    pin_set_level(&s->irq_kbd, irq_kbd_level);
+    pin_set_level(&s->irq_mouse, irq_mouse_level);
 }
 
 static void kbd_update_kbd_irq(void *opaque, int level)
@@ -215,9 +216,7 @@ static void outport_write(KBDState *s, uint32_t val)
 {
     DPRINTF("kbd: write outport=0x%02x\n", val);
     s->outport = val;
-    if (s->a20_out) {
-        qemu_set_irq(*s->a20_out, (val >> 1) & 1);
-    }
+    pin_set_level(&s->a20_out, (val >> 1) & 1);
     if (!(val & 1)) {
         qemu_system_reset_request();
     }
@@ -285,15 +284,11 @@ static void kbd_write_command(void *opaque, uint32_t addr, uint32_t val)
         kbd_queue(s, s->outport, 0);
         break;
     case KBD_CCMD_ENABLE_A20:
-        if (s->a20_out) {
-            qemu_irq_raise(*s->a20_out);
-        }
+        pin_raise(&s->a20_out);
         s->outport |= KBD_OUT_A20;
         break;
     case KBD_CCMD_DISABLE_A20:
-        if (s->a20_out) {
-            qemu_irq_lower(*s->a20_out);
-        }
+        pin_lower(&s->a20_out);
         s->outport &= ~KBD_OUT_A20;
         break;
     case KBD_CCMD_RESET:
@@ -414,8 +409,12 @@ void i8042_mm_init(qemu_irq kbd_irq, qemu_irq mouse_irq,
 {
     KBDState *s = g_malloc0(sizeof(KBDState));
 
-    s->irq_kbd = kbd_irq;
-    s->irq_mouse = mouse_irq;
+    object_initialize(&s->irq_kbd, TYPE_PIN);
+    object_initialize(&s->irq_mouse, TYPE_PIN);
+    object_initialize(&s->a20_out, TYPE_PIN);
+
+    pin_connect_qemu_irq(&s->irq_kbd, kbd_irq);
+    pin_connect_qemu_irq(&s->irq_mouse, mouse_irq);
     s->mask = mask;
 
     vmstate_register(NULL, 0, &vmstate_kbd, s);
@@ -445,7 +444,7 @@ void i8042_setup_a20_line(ISADevice *dev, qemu_irq *a20_out)
 {
     KBDState *s = &(DO_UPCAST(ISAKBDState, dev, dev)->kbd);
 
-    s->a20_out = a20_out;
+    pin_connect_qemu_irq(&s->a20_out, *a20_out);
 }
 
 static const VMStateDescription vmstate_kbd_isa = {
@@ -477,13 +476,17 @@ static const MemoryRegionOps i8042_cmd_ops = {
     .old_portio = i8042_cmd_portio
 };
 
-static int i8042_initfn(ISADevice *dev)
+static int i8042_realize(ISADevice *dev)
 {
     ISAKBDState *isa_s = DO_UPCAST(ISAKBDState, dev, dev);
     KBDState *s = &isa_s->kbd;
+    qemu_irq irq;
 
-    isa_init_irq(dev, &s->irq_kbd, 1);
-    isa_init_irq(dev, &s->irq_mouse, 12);
+    isa_init_irq(dev, &irq, 1);
+    pin_connect_qemu_irq(&s->irq_kbd, irq);
+
+    isa_init_irq(dev, &irq, 12);
+    pin_connect_qemu_irq(&s->irq_mouse, irq);
 
     memory_region_init_io(isa_s->io + 0, &i8042_data_ops, s, "i8042-data", 1);
     isa_register_ioport(dev, isa_s->io + 0, 0x60);
@@ -497,11 +500,25 @@ static int i8042_initfn(ISADevice *dev)
     return 0;
 }
 
+static void i8042_initfn(Object *obj)
+{
+    ISAKBDState *isa_s = OBJECT_CHECK(ISAKBDState, obj, "i8042");
+    KBDState *s = &isa_s->kbd;
+
+    object_initialize(&s->irq_kbd, TYPE_PIN);
+    object_initialize(&s->irq_mouse, TYPE_PIN);
+    object_initialize(&s->a20_out, TYPE_PIN);
+
+    object_property_add_child(obj, "irq_kbd", OBJECT(&s->irq_kbd), NULL);
+    object_property_add_child(obj, "irq_mouse", OBJECT(&s->irq_mouse), NULL);
+    object_property_add_child(obj, "a20_out", OBJECT(&s->a20_out), NULL);
+}
+
 static void i8042_class_initfn(ObjectClass *klass, void *data)
 {
     DeviceClass *dc = DEVICE_CLASS(klass);
     ISADeviceClass *ic = ISA_DEVICE_CLASS(klass);
-    ic->init = i8042_initfn;
+    ic->init = i8042_realize;
     dc->no_user = 1;
     dc->vmsd = &vmstate_kbd_isa;
 }
@@ -509,6 +526,7 @@ static void i8042_class_initfn(ObjectClass *klass, void *data)
 static TypeInfo i8042_info = {
     .name          = "i8042",
     .parent        = TYPE_ISA_DEVICE,
+    .instance_init = i8042_initfn,
     .instance_size = sizeof(ISAKBDState),
     .class_init    = i8042_class_initfn,
 };
