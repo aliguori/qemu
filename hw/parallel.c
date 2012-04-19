@@ -27,6 +27,7 @@
 #include "isa.h"
 #include "pc.h"
 #include "sysemu.h"
+#include "qemu/pin.h"
 
 //#define DEBUG_PARALLEL
 
@@ -70,7 +71,7 @@ typedef struct ParallelState {
     uint8_t datar;
     uint8_t status;
     uint8_t control;
-    qemu_irq irq;
+    Pin irq;
     int irq_pending;
     CharDriverState *chr;
     int hw_driver;
@@ -91,9 +92,9 @@ typedef struct ISAParallelState {
 static void parallel_update_irq(ParallelState *s)
 {
     if (s->irq_pending)
-        qemu_irq_raise(s->irq);
+        pin_raise(&s->irq);
     else
-        qemu_irq_lower(s->irq);
+        pin_lower(&s->irq);
 }
 
 static void
@@ -472,13 +473,14 @@ static const MemoryRegionPortio isa_parallel_portio_sw_list[] = {
     PORTIO_END_OF_LIST(),
 };
 
-static int parallel_isa_initfn(ISADevice *dev)
+static int parallel_isa_realize(ISADevice *dev)
 {
     static int index;
     ISAParallelState *isa = DO_UPCAST(ISAParallelState, dev, dev);
     ParallelState *s = &isa->state;
     int base;
     uint8_t dummy;
+    qemu_irq irq;
 
     if (!s->chr) {
         fprintf(stderr, "Can't create parallel device, empty char device\n");
@@ -494,7 +496,8 @@ static int parallel_isa_initfn(ISADevice *dev)
     index++;
 
     base = isa->iobase;
-    isa_init_irq(dev, &s->irq, isa->isairq);
+    isa_init_irq(dev, &irq, isa->isairq);
+    pin_connect_qemu_irq(&s->irq, irq);
     qemu_register_reset(parallel_reset, s);
 
     if (qemu_chr_fe_ioctl(s->chr, CHR_IOCTL_PP_READ_STATUS, &dummy) == 0) {
@@ -572,7 +575,8 @@ bool parallel_mm_init(MemoryRegion *address_space,
     ParallelState *s;
 
     s = g_malloc0(sizeof(ParallelState));
-    s->irq = irq;
+    object_initialize(&s->irq, TYPE_PIN);
+    pin_connect_qemu_irq(&s->irq, irq);
     s->chr = chr;
     s->it_shift = it_shift;
     qemu_register_reset(parallel_reset, s);
@@ -581,6 +585,15 @@ bool parallel_mm_init(MemoryRegion *address_space,
                           "parallel", 8 << it_shift);
     memory_region_add_subregion(address_space, base, &s->iomem);
     return true;
+}
+
+static void parallel_isa_initfn(Object *obj)
+{
+    ISAParallelState *isa = OBJECT_CHECK(ISAParallelState, obj, "isa-parallel");
+    ParallelState *s = &isa->state;
+    
+    object_initialize(&s->irq, TYPE_PIN);
+    object_property_add_child(obj, "irq", OBJECT(&s->irq), NULL);
 }
 
 static Property parallel_isa_properties[] = {
@@ -595,13 +608,14 @@ static void parallel_isa_class_initfn(ObjectClass *klass, void *data)
 {
     DeviceClass *dc = DEVICE_CLASS(klass);
     ISADeviceClass *ic = ISA_DEVICE_CLASS(klass);
-    ic->init = parallel_isa_initfn;
+    ic->init = parallel_isa_realize;
     dc->props = parallel_isa_properties;
 }
 
 static TypeInfo parallel_isa_info = {
     .name          = "isa-parallel",
     .parent        = TYPE_ISA_DEVICE,
+    .instance_init = parallel_isa_initfn,
     .instance_size = sizeof(ISAParallelState),
     .class_init    = parallel_isa_class_initfn,
 };
