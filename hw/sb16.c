@@ -28,6 +28,7 @@
 #include "qdev.h"
 #include "qemu-timer.h"
 #include "host-utils.h"
+#include "qemu/pin.h"
 
 #define dolog(...) AUD_log ("sb16", __VA_ARGS__)
 
@@ -50,7 +51,7 @@ static const char e3[] = "COPYRIGHT (C) CREATIVE TECHNOLOGY LTD, 1992.";
 typedef struct SB16State {
     ISADevice dev;
     QEMUSoundCard card;
-    qemu_irq pic;
+    Pin pic;
     uint32_t irq;
     uint32_t dma;
     uint32_t hdma;
@@ -184,7 +185,7 @@ static void aux_timer (void *opaque)
 {
     SB16State *s = opaque;
     s->can_write = 1;
-    qemu_irq_raise (s->pic);
+    pin_raise (&s->pic);
 }
 
 #define DMA8_AUTO 1
@@ -592,7 +593,7 @@ static void command (SB16State *s, uint8_t cmd)
         case 0xf3:
             dsp_out_data (s, 0xaa);
             s->mixer_regs[0x82] |= (cmd == 0xf2) ? 1 : 2;
-            qemu_irq_raise (s->pic);
+            pin_raise (&s->pic);
             break;
 
         case 0xf9:
@@ -760,7 +761,7 @@ static void complete (SB16State *s)
                 bytes = samples << s->fmt_stereo << (s->fmt_bits == 16);
                 ticks = muldiv64 (bytes, get_ticks_per_sec (), freq);
                 if (ticks < get_ticks_per_sec () / 1024) {
-                    qemu_irq_raise (s->pic);
+                    pin_raise (&s->pic);
                 }
                 else {
                     if (s->aux_ts) {
@@ -854,10 +855,9 @@ static void legacy_reset (SB16State *s)
 
 static void reset (SB16State *s)
 {
-    qemu_irq_lower (s->pic);
+    pin_lower (&s->pic);
     if (s->dma_auto) {
-        qemu_irq_raise (s->pic);
-        qemu_irq_lower (s->pic);
+        pin_pulse (&s->pic);
     }
 
     s->mixer_regs[0x82] = 0;
@@ -997,7 +997,7 @@ static IO_READ_PROTO (dsp_read)
         if (s->mixer_regs[0x82] & 1) {
             ack = 1;
             s->mixer_regs[0x82] &= 1;
-            qemu_irq_lower (s->pic);
+            pin_lower (&s->pic);
         }
         break;
 
@@ -1006,7 +1006,7 @@ static IO_READ_PROTO (dsp_read)
         if (s->mixer_regs[0x82] & 2) {
             ack = 1;
             s->mixer_regs[0x82] &= 2;
-            qemu_irq_lower (s->pic);
+            pin_lower (&s->pic);
         }
         break;
 
@@ -1220,7 +1220,7 @@ static int SB_read_DMA (void *opaque, int nchan, int dma_pos, int dma_len)
 
     if (s->left_till_irq <= 0) {
         s->mixer_regs[0x82] |= (nchan & 4) ? 2 : 1;
-        qemu_irq_raise (s->pic);
+        pin_raise (&s->pic);
         if (0 == s->dma_auto) {
             control (s, 0);
             speaker (s, 0);
@@ -1353,14 +1353,16 @@ static const MemoryRegionPortio sb16_ioport_list[] = {
 };
 
 
-static int sb16_initfn (ISADevice *dev)
+static int sb16_realize (ISADevice *dev)
 {
     SB16State *s;
+    qemu_irq irq;
 
     s = DO_UPCAST (SB16State, dev, dev);
 
     s->cmd = -1;
-    isa_init_irq (dev, &s->pic, s->irq);
+    isa_init_irq (dev, &irq, s->irq);
+    pin_connect_qemu_irq(&s->pic, irq);
 
     s->mixer_regs[0x80] = magic_of_irq (s->irq);
     s->mixer_regs[0x81] = (1 << s->dma) | (1 << s->hdma);
@@ -1385,6 +1387,14 @@ static int sb16_initfn (ISADevice *dev)
     return 0;
 }
 
+static void sb16_initfn (Object *obj)
+{
+    SB16State *s = OBJECT_CHECK (SB16State, obj, "sb16");
+
+    object_initialize (&s->pic, TYPE_PIN);
+    object_property_add_child (obj, "pic", OBJECT (&s->pic), NULL);
+}
+
 int SB16_init (ISABus *bus)
 {
     isa_create_simple (bus, "sb16");
@@ -1404,7 +1414,7 @@ static void sb16_class_initfn (ObjectClass *klass, void *data)
 {
     DeviceClass *dc = DEVICE_CLASS (klass);
     ISADeviceClass *ic = ISA_DEVICE_CLASS (klass);
-    ic->init = sb16_initfn;
+    ic->init = sb16_realize;
     dc->desc = "Creative Sound Blaster 16";
     dc->vmsd = &vmstate_sb16;
     dc->props = sb16_properties;
@@ -1413,6 +1423,7 @@ static void sb16_class_initfn (ObjectClass *klass, void *data)
 static TypeInfo sb16_info = {
     .name          = "sb16",
     .parent        = TYPE_ISA_DEVICE,
+    .instance_init = sb16_initfn,
     .instance_size = sizeof (SB16State),
     .class_init    = sb16_class_initfn,
 };
