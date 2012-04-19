@@ -903,6 +903,24 @@ void object_property_add_str(Object *obj, const char *name,
                              void (*set)(Object *, const char *, struct Error **),
                              struct Error **errp);
 
+typedef bool (BoolPropertyGetter)(Object *, struct Error **);
+typedef void (BoolPropertySetter)(Object *, bool, struct Error **);
+
+/**
+ * object_property_add_bool:
+ * @obj: the object to add a property to
+ * @name: the name of the property
+ * @get: the getter or NULL if the property is write-only.
+ * @set: the setter or NULL if the property is read-only
+ * @errp: if an error occurs, a pointer to an area to store the error
+ *
+ * Add a bool property using getters/setters.  This function will add a
+ * property of type 'bool'.
+ */
+void object_property_add_bool(Object *obj, const char *name,
+                              BoolPropertyGetter *get,
+                              BoolPropertySetter *set,
+                              struct Error **errp);
 /**
  * container_get:
  * @path: path to the container
