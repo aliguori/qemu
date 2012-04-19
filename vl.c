@@ -2172,7 +2172,7 @@ void qemu_add_exit_notifier(Notifier *notify)
 
 void qemu_remove_exit_notifier(Notifier *notify)
 {
-    notifier_remove(notify);
+    notifier_list_remove(&exit_notifiers, notify);
 }
 
 static void qemu_run_exit_notifiers(void)

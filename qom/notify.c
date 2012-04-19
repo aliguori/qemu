@@ -26,7 +26,7 @@ void notifier_list_add(NotifierList *list, Notifier *notifier)
     QLIST_INSERT_HEAD(&list->notifiers, notifier, node);
 }
 
-void notifier_remove(Notifier *notifier)
+void notifier_list_remove(NotifierList *list, Notifier *notifier)
 {
     QLIST_REMOVE(notifier, node);
 }

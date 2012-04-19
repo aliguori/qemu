@@ -21,6 +21,9 @@ typedef struct Notifier Notifier;
 struct Notifier
 {
     void (*notify)(Notifier *notifier, void *data);
+    void (*release)(Notifier *notifier);
+
+    /*< private >*/
     QLIST_ENTRY(Notifier) node;
 };
 
@@ -36,7 +39,7 @@ void notifier_list_init(NotifierList *list);
 
 void notifier_list_add(NotifierList *list, Notifier *notifier);
 
-void notifier_remove(Notifier *notifier);
+void notifier_list_remove(NotifierList *list, Notifier *notifier);
 
 void notifier_list_notify(NotifierList *list, void *data);
 
