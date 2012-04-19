@@ -27,6 +27,7 @@
 #include "isa.h"
 #include "gusemu.h"
 #include "gustate.h"
+#include "qemu/pin.h"
 
 #define dolog(...) AUD_log ("audio", __VA_ARGS__)
 #ifdef DEBUG
@@ -46,6 +47,9 @@
 #define IO_WRITE_PROTO(name) \
     static void name (void *opaque, uint32_t nport, uint32_t val)
 
+#define TYPE_GUS "gus"
+#define GUS(obj) OBJECT_CHECK (GUSState, (obj), TYPE_GUS)
+
 typedef struct GUSState {
     ISADevice dev;
     GUSEmuState emu;
@@ -58,7 +62,7 @@ typedef struct GUSState {
     int samples;
     SWVoiceOut *voice;
     int64_t last_ticks;
-    qemu_irq pic;
+    Pin pic;
 } GUSState;
 
 IO_READ_PROTO (gus_readb)
@@ -163,8 +167,8 @@ static void GUS_callback (void *opaque, int free)
 int GUS_irqrequest (GUSEmuState *emu, int hwirq, int n)
 {
     GUSState *s = emu->opaque;
-    /* qemu_irq_lower (s->pic); */
-    qemu_irq_raise (s->pic);
+    /* pin_lower (&s->pic); */
+    pin_raise (&s->pic);
     s->irqs += n;
     ldebug ("irqrequest %d %d %d\n", hwirq, n, s->irqs);
     return n;
@@ -174,11 +178,11 @@ void GUS_irqclear (GUSEmuState *emu, int hwirq)
 {
     GUSState *s = emu->opaque;
     ldebug ("irqclear %d %d\n", hwirq, s->irqs);
-    qemu_irq_lower (s->pic);
+    pin_lower (&s->pic);
     s->irqs -= 1;
 #ifdef IRQ_STORM
     if (s->irqs > 0) {
-        qemu_irq_raise (s->pic[hwirq]);
+        pin_raise (&s->pic[hwirq]);
     }
 #endif
 }
@@ -248,10 +252,11 @@ static const MemoryRegionPortio gus_portio_list2[] = {
     PORTIO_END_OF_LIST (),
 };
 
-static int gus_initfn (ISADevice *dev)
+static int gus_realize (ISADevice *dev)
 {
     GUSState *s = DO_UPCAST (GUSState, dev, dev);
     struct audsettings as;
+    qemu_irq irq;
 
     AUD_register_card ("gus", &s->card);
 
@@ -286,7 +291,8 @@ static int gus_initfn (ISADevice *dev)
     s->emu.himemaddr = s->himem;
     s->emu.gusdatapos = s->emu.himemaddr + 1024 * 1024 + 32;
     s->emu.opaque = s;
-    isa_init_irq (dev, &s->pic, s->emu.gusirq);
+    isa_init_irq (dev, &irq, s->emu.gusirq);
+    pin_connect_qemu_irq (&s->pic, irq);
 
     AUD_set_active_out (s->voice, 1);
 
@@ -297,6 +303,14 @@ int GUS_init (ISABus *bus)
 {
     isa_create_simple (bus, "gus");
     return 0;
+}
+
+static void gus_initfn (Object *obj)
+{
+    GUSState *s = GUS (obj);
+
+    object_initialize (&s->pic, TYPE_PIN);
+    object_property_add_child (obj, "pic", OBJECT (&s->pic), NULL);
 }
 
 static Property gus_properties[] = {
@@ -311,15 +325,16 @@ static void gus_class_initfn (ObjectClass *klass, void *data)
 {
     DeviceClass *dc = DEVICE_CLASS (klass);
     ISADeviceClass *ic = ISA_DEVICE_CLASS (klass);
-    ic->init = gus_initfn;
+    ic->init = gus_realize;
     dc->desc = "Gravis Ultrasound GF1";
     dc->vmsd = &vmstate_gus;
     dc->props = gus_properties;
 }
 
 static TypeInfo gus_info = {
-    .name          = "gus",
+    .name          = TYPE_GUS,
     .parent        = TYPE_ISA_DEVICE,
+    .instance_init = gus_initfn,
     .instance_size = sizeof (GUSState),
     .class_init    = gus_class_initfn,
 };
