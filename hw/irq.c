@@ -23,12 +23,31 @@
  */
 #include "qemu-common.h"
 #include "irq.h"
+#include "qemu/pin.h"
 
 struct IRQState {
     qemu_irq_handler handler;
     void *opaque;
     int n;
 };
+
+static void pin_set_irq_level(void *opaque, int n, int level)
+{
+    Pin *pin = PIN(opaque);
+
+    pin_set_level(pin, !!level);
+}
+
+qemu_irq pin_get_qemu_irq(Pin *in)
+{
+    struct IRQState *p = g_malloc0(sizeof(*p));
+
+    p->handler = pin_set_irq_level;
+    p->opaque = in;
+    p->n = 0;
+
+    return p;
+}
 
 void qemu_set_irq(qemu_irq irq, int level)
 {
