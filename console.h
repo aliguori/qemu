@@ -3,7 +3,7 @@
 
 #include "qemu-char.h"
 #include "qdict.h"
-#include "notify.h"
+#include "qemu/notify.h"
 #include "monitor.h"
 #include "trace.h"
 

@@ -7,7 +7,7 @@
 #include "qemu-queue.h"
 #include "qemu-timer.h"
 #include "qapi-types.h"
-#include "notify.h"
+#include "qemu/notify.h"
 #include "main-loop.h"
 
 /* vl.c */

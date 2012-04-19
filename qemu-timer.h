@@ -3,7 +3,7 @@
 
 #include "qemu-common.h"
 #include "main-loop.h"
-#include "notify.h"
+#include "qemu/notify.h"
 #include <time.h>
 #include <sys/time.h>
 
