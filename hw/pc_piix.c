@@ -145,7 +145,7 @@ static void pc_init1(MemoryRegion *system_memory,
     GSIState *gsi_state;
     DriveInfo *hd[MAX_IDE_BUS * MAX_IDE_DEVS];
     BusState *idebus[MAX_IDE_BUS];
-    ISADevice *rtc_state;
+    RTCState *rtc_state;
     ISADevice *floppy;
     MemoryRegion *ram_memory;
     MemoryRegion *pci_memory;

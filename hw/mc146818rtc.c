@@ -477,16 +477,14 @@ static uint32_t cmos_ioport_read(void *opaque, uint32_t addr)
     }
 }
 
-void rtc_set_memory(ISADevice *dev, int addr, int val)
+void rtc_set_memory(RTCState *s, int addr, int val)
 {
-    RTCState *s = DO_UPCAST(RTCState, dev, dev);
     if (addr >= 0 && addr <= 127)
         s->cmos_data[addr] = val;
 }
 
-void rtc_set_date(ISADevice *dev, const struct tm *tm)
+void rtc_set_date(RTCState *s, const struct tm *tm)
 {
-    RTCState *s = DO_UPCAST(RTCState, dev, dev);
     s->current_tm = *tm;
     rtc_copy_date(s);
 }
@@ -495,19 +493,18 @@ void rtc_set_date(ISADevice *dev, const struct tm *tm)
 #define REG_IBM_CENTURY_BYTE        0x32
 #define REG_IBM_PS2_CENTURY_BYTE    0x37
 
-static void rtc_set_date_from_host(ISADevice *dev)
+static void rtc_set_date_from_host(RTCState *s)
 {
-    RTCState *s = DO_UPCAST(RTCState, dev, dev);
     struct tm tm;
     int val;
 
     /* set the CMOS date */
     qemu_get_timedate(&tm, 0);
-    rtc_set_date(dev, &tm);
+    rtc_set_date(s, &tm);
 
     val = rtc_to_bcd(s, (tm.tm_year / 100) + 19);
-    rtc_set_memory(dev, REG_IBM_CENTURY_BYTE, val);
-    rtc_set_memory(dev, REG_IBM_PS2_CENTURY_BYTE, val);
+    rtc_set_memory(s, REG_IBM_CENTURY_BYTE, val);
+    rtc_set_memory(s, REG_IBM_PS2_CENTURY_BYTE, val);
 }
 
 static int rtc_post_load(void *opaque, int version_id)
@@ -556,7 +553,7 @@ static void rtc_notify_clock_reset(Notifier *notifier, void *data)
     RTCState *s = container_of(notifier, RTCState, clock_reset_notifier);
     int64_t now = *(int64_t *)data;
 
-    rtc_set_date_from_host(&s->dev);
+    rtc_set_date_from_host(s);
     s->next_second_time = now + (get_ticks_per_sec() * 99) / 100;
     qemu_mod_timer(s->second_timer2, s->next_second_time);
     rtc_timer_update(s, now);
@@ -572,7 +569,7 @@ static void rtc_notify_clock_reset(Notifier *notifier, void *data)
 static void rtc_notify_suspend(Notifier *notifier, void *data)
 {
     RTCState *s = container_of(notifier, RTCState, suspend_notifier);
-    rtc_set_memory(&s->dev, 0xF, 0xFE);
+    rtc_set_memory(s, 0xF, 0xFE);
 }
 
 static void rtc_reset(void *opaque)
@@ -633,7 +630,7 @@ static int rtc_realize(ISADevice *dev)
     s->cmos_data[RTC_REG_C] = 0x00;
     s->cmos_data[RTC_REG_D] = 0x80;
 
-    rtc_set_date_from_host(dev);
+    rtc_set_date_from_host(s);
 
 #ifdef TARGET_I386
     switch (s->lost_tick_policy) {
@@ -685,7 +682,7 @@ static void rtc_initfn(Object *obj)
     object_property_add_child(obj, "sqw_irq", OBJECT(&s->sqw_irq), NULL);
 }
 
-ISADevice *rtc_init(ISABus *bus, int base_year, qemu_irq intercept_irq)
+RTCState *rtc_init(ISABus *bus, int base_year, qemu_irq intercept_irq)
 {
     ISADevice *dev;
     RTCState *s;
@@ -699,7 +696,7 @@ ISADevice *rtc_init(ISABus *bus, int base_year, qemu_irq intercept_irq)
     } else {
         isa_init_irq(dev, &s->irq, RTC_ISA_IRQ);
     }
-    return dev;
+    return s;
 }
 
 static Property mc146818rtc_properties[] = {

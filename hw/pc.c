@@ -216,7 +216,7 @@ static int cmos_get_fd_drive_type(FDriveType fd0)
 }
 
 static void cmos_init_hd(int type_ofs, int info_ofs, BlockDriverState *hd,
-                         ISADevice *s)
+                         RTCState *s)
 {
     int cylinders, heads, sectors;
     bdrv_get_geometry_hint(hd, &cylinders, &heads, &sectors);
@@ -249,7 +249,7 @@ static int boot_device2nibble(char boot_device)
     return 0;
 }
 
-static int set_boot_dev(ISADevice *s, const char *boot_device, int fd_bootchk)
+static int set_boot_dev(RTCState *s, const char *boot_device, int fd_bootchk)
 {
 #define PC_MAX_BOOT_DEVICES 3
     int nbds, bds[3] = { 0, };
@@ -279,14 +279,14 @@ static int pc_boot_set(void *opaque, const char *boot_device)
 }
 
 typedef struct pc_cmos_init_late_arg {
-    ISADevice *rtc_state;
+    RTCState *rtc_state;
     BusState *idebus0, *idebus1;
 } pc_cmos_init_late_arg;
 
 static void pc_cmos_init_late(void *opaque)
 {
     pc_cmos_init_late_arg *arg = opaque;
-    ISADevice *s = arg->rtc_state;
+    RTCState *s = arg->rtc_state;
     int val;
     BlockDriverState *hd_table[4];
     int i;
@@ -332,7 +332,7 @@ static void pc_cmos_init_late(void *opaque)
 void pc_cmos_init(ram_addr_t ram_size, ram_addr_t above_4g_mem_size,
                   const char *boot_device,
                   ISADevice *floppy, BusState *idebus0, BusState *idebus1,
-                  ISADevice *s)
+                  RTCState *s)
 {
     int val, nb, nb_heads, max_track, last_sect, i;
     FDriveType fd_type[2] = { FDRIVE_DRV_NONE, FDRIVE_DRV_NONE };
@@ -1086,7 +1086,7 @@ static void cpu_request_exit(void *opaque, int irq, int level)
 }
 
 void pc_basic_device_init(ISABus *isa_bus, qemu_irq *gsi,
-                          ISADevice **rtc_state,
+                          RTCState **rtc_state,
                           ISADevice **floppy,
                           bool no_vmport)
 {
