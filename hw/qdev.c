@@ -193,6 +193,9 @@ int qdev_init(DeviceState *dev)
                                        dev->instance_id_alias,
                                        dev->alias_required_for_version);
     }
+    if (dev->parent_bus == NULL) {
+        qemu_register_reset((QEMUResetHandler *)device_reset, dev);
+    }
     dev->state = DEV_STATE_INITIALIZED;
     if (dev->hotplugged) {
         device_reset(dev);
@@ -698,6 +701,9 @@ static void device_finalize(Object *obj)
         }
         if (qdev_get_vmsd(dev)) {
             vmstate_unregister(dev, qdev_get_vmsd(dev), dev);
+        }
+        if (dev->parent_bus == NULL) {
+            qemu_unregister_reset((QEMUResetHandler *)device_reset, dev);
         }
         if (dc->exit) {
             dc->exit(dev);
