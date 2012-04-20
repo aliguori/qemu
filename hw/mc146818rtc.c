@@ -25,6 +25,7 @@
 #include "qemu-timer.h"
 #include "sysemu.h"
 #include "mc146818rtc.h"
+#include "qemu/pin.h"
 
 #ifdef TARGET_I386
 #include "apic.h"
@@ -54,8 +55,8 @@ typedef struct RTCState {
     uint8_t cmos_index;
     struct tm current_tm;
     int32_t base_year;
-    qemu_irq irq;
-    qemu_irq sqw_irq;
+    Pin irq;
+    Pin sqw_irq;
     int it_shift;
     /* periodic timer */
     QEMUTimer *periodic_timer;
@@ -98,7 +99,7 @@ static void rtc_coalesced_timer(void *opaque)
         apic_reset_irq_delivered();
         s->cmos_data[RTC_REG_C] |= 0xc0;
         DPRINTF_C("cmos: injecting from timer\n");
-        qemu_irq_raise(s->irq);
+        pin_raise(&s->irq);
         if (apic_get_irq_delivered()) {
             s->irq_coalesced--;
             DPRINTF_C("cmos: coalesced irqs decreased to %d\n",
@@ -118,7 +119,7 @@ static void rtc_timer_update(RTCState *s, int64_t current_time)
     period_code = s->cmos_data[RTC_REG_A] & 0x0f;
     if (period_code != 0
         && ((s->cmos_data[RTC_REG_B] & REG_B_PIE)
-            || ((s->cmos_data[RTC_REG_B] & REG_B_SQWE) && s->sqw_irq))) {
+            || ((s->cmos_data[RTC_REG_B] & REG_B_SQWE)))) {
         if (period_code <= 2)
             period_code += 7;
         /* period in 32 Khz cycles */
@@ -157,7 +158,7 @@ static void rtc_periodic_timer(void *opaque)
             if (s->irq_reinject_on_ack_count >= RTC_REINJECT_ON_ACK_COUNT)
                 s->irq_reinject_on_ack_count = 0;		
             apic_reset_irq_delivered();
-            qemu_irq_raise(s->irq);
+            pin_raise(&s->irq);
             if (!apic_get_irq_delivered()) {
                 s->irq_coalesced++;
                 rtc_coalesced_timer_update(s);
@@ -166,12 +167,12 @@ static void rtc_periodic_timer(void *opaque)
             }
         } else
 #endif
-        qemu_irq_raise(s->irq);
+        pin_raise(&s->irq);
     }
     if (s->cmos_data[RTC_REG_B] & REG_B_SQWE) {
         /* Not square wave at all but we don't want 2048Hz interrupts!
            Must be seen as a pulse.  */
-        qemu_irq_raise(s->sqw_irq);
+        pin_raise(&s->sqw_irq);
     }
 }
 
@@ -406,7 +407,7 @@ static void rtc_update_second2(void *opaque)
         s->cmos_data[RTC_REG_C] |= REG_C_AF;
         if (s->cmos_data[RTC_REG_B] & REG_B_AIE) {
             qemu_system_wakeup_request(QEMU_WAKEUP_REASON_RTC);
-            qemu_irq_raise(s->irq);
+            pin_raise(&s->irq);
             s->cmos_data[RTC_REG_C] |= REG_C_IRQF;
         }
     }
@@ -415,7 +416,7 @@ static void rtc_update_second2(void *opaque)
     s->cmos_data[RTC_REG_C] |= REG_C_UF;
     if (s->cmos_data[RTC_REG_B] & REG_B_UIE) {
         s->cmos_data[RTC_REG_C] |= REG_C_IRQF;
-        qemu_irq_raise(s->irq);
+        pin_raise(&s->irq);
     }
 
     /* clear update in progress bit */
@@ -447,7 +448,7 @@ static uint32_t cmos_ioport_read(void *opaque, uint32_t addr)
             break;
         case RTC_REG_C:
             ret = s->cmos_data[s->cmos_index];
-            qemu_irq_lower(s->irq);
+            pin_lower(&s->irq);
             s->cmos_data[RTC_REG_C] = 0x00;
 #ifdef TARGET_I386
             if(s->irq_coalesced &&
@@ -457,7 +458,7 @@ static uint32_t cmos_ioport_read(void *opaque, uint32_t addr)
                 s->cmos_data[RTC_REG_C] |= REG_C_IRQF | REG_C_PF;
                 apic_reset_irq_delivered();
                 DPRINTF_C("cmos: injecting on ack\n");
-                qemu_irq_raise(s->irq);
+                pin_raise(&s->irq);
                 if (apic_get_irq_delivered()) {
                     s->irq_coalesced--;
                     DPRINTF_C("cmos: coalesced irqs decreased to %d\n",
@@ -581,7 +582,7 @@ static void rtc_reset(void *opaque)
     s->cmos_data[RTC_REG_B] &= ~(REG_B_PIE | REG_B_AIE | REG_B_SQWE);
     s->cmos_data[RTC_REG_C] &= ~(REG_C_UF | REG_C_IRQF | REG_C_PF | REG_C_AF);
 
-    qemu_irq_lower(s->irq);
+    pin_lower(&s->irq);
 
 #ifdef TARGET_I386
     if (s->lost_tick_policy == LOST_TICK_SLEW) {
@@ -622,7 +623,7 @@ static void rtc_get_date(Object *obj, Visitor *v, void *opaque,
     visit_end_struct(v, errp);
 }
 
-static int rtc_initfn(ISADevice *dev)
+static int rtc_realize(ISADevice *dev)
 {
     RTCState *s = DO_UPCAST(RTCState, dev, dev);
     int base = 0x70;
@@ -673,6 +674,17 @@ static int rtc_initfn(ISADevice *dev)
     return 0;
 }
 
+static void rtc_initfn(Object *obj)
+{
+    RTCState *s = OBJECT_CHECK(RTCState, obj, "mc146818rtc");
+
+    object_initialize(&s->irq, TYPE_PIN);
+    object_initialize(&s->sqw_irq, TYPE_PIN);
+
+    object_property_add_child(obj, "irq", OBJECT(&s->irq), NULL);
+    object_property_add_child(obj, "sqw_irq", OBJECT(&s->sqw_irq), NULL);
+}
+
 ISADevice *rtc_init(ISABus *bus, int base_year, qemu_irq intercept_irq)
 {
     ISADevice *dev;
@@ -683,9 +695,11 @@ ISADevice *rtc_init(ISABus *bus, int base_year, qemu_irq intercept_irq)
     qdev_prop_set_int32(&dev->qdev, "base_year", base_year);
     qdev_init_nofail(&dev->qdev);
     if (intercept_irq) {
-        s->irq = intercept_irq;
+        pin_connect_qemu_irq(&s->irq, intercept_irq);
     } else {
-        isa_init_irq(dev, &s->irq, RTC_ISA_IRQ);
+        qemu_irq irq;
+        isa_init_irq(dev, &irq, RTC_ISA_IRQ);
+        pin_connect_qemu_irq(&s->irq, irq);
     }
     return dev;
 }
@@ -701,7 +715,7 @@ static void rtc_class_initfn(ObjectClass *klass, void *data)
 {
     DeviceClass *dc = DEVICE_CLASS(klass);
     ISADeviceClass *ic = ISA_DEVICE_CLASS(klass);
-    ic->init = rtc_initfn;
+    ic->init = rtc_realize;
     dc->no_user = 1;
     dc->vmsd = &vmstate_rtc;
     dc->props = mc146818rtc_properties;
@@ -710,6 +724,7 @@ static void rtc_class_initfn(ObjectClass *klass, void *data)
 static TypeInfo mc146818rtc_info = {
     .name          = "mc146818rtc",
     .parent        = TYPE_ISA_DEVICE,
+    .instance_init = rtc_initfn,
     .instance_size = sizeof(RTCState),
     .class_init    = rtc_class_initfn,
 };
