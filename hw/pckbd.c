@@ -480,13 +480,9 @@ static int i8042_realize(ISADevice *dev)
 {
     ISAKBDState *isa_s = DO_UPCAST(ISAKBDState, dev, dev);
     KBDState *s = &isa_s->kbd;
-    qemu_irq irq;
 
-    isa_init_irq(dev, &irq, 1);
-    pin_connect_qemu_irq(&s->irq_kbd, irq);
-
-    isa_init_irq(dev, &irq, 12);
-    pin_connect_qemu_irq(&s->irq_mouse, irq);
+    isa_init_irq(dev, &s->irq_kbd, 1);
+    isa_init_irq(dev, &s->irq_mouse, 12);
 
     memory_region_init_io(isa_s->io + 0, &i8042_data_ops, s, "i8042-data", 1);
     isa_register_ioport(dev, isa_s->io + 0, 0x60);

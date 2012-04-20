@@ -22,7 +22,7 @@ typedef struct NE2000State {
     uint8_t phys[6]; /* mac address */
     uint8_t curpag;
     uint8_t mult[8]; /* multicast mask array */
-    qemu_irq irq;
+    Pin irq;
     NICState *nic;
     NICConf c;
     uint8_t mem[NE2000_MEM_SIZE];

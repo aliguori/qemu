@@ -782,7 +782,6 @@ static int serial_isa_realize(ISADevice *dev)
     static int index;
     ISASerialState *isa = DO_UPCAST(ISASerialState, dev, dev);
     SerialState *s = &isa->state;
-    qemu_irq irq;
 
     if (isa->index == -1)
         isa->index = index;
@@ -795,8 +794,7 @@ static int serial_isa_realize(ISADevice *dev)
     index++;
 
     s->baudbase = 115200;
-    isa_init_irq(dev, &irq, isa->isairq);
-    pin_connect_qemu_irq(&s->irq, irq);
+    isa_init_irq(dev, &s->irq, isa->isairq);
     serial_init_core(s);
     qdev_set_legacy_instance_id(&dev->qdev, isa->iobase, 3);
 

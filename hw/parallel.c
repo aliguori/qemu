@@ -480,7 +480,6 @@ static int parallel_isa_realize(ISADevice *dev)
     ParallelState *s = &isa->state;
     int base;
     uint8_t dummy;
-    qemu_irq irq;
 
     if (!s->chr) {
         fprintf(stderr, "Can't create parallel device, empty char device\n");
@@ -496,8 +495,7 @@ static int parallel_isa_realize(ISADevice *dev)
     index++;
 
     base = isa->iobase;
-    isa_init_irq(dev, &irq, isa->isairq);
-    pin_connect_qemu_irq(&s->irq, irq);
+    isa_init_irq(dev, &s->irq, isa->isairq);
     qemu_register_reset(parallel_reset, s);
 
     if (qemu_chr_fe_ioctl(s->chr, CHR_IOCTL_PP_READ_STATUS, &dummy) == 0) {

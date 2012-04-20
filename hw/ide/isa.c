@@ -27,6 +27,7 @@
 #include <hw/isa.h>
 #include "block.h"
 #include "dma.h"
+#include "qemu/pin.h"
 
 #include <hw/ide/internal.h>
 
@@ -39,7 +40,7 @@ typedef struct ISAIDEState {
     uint32_t  iobase;
     uint32_t  iobase2;
     uint32_t  isairq;
-    qemu_irq  irq;
+    Pin       irq;
 } ISAIDEState;
 
 static void isa_ide_reset(DeviceState *d)
@@ -61,14 +62,14 @@ static const VMStateDescription vmstate_ide_isa = {
     }
 };
 
-static int isa_ide_initfn(ISADevice *dev)
+static int isa_ide_realize(ISADevice *dev)
 {
     ISAIDEState *s = DO_UPCAST(ISAIDEState, dev, dev);
 
     ide_bus_new(&s->bus, &s->dev.qdev, 0);
     ide_init_ioport(&s->bus, dev, s->iobase, s->iobase2);
     isa_init_irq(dev, &s->irq, s->isairq);
-    ide_init2(&s->bus, s->irq);
+    ide_init2(&s->bus, pin_get_qemu_irq(&s->irq));
     vmstate_register(&dev->qdev, 0, &vmstate_ide_isa, s);
     return 0;
 };
@@ -94,6 +95,14 @@ ISADevice *isa_ide_init(ISABus *bus, int iobase, int iobase2, int isairq,
     return dev;
 }
 
+static void isa_ide_initfn(Object *obj)
+{
+    ISAIDEState *s = OBJECT_CHECK(ISAIDEState, obj, "isa-ide");
+
+    object_initialize(&s->irq, TYPE_PIN);
+    object_property_add_child(obj, "irq", OBJECT(&s->irq), NULL);
+}
+
 static Property isa_ide_properties[] = {
     DEFINE_PROP_HEX32("iobase",  ISAIDEState, iobase,  0x1f0),
     DEFINE_PROP_HEX32("iobase2", ISAIDEState, iobase2, 0x3f6),
@@ -105,7 +114,7 @@ static void isa_ide_class_initfn(ObjectClass *klass, void *data)
 {
     DeviceClass *dc = DEVICE_CLASS(klass);
     ISADeviceClass *ic = ISA_DEVICE_CLASS(klass);
-    ic->init = isa_ide_initfn;
+    ic->init = isa_ide_realize;
     dc->fw_name = "ide";
     dc->reset = isa_ide_reset;
     dc->props = isa_ide_properties;
@@ -114,6 +123,7 @@ static void isa_ide_class_initfn(ObjectClass *klass, void *data)
 static TypeInfo isa_ide_info = {
     .name          = "isa-ide",
     .parent        = TYPE_ISA_DEVICE,
+    .instance_init = isa_ide_initfn,
     .instance_size = sizeof(ISAIDEState),
     .class_init    = isa_ide_class_initfn,
 };

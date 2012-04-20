@@ -256,7 +256,6 @@ static int gus_realize (ISADevice *dev)
 {
     GUSState *s = DO_UPCAST (GUSState, dev, dev);
     struct audsettings as;
-    qemu_irq irq;
 
     AUD_register_card ("gus", &s->card);
 
@@ -291,8 +290,7 @@ static int gus_realize (ISADevice *dev)
     s->emu.himemaddr = s->himem;
     s->emu.gusdatapos = s->emu.himemaddr + 1024 * 1024 + 32;
     s->emu.opaque = s;
-    isa_init_irq (dev, &irq, s->emu.gusirq);
-    pin_connect_qemu_irq (&s->pic, irq);
+    isa_init_irq (dev, &s->pic, s->emu.gusirq);
 
     AUD_set_active_out (s->voice, 1);
 

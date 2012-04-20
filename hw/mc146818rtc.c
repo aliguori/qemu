@@ -697,9 +697,7 @@ ISADevice *rtc_init(ISABus *bus, int base_year, qemu_irq intercept_irq)
     if (intercept_irq) {
         pin_connect_qemu_irq(&s->irq, intercept_irq);
     } else {
-        qemu_irq irq;
-        isa_init_irq(dev, &irq, RTC_ISA_IRQ);
-        pin_connect_qemu_irq(&s->irq, irq);
+        isa_init_irq(dev, &s->irq, RTC_ISA_IRQ);
     }
     return dev;
 }

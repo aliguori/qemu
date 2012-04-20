@@ -6,6 +6,7 @@
 #include "ioport.h"
 #include "memory.h"
 #include "qdev.h"
+#include "qemu/pin.h"
 
 #define ISA_NUM_IRQS 16
 
@@ -27,7 +28,8 @@ typedef struct ISADeviceClass {
 struct ISABus {
     BusState qbus;
     MemoryRegion *address_space_io;
-    qemu_irq *irqs;
+    Pin in[ISA_NUM_IRQS];
+    qemu_irq *out;
 };
 
 struct ISADevice {
@@ -38,9 +40,10 @@ struct ISADevice {
 };
 
 ISABus *isa_bus_new(DeviceState *dev, MemoryRegion *address_space_io);
+void isa_bus_realize(ISABus *bus);
 void isa_bus_irqs(ISABus *bus, qemu_irq *irqs);
 qemu_irq isa_get_irq(ISADevice *dev, int isairq);
-void isa_init_irq(ISADevice *dev, qemu_irq *p, int isairq);
+void isa_init_irq(ISADevice *dev, Pin *p, int isairq);
 MemoryRegion *isa_address_space(ISADevice *dev);
 ISADevice *isa_create(ISABus *bus, const char *name);
 ISADevice *isa_try_create(ISABus *bus, const char *name);

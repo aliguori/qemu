@@ -147,7 +147,7 @@ static void ne2000_update_irq(NE2000State *s)
     printf("NE2000: Set IRQ to %d (%02x %02x)\n",
 	   isr ? 1 : 0, s->isr, s->imr);
 #endif
-    qemu_set_irq(s->irq, (isr != 0));
+    pin_set_level(&s->irq, (isr != 0));
 }
 
 static int ne2000_buffer_full(NE2000State *s)
@@ -730,7 +730,7 @@ static int pci_ne2000_init(PCIDevice *pci_dev)
     s = &d->ne2000;
     ne2000_setup_io(s, 0x100);
     pci_register_bar(&d->dev, 0, PCI_BASE_ADDRESS_SPACE_IO, &s->io);
-    s->irq = d->dev.irq[0];
+    pin_connect_qemu_irq(&s->irq, d->dev.irq[0]);
 
     qemu_macaddr_default_if_unset(&s->c.macaddr);
     ne2000_reset(s);
@@ -742,6 +742,15 @@ static int pci_ne2000_init(PCIDevice *pci_dev)
     add_boot_device_path(s->c.bootindex, &pci_dev->qdev, "/ethernet-phy@0");
 
     return 0;
+}
+
+static void pci_ne2000_initfn(Object *obj)
+{
+    PCINE2000State *d = OBJECT_CHECK(PCINE2000State, obj, "ne2k_pci");
+    NE2000State *s = &d->ne2000;
+
+    object_initialize(&s->irq, TYPE_PIN);
+    object_property_add_child(obj, "irq", OBJECT(&s->irq), NULL);
 }
 
 static int pci_ne2000_exit(PCIDevice *pci_dev)
@@ -777,6 +786,7 @@ static void ne2000_class_init(ObjectClass *klass, void *data)
 static TypeInfo ne2000_info = {
     .name          = "ne2k_pci",
     .parent        = TYPE_PCI_DEVICE,
+    .instance_init = pci_ne2000_initfn,
     .instance_size = sizeof(PCINE2000State),
     .class_init    = ne2000_class_init,
 };
