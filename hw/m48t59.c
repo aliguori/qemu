@@ -27,6 +27,7 @@
 #include "sysemu.h"
 #include "sysbus.h"
 #include "isa.h"
+#include "qemu/pin.h"
 
 //#define DEBUG_NVRAM
 
@@ -51,7 +52,7 @@
 
 struct M48t59State {
     /* Hardware parameters */
-    qemu_irq IRQ;
+    Pin IRQ;
     MemoryRegion iomem;
     uint32_t io_base;
     uint32_t size;
@@ -91,7 +92,7 @@ static void alarm_cb (void *opaque)
     uint64_t next_time;
     M48t59State *NVRAM = opaque;
 
-    qemu_set_irq(NVRAM->IRQ, 1);
+    pin_raise(&NVRAM->IRQ);
     if ((NVRAM->buffer[0x1FF5] & 0x80) == 0 &&
 	(NVRAM->buffer[0x1FF4] & 0x80) == 0 &&
 	(NVRAM->buffer[0x1FF3] & 0x80) == 0 &&
@@ -128,7 +129,7 @@ static void alarm_cb (void *opaque)
     }
     qemu_mod_timer(NVRAM->alrm_timer, qemu_get_clock_ns(rtc_clock) +
                     next_time * 1000);
-    qemu_set_irq(NVRAM->IRQ, 0);
+    pin_lower(&NVRAM->IRQ);
 }
 
 static void set_alarm(M48t59State *NVRAM)
@@ -166,8 +167,7 @@ static void watchdog_cb (void *opaque)
         /* May it be a hw CPU Reset instead ? */
         qemu_system_reset_request();
     } else {
-	qemu_set_irq(NVRAM->IRQ, 1);
-	qemu_set_irq(NVRAM->IRQ, 0);
+	pin_pulse(&NVRAM->IRQ);
     }
 }
 
@@ -699,8 +699,10 @@ static int m48t59_init_isa1(ISADevice *dev)
 {
     M48t59ISAState *d = DO_UPCAST(M48t59ISAState, busdev, dev);
     M48t59State *s = &d->state;
+    qemu_irq irq;
 
-    isa_init_irq(dev, &s->IRQ, 8);
+    isa_init_irq(dev, &irq, 8);
+    pin_connect_qemu_irq(&s->IRQ, irq);
     m48t59_init_common(s);
 
     return 0;
@@ -710,14 +712,25 @@ static int m48t59_init1(SysBusDevice *dev)
 {
     M48t59SysBusState *d = FROM_SYSBUS(M48t59SysBusState, dev);
     M48t59State *s = &d->state;
+    qemu_irq irq;
 
-    sysbus_init_irq(dev, &s->IRQ);
+    sysbus_init_irq(dev, &irq);
+    pin_connect_qemu_irq(&s->IRQ, irq);
 
     memory_region_init_io(&s->iomem, &nvram_ops, s, "m48t59.nvram", s->size);
     sysbus_init_mmio(dev, &s->iomem);
     m48t59_init_common(s);
 
     return 0;
+}
+
+static void m48t59_isa_initfn(Object *obj)
+{
+    M48t59ISAState *d = OBJECT_CHECK(M48t59ISAState, obj, "m48t59_isa");
+    M48t59State *s = &d->state;
+
+    object_initialize(&s->IRQ, TYPE_PIN);
+    object_property_add_child(obj, "IRQ", OBJECT(&s->IRQ), NULL);
 }
 
 static Property m48t59_isa_properties[] = {
@@ -740,9 +753,19 @@ static void m48t59_init_class_isa1(ObjectClass *klass, void *data)
 static TypeInfo m48t59_isa_info = {
     .name          = "m48t59_isa",
     .parent        = TYPE_ISA_DEVICE,
+    .instance_init = m48t59_isa_initfn,
     .instance_size = sizeof(M48t59ISAState),
     .class_init    = m48t59_init_class_isa1,
 };
+
+static void m48t59_sysbus_initfn(Object *obj)
+{
+    M48t59SysBusState *d = OBJECT_CHECK(M48t59SysBusState, obj, "m48t59");
+    M48t59State *s = &d->state;
+
+    object_initialize(&s->IRQ, TYPE_PIN);
+    object_property_add_child(obj, "IRQ", OBJECT(&s->IRQ), NULL);
+}
 
 static Property m48t59_properties[] = {
     DEFINE_PROP_UINT32("size",    M48t59SysBusState, state.size,    -1),
@@ -764,6 +787,7 @@ static void m48t59_class_init(ObjectClass *klass, void *data)
 static TypeInfo m48t59_info = {
     .name          = "m48t59",
     .parent        = TYPE_SYS_BUS_DEVICE,
+    .instance_init = m48t59_sysbus_initfn,
     .instance_size = sizeof(M48t59SysBusState),
     .class_init    = m48t59_class_init,
 };
