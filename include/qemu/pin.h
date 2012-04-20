@@ -21,8 +21,13 @@
 typedef struct PinClass PinClass;
 typedef struct Pin Pin;
 
+typedef struct Wire Wire;
+
 #define TYPE_PIN "pin"
 #define PIN(obj) OBJECT_CHECK(Pin, (obj), TYPE_PIN)
+
+#define TYPE_WIRE "wire"
+#define WIRE(obj) OBJECT_CHECK(Wire, (obj), TYPE_WIRE)
 
 struct Pin
 {
@@ -32,6 +37,17 @@ struct Pin
     bool level;
 
     NotifierList level_change;
+};
+
+struct Wire
+{
+    Object parent;
+    Pin *in;
+    Pin *out;
+
+    /*< private >*/
+    Notifier in_level_change;
+    bool connected;
 };
 
 bool pin_get_level(Pin *pin);
@@ -58,5 +74,9 @@ void pin_del_level_change_notifier(Pin *pin, Notifier *notifier);
 
 void pin_connect_qemu_irq(Pin *out, qemu_irq in);
 qemu_irq pin_get_qemu_irq(Pin *in);
+
+void pin_connect_pin(Pin *out, Pin *in);
+
+void wire_realize(Wire *s);
 
 #endif
