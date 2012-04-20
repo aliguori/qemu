@@ -22,22 +22,10 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-#include "hw.h"
-#include "qemu-char.h"
-#include "isa.h"
-#include "pc.h"
-#include "qemu-timer.h"
+#include "serial.h"
 #include "sysemu.h"
-#include "qemu/pin.h"
-#include "exec-memory.h"
 
 //#define DEBUG_SERIAL
-
-#define TYPE_SERIAL "serial"
-#define SERIAL(obj) OBJECT_CHECK(SerialState, (obj), TYPE_SERIAL)
-
-#define TYPE_ISA_SERIAL "isa-serial"
-#define ISA_SERIAL(obj) OBJECT_CHECK(ISASerialState, obj, TYPE_ISA_SERIAL)
 
 #define UART_LCR_DLAB	0x80	/* Divisor latch access bit */
 
@@ -101,8 +89,6 @@
 #define UART_FCR_RFR        0x02    /* RCVR Fifo Reset */
 #define UART_FCR_FE         0x01    /* FIFO Enable */
 
-#define UART_FIFO_LENGTH    16      /* 16550A Fifo Length */
-
 #define XMIT_FIFO           0
 #define RECV_FIFO           1
 #define MAX_XMIT_RETRY      4
@@ -114,74 +100,6 @@ do { fprintf(stderr, "serial: " fmt , ## __VA_ARGS__); } while (0)
 #define DPRINTF(fmt, ...) \
 do {} while (0)
 #endif
-
-typedef struct SerialFIFO {
-    uint8_t data[UART_FIFO_LENGTH];
-    uint8_t count;
-    uint8_t itl;                        /* Interrupt Trigger Level */
-    uint8_t tail;
-    uint8_t head;
-} SerialFIFO;
-
-struct SerialState {
-    DeviceState parent;
-
-    uint16_t divider;
-    uint8_t rbr; /* receive register */
-    uint8_t thr; /* transmit holding register */
-    uint8_t tsr; /* transmit shift register */
-    uint8_t ier;
-    uint8_t iir; /* read only */
-    uint8_t lcr;
-    uint8_t mcr;
-    uint8_t lsr; /* read only */
-    uint8_t msr; /* read only */
-    uint8_t scr;
-    uint8_t fcr;
-    uint8_t fcr_vmstate; /* we can't write directly this value
-                            it has side effects */
-    /* NOTE: this hidden state is necessary for tx irq generation as
-       it can be reset while reading iir */
-    int thr_ipending;
-    Pin irq;
-    CharDriverState *chr;
-    int last_break_enable;
-    int32_t it_shift;
-    int32_t baudbase;
-    int tsr_retry;
-    uint32_t wakeup;
-
-    /* Time when the last byte was successfully sent out of the tsr */
-    uint64_t last_xmit_ts;
-    SerialFIFO recv_fifo;
-    SerialFIFO xmit_fifo;
-
-    struct QEMUTimer *fifo_timeout_timer;
-    /* timeout interrupt pending state */
-    int timeout_ipending;
-    struct QEMUTimer *transmit_timer;
-
-    /* time to transmit a char in ticks*/
-    uint64_t char_transmit_time;
-    int poll_msl;
-
-    struct QEMUTimer *modem_status_poll;
-    MemoryRegion io;
-};
-
-typedef struct ISASerialState {
-    ISADevice dev;
-    uint32_t index;
-    uint32_t iobase;
-    uint32_t isairq;
-    CharDriverState *chr;
-    uint32_t wakeup;
-    SerialState state;
-} ISASerialState;
-
-Pin *serial_get_irq(SerialState *s);
-
-MemoryRegion *serial_get_io(SerialState *s);
 
 static void serial_receive1(void *opaque, const uint8_t *buf, int size);
 
@@ -789,41 +707,6 @@ static void serial_initfn(Object *obj)
 
 }
 
-/**
- * Legacy compat contructors.
- *
- * Do not use in new code!
- **/
-SerialState *serial_mm_init(MemoryRegion *address_space,
-                            target_phys_addr_t base, int it_shift,
-                            qemu_irq irq, int baudbase,
-                            CharDriverState *chr,
-                            enum device_endian end)
-{
-    SerialState *s;
-    DeviceState *dev;
-
-    s = SERIAL(object_new(TYPE_SERIAL));
-    dev = DEVICE(s);
-
-    qdev_prop_set_globals(dev);
-    qdev_prop_set_int32(dev, "it_shift", it_shift);
-    qdev_prop_set_int32(dev, "baudbase", baudbase);
-    qdev_prop_set_chr(dev, "chardev", chr);
-    qdev_init_nofail(dev);
-
-    pin_connect_qemu_irq(&s->irq, irq);
-    memory_region_add_subregion(address_space, base, &s->io);
-
-    return s;
-}
-
-SerialState *serial_init(int base, qemu_irq irq, int baudbase,
-                         CharDriverState *chr)
-{
-    return serial_mm_init(get_system_io(), base, 0, irq, baudbase, chr, 0);
-}
-
 static int serial_realize(DeviceState *dev)
 {
     SerialState *s = SERIAL(dev);
@@ -868,83 +751,8 @@ static TypeInfo serial_info = {
     .class_init = serial_class_initfn,
 };
 
-static const int isa_serial_io[MAX_SERIAL_PORTS] = { 0x3f8, 0x2f8, 0x3e8, 0x2e8 };
-static const int isa_serial_irq[MAX_SERIAL_PORTS] = { 4, 3, 4, 3 };
-
-static int serial_isa_realize(ISADevice *dev)
-{
-    static int index;
-    ISASerialState *isa = ISA_SERIAL(dev);
-    SerialState *s = &isa->state;
-    int err;
-
-    qdev_prop_set_chr(DEVICE(&isa->state), "chardev", isa->chr);
-    qdev_prop_set_uint32(DEVICE(&isa->state), "wakeup", isa->wakeup);
-
-    err = qdev_init(DEVICE(&isa->state));
-    if (err < 0) {
-        return err;
-    }
-
-    if (isa->index == -1) {
-        isa->index = index;
-    }
-    if (isa->index >= MAX_SERIAL_PORTS) {
-        return -1;
-    }
-    if (isa->iobase == -1) {
-        isa->iobase = isa_serial_io[isa->index];
-    }
-    if (isa->isairq == -1) {
-        isa->isairq = isa_serial_irq[isa->index];
-    }
-    index++;
-
-    isa_init_irq(dev, serial_get_irq(s), isa->isairq);
-    qdev_set_legacy_instance_id(&dev->qdev, isa->iobase, 3);
-    isa_register_ioport(dev, serial_get_io(s), isa->iobase);
-
-    return 0;
-}
-
-static Property serial_isa_properties[] = {
-    DEFINE_PROP_UINT32("index", ISASerialState, index,   -1),
-    DEFINE_PROP_HEX32("iobase", ISASerialState, iobase,  -1),
-    DEFINE_PROP_UINT32("irq",   ISASerialState, isairq,  -1),
-    DEFINE_PROP_CHR("chardev",  ISASerialState, chr),
-    DEFINE_PROP_UINT32("wakeup", ISASerialState, wakeup, 0),
-    DEFINE_PROP_END_OF_LIST(),
-};
-
-static void serial_isa_class_initfn(ObjectClass *klass, void *data)
-{
-    DeviceClass *dc = DEVICE_CLASS(klass);
-    ISADeviceClass *ic = ISA_DEVICE_CLASS(klass);
-    ic->init = serial_isa_realize;
-    dc->props = serial_isa_properties;
-}
-
-static void serial_isa_initfn(Object *obj)
-{
-    ISASerialState *isa = ISA_SERIAL(obj);
-
-    object_initialize(&isa->state, TYPE_SERIAL);
-    qdev_prop_set_globals(DEVICE(&isa->state));
-
-    object_property_add_child(obj, "uart", OBJECT(&isa->state), NULL);
-}
-
-static TypeInfo serial_isa_info = {
-    .name          = TYPE_ISA_SERIAL,
-    .parent        = TYPE_ISA_DEVICE,
-    .instance_init = serial_isa_initfn,
-    .instance_size = sizeof(ISASerialState),
-    .class_init    = serial_isa_class_initfn,
-};
-
 static void serial_register_types(void)
 {
-    type_register_static(&serial_isa_info);
     type_register_static(&serial_info);
 }
 

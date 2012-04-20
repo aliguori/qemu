@@ -230,7 +230,7 @@ hw-obj-$(CONFIG_M48T59) += m48t59.o
 hw-obj-$(CONFIG_ESCC) += escc.o
 hw-obj-$(CONFIG_EMPTY_SLOT) += empty_slot.o
 
-hw-obj-$(CONFIG_SERIAL) += serial.o
+hw-obj-$(CONFIG_SERIAL) += serial.o isa-serial.o
 hw-obj-$(CONFIG_PARALLEL) += parallel.o
 hw-obj-$(CONFIG_I8254) += i8254_common.o i8254.o
 hw-obj-$(CONFIG_PCSPK) += pcspk.o
