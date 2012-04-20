@@ -1967,12 +1967,10 @@ static int isabus_fdc_init1(ISADevice *dev)
     int isairq = 6;
     int dma_chann = 2;
     int ret;
-    qemu_irq irq;
 
     isa_register_portio_list(dev, iobase, fdc_portio_list, fdctrl, "fdc");
 
-    isa_init_irq(&isa->busdev, &irq, isairq);
-    pin_connect_qemu_irq(&fdctrl->irq, irq);
+    isa_init_irq(&isa->busdev, &fdctrl->irq, isairq);
     fdctrl->dma_chann = dma_chann;
 
     qdev_set_legacy_instance_id(&dev->qdev, iobase, 2);

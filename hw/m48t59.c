@@ -699,10 +699,8 @@ static int m48t59_init_isa1(ISADevice *dev)
 {
     M48t59ISAState *d = DO_UPCAST(M48t59ISAState, busdev, dev);
     M48t59State *s = &d->state;
-    qemu_irq irq;
 
-    isa_init_irq(dev, &irq, 8);
-    pin_connect_qemu_irq(&s->IRQ, irq);
+    isa_init_irq(dev, &s->IRQ, 8);
     m48t59_init_common(s);
 
     return 0;

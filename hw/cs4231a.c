@@ -648,10 +648,8 @@ static const MemoryRegionOps cs_ioport_ops = {
 static int cs4231a_realize (ISADevice *dev)
 {
     CSState *s = DO_UPCAST (CSState, dev, dev);
-    qemu_irq irq;
 
-    isa_init_irq (dev, &irq, s->irq);
-    pin_connect_qemu_irq (&s->pic, irq);
+    isa_init_irq (dev, &s->pic, s->irq);
 
     memory_region_init_io (&s->ioports, &cs_ioport_ops, s, "cs4231a", 4);
     isa_register_ioport (dev, &s->ioports, s->port);

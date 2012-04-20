@@ -26,10 +26,26 @@ static ISABus *isabus;
 target_phys_addr_t isa_mem_base = 0;
 
 #define TYPE_ISA_BUS "ISA"
+#define ISA_BUS(obj) OBJECT_CHECK(ISABus, (obj), TYPE_ISA_BUS)
+
+static void isa_bus_initfn(Object *obj)
+{
+    ISABus *bus = ISA_BUS(obj);
+    int i;
+
+    for (i = 0; i < ISA_NUM_IRQS; i++) {
+        char buffer[32];
+
+        object_initialize(&bus->irq[i], TYPE_PIN);
+        snprintf(buffer, sizeof(buffer), "irq[%d]", i);
+        object_property_add_child(obj, buffer, OBJECT(&bus->irq[i]), NULL);
+    }
+}
 
 static TypeInfo isa_bus_info = {
     .name = TYPE_ISA_BUS,
     .parent = TYPE_BUS,
+    .instance_init = isa_bus_initfn,
     .instance_size = sizeof(ISABus),
 };
 
@@ -51,10 +67,13 @@ ISABus *isa_bus_new(DeviceState *dev, MemoryRegion *address_space_io)
 
 void isa_bus_irqs(ISABus *bus, qemu_irq *irqs)
 {
+    int i;
     if (!bus) {
         hw_error("Can't set isa irqs with no isa bus present.");
     }
-    bus->irqs = irqs;
+    for (i = 0; i < ISA_NUM_IRQS; i++) {
+        pin_connect_qemu_irq(&bus->irq[i], irqs[i]);
+    }
 }
 
 /*
@@ -69,14 +88,15 @@ qemu_irq isa_get_irq(ISADevice *dev, int isairq)
     if (isairq < 0 || isairq > 15) {
         hw_error("isa irq %d invalid", isairq);
     }
-    return isabus->irqs[isairq];
+    return pin_get_qemu_irq(&isabus->irq[isairq]);
 }
 
-void isa_init_irq(ISADevice *dev, qemu_irq *p, int isairq)
+void isa_init_irq(ISADevice *dev, Pin *p, int isairq)
 {
+    ISABus *bus = ISA_BUS(dev->qdev.parent_bus);
     assert(dev->nirqs < ARRAY_SIZE(dev->isairq));
     dev->isairq[dev->nirqs] = isairq;
-    *p = isa_get_irq(dev, isairq);
+    pin_connect_pin(p, &bus->irq[isairq]);
     dev->nirqs++;
 }
 

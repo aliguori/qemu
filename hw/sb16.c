@@ -1356,13 +1356,11 @@ static const MemoryRegionPortio sb16_ioport_list[] = {
 static int sb16_realize (ISADevice *dev)
 {
     SB16State *s;
-    qemu_irq irq;
 
     s = DO_UPCAST (SB16State, dev, dev);
 
     s->cmd = -1;
-    isa_init_irq (dev, &irq, s->irq);
-    pin_connect_qemu_irq(&s->pic, irq);
+    isa_init_irq (dev, &s->pic, s->irq);
 
     s->mixer_regs[0x80] = magic_of_irq (s->irq);
     s->mixer_regs[0x81] = (1 << s->dma) | (1 << s->hdma);
