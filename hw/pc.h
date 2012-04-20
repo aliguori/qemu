@@ -9,6 +9,7 @@
 #include "net.h"
 #include "memory.h"
 #include "ioapic.h"
+#include "mc146818rtc.h"
 
 /* PC-style peripherals (also used by other machines).  */
 
@@ -117,14 +118,14 @@ void pc_memory_init(MemoryRegion *system_memory,
 qemu_irq *pc_allocate_cpu_irq(void);
 DeviceState *pc_vga_init(ISABus *isa_bus, PCIBus *pci_bus);
 void pc_basic_device_init(ISABus *isa_bus, qemu_irq *gsi,
-                          ISADevice **rtc_state,
+                          RTCState **rtc_state,
                           ISADevice **floppy,
                           bool no_vmport);
 void pc_init_ne2k_isa(ISABus *bus, NICInfo *nd);
 void pc_cmos_init(ram_addr_t ram_size, ram_addr_t above_4g_mem_size,
                   const char *boot_device,
                   ISADevice *floppy, BusState *ide0, BusState *ide1,
-                  ISADevice *s);
+                  RTCState *s);
 void pc_pci_device_init(PCIBus *pci_bus);
 
 typedef void (*cpu_set_smm_t)(int smm, void *arg);
