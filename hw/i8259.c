@@ -53,6 +53,9 @@ static int64_t irq_time[16];
 DeviceState *isa_pic;
 static PICCommonState *slave_pic;
 
+#define TYPE_ISA_I8259 "isa-i8259"
+#define ISA_I8259(obj) OBJECT_CHECK(PICCommonState, (obj), TYPE_ISA_I8259)
+
 /* return the highest priority found in mask (highest = smallest
    number). Return 8 if no irq */
 static int get_priority(PICCommonState *s, int mask)
@@ -107,9 +110,9 @@ static void pic_update_irq(PICCommonState *s)
     if (irq >= 0) {
         DPRINTF("pic%d: imr=%x irr=%x padd=%d\n",
                 s->master ? 0 : 1, s->imr, s->irr, s->priority_add);
-        qemu_irq_raise(s->int_out[0]);
+        pin_raise(&s->int_out[0]);
     } else {
-        qemu_irq_lower(s->int_out[0]);
+        pin_lower(&s->int_out[0]);
     }
 }
 
@@ -403,7 +406,6 @@ static void pic_init(PICCommonState *s)
     memory_region_init_io(&s->base_io, &pic_base_ioport_ops, s, "pic", 2);
     memory_region_init_io(&s->elcr_io, &pic_elcr_ioport_ops, s, "elcr", 1);
 
-    qdev_init_gpio_out(&s->dev.qdev, s->int_out, ARRAY_SIZE(s->int_out));
     qdev_init_gpio_in(&s->dev.qdev, pic_set_irq, 8);
 }
 
@@ -445,6 +447,7 @@ void irq_info(Monitor *mon)
 
 qemu_irq *i8259_init(ISABus *bus, qemu_irq parent_irq)
 {
+    PICCommonState *s;
     qemu_irq *irq_set;
     ISADevice *dev;
     int i;
@@ -452,8 +455,9 @@ qemu_irq *i8259_init(ISABus *bus, qemu_irq parent_irq)
     irq_set = g_malloc(ISA_NUM_IRQS * sizeof(qemu_irq));
 
     dev = i8259_init_chip("isa-i8259", bus, true);
+    s = ISA_I8259(dev);
 
-    qdev_connect_gpio_out(&dev->qdev, 0, parent_irq);
+    pin_connect_qemu_irq(&s->int_out[0], parent_irq);
     for (i = 0 ; i < 8; i++) {
         irq_set[i] = qdev_get_gpio_in(&dev->qdev, i);
     }
@@ -461,8 +465,9 @@ qemu_irq *i8259_init(ISABus *bus, qemu_irq parent_irq)
     isa_pic = &dev->qdev;
 
     dev = i8259_init_chip("isa-i8259", bus, false);
+    s = ISA_I8259(dev);
 
-    qdev_connect_gpio_out(&dev->qdev, 0, irq_set[2]);
+    pin_connect_qemu_irq(&s->int_out[0], irq_set[2]);
     for (i = 0 ; i < 8; i++) {
         irq_set[i + 8] = qdev_get_gpio_in(&dev->qdev, i);
     }
@@ -482,7 +487,7 @@ static void i8259_class_init(ObjectClass *klass, void *data)
 }
 
 static TypeInfo i8259_info = {
-    .name       = "isa-i8259",
+    .name       = TYPE_ISA_I8259,
     .instance_size = sizeof(PICCommonState),
     .parent     = TYPE_PIC_COMMON,
     .class_init = i8259_class_init,

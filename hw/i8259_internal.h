@@ -28,6 +28,7 @@
 #include "hw.h"
 #include "pc.h"
 #include "isa.h"
+#include "qemu/pin.h"
 
 typedef struct PICCommonState PICCommonState;
 
@@ -66,7 +67,7 @@ struct PICCommonState {
     uint8_t single_mode; /* true if slave pic is not initialized */
     uint8_t elcr; /* PIIX edge/trigger selection*/
     uint8_t elcr_mask;
-    qemu_irq int_out[1];
+    Pin int_out[1];
     uint32_t master; /* reflects /SP input pin */
     uint32_t iobase;
     uint32_t elcr_addr;

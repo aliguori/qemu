@@ -83,6 +83,14 @@ static int pic_init_common(ISADevice *dev)
     return 0;
 }
 
+static void pic_common_initfn(Object *obj)
+{
+    PICCommonState *s = OBJECT_CHECK(PICCommonState, obj, TYPE_PIC_COMMON);
+
+    object_initialize(&s->int_out[0], TYPE_PIN);
+    object_property_add_child(obj, "int_out", OBJECT(&s->int_out[0]), NULL);
+}
+
 ISADevice *i8259_init_chip(const char *name, ISABus *bus, bool master)
 {
     ISADevice *dev;
@@ -147,6 +155,7 @@ static void pic_common_class_init(ObjectClass *klass, void *data)
 static TypeInfo pic_common_type = {
     .name = TYPE_PIC_COMMON,
     .parent = TYPE_ISA_DEVICE,
+    .instance_init = pic_common_initfn,
     .instance_size = sizeof(PICCommonState),
     .class_size = sizeof(PICCommonClass),
     .class_init = pic_common_class_init,
