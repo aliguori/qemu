@@ -54,23 +54,6 @@ static void main_cpu_reset(void *opaque)
     cpu_state_reset(env);
 }
 
-static uint64_t rtc_read(void *opaque, target_phys_addr_t addr, unsigned size)
-{
-    return cpu_inw(0x71);
-}
-
-static void rtc_write(void *opaque, target_phys_addr_t addr,
-                      uint64_t val, unsigned size)
-{
-    cpu_outw(0x71, val & 0xff);
-}
-
-static const MemoryRegionOps rtc_ops = {
-    .read = rtc_read,
-    .write = rtc_write,
-    .endianness = DEVICE_NATIVE_ENDIAN,
-};
-
 static uint64_t dma_dummy_read(void *opaque, target_phys_addr_t addr,
                                unsigned size)
 {
@@ -116,7 +99,6 @@ static void mips_jazz_init(MemoryRegion *address_space,
     qemu_irq *rc4030, *i8259;
     rc4030_dma *dmas;
     void* rc4030_opaque;
-    MemoryRegion *rtc = g_new(MemoryRegion, 1);
     MemoryRegion *i8042 = g_new(MemoryRegion, 1);
     MemoryRegion *dma_dummy = g_new(MemoryRegion, 1);
     NICInfo *nd;
@@ -130,6 +112,7 @@ static void mips_jazz_init(MemoryRegion *address_space,
     MemoryRegion *ram = g_new(MemoryRegion, 1);
     MemoryRegion *bios = g_new(MemoryRegion, 1);
     MemoryRegion *bios2 = g_new(MemoryRegion, 1);
+    RTCState *rtc;
 
     /* init CPUs */
     if (cpu_model == NULL) {
@@ -261,9 +244,9 @@ static void mips_jazz_init(MemoryRegion *address_space,
     fdctrl_init_sysbus(rc4030[1], 0, 0x80003000, fds);
 
     /* Real time clock */
-    rtc_init(isa_bus, 1980, NULL);
-    memory_region_init_io(rtc, &rtc_ops, NULL, "rtc", 0x1000);
-    memory_region_add_subregion(address_space, 0x80004000, rtc);
+    rtc = rtc_init(1980);
+    memory_region_add_subregion(address_space, 0x80004000, rtc_get_io(rtc));
+    pin_connect_pin(rtc_get_irq(rtc), isa_get_pin(isa_bus, RTC_ISA_IRQ));
 
     /* Keyboard (i8042) */
     i8042_mm_init(rc4030[6], rc4030[7], i8042, 0x1000, 0x1);

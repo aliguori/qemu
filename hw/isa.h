@@ -43,6 +43,7 @@ ISABus *isa_bus_new(DeviceState *dev, MemoryRegion *address_space_io);
 void isa_bus_realize(ISABus *bus);
 void isa_bus_irqs(ISABus *bus, qemu_irq *irqs);
 qemu_irq isa_get_irq(ISADevice *dev, int isairq);
+Pin *isa_get_pin(ISABus *bus, int isairq);
 void isa_init_irq(ISADevice *dev, Pin *p, int isairq);
 MemoryRegion *isa_address_space(ISADevice *dev);
 ISADevice *isa_create(ISABus *bus, const char *name);

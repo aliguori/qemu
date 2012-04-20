@@ -15,6 +15,7 @@
 #include "mc146818rtc.h"
 #include "ide.h"
 #include "i8254.h"
+#include "exec-memory.h"
 
 #define MAX_IDE_BUS 2
 
@@ -57,6 +58,8 @@ static void clipper_init(ram_addr_t ram_size,
     const char *palcode_filename;
     uint64_t palcode_entry, palcode_low, palcode_high;
     uint64_t kernel_entry, kernel_low, kernel_high;
+    MemoryRegion *addr_space_io = get_system_io();
+    RTCState *rtc;
 
     /* Create up to 4 cpus.  */
     memset(cpus, 0, sizeof(cpus));
@@ -72,7 +75,10 @@ static void clipper_init(ram_addr_t ram_size,
     pci_bus = typhoon_init(ram_size, &isa_bus, &rtc_irq, cpus,
                            clipper_pci_map_irq);
 
-    rtc_init(isa_bus, 1980, rtc_irq);
+    rtc = rtc_init(1980);
+    memory_region_add_subregion(addr_space_io, RTC_IO_BASE, rtc_get_io(rtc));
+    pin_connect_qemu_irq(rtc_get_irq(rtc), rtc_irq);
+
     pit_init(isa_bus, 0x40, 0, NULL);
     isa_create_simple(isa_bus, "i8042");
 

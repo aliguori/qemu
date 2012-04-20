@@ -371,8 +371,7 @@ static void mips_fulong2e_init(ram_addr_t ram_size, const char *boot_device,
 
     /* Super I/O */
     isa_create_simple(isa_bus, "i8042");
-
-    rtc_init(isa_bus, 2000, NULL);
+    rtc_isa_init(isa_bus, 2000);
 
     for(i = 0; i < MAX_SERIAL_PORTS; i++) {
         if (serial_hds[i]) {

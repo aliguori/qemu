@@ -73,6 +73,11 @@ void isa_bus_realize(ISABus *bus)
     }
 }
 
+Pin *isa_get_pin(ISABus *bus, int isairq)
+{
+    return &bus->in[isairq];
+}
+
 void isa_bus_irqs(ISABus *bus, qemu_irq *irqs)
 {
     if (!bus) {

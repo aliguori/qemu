@@ -964,7 +964,7 @@ void mips_malta_init (ram_addr_t ram_size,
     /* Super I/O */
     isa_create_simple(isa_bus, "i8042");
 
-    rtc_init(isa_bus, 2000, NULL);
+    rtc_isa_init(isa_bus, 2000);
     serial_isa_init(isa_bus, 0, serial_hds[0]);
     serial_isa_init(isa_bus, 1, serial_hds[1]);
     if (parallel_hds[0])
