@@ -28,6 +28,7 @@
 #include "hw.h"
 #include "pc.h"
 #include "isa.h"
+#include "qemu/pin.h"
 
 typedef struct PITChannelState {
     int count; /* can be 65536 */
@@ -46,7 +47,7 @@ typedef struct PITChannelState {
     /* irq handling */
     int64_t next_transition_time;
     QEMUTimer *irq_timer;
-    qemu_irq irq;
+    Pin irq;
     uint32_t irq_disabled;
 } PITChannelState;
 
@@ -55,6 +56,7 @@ typedef struct PITCommonState {
     MemoryRegion ioports;
     uint32_t iobase;
     PITChannelState channels[3];
+    Pin irq_control;
 } PITCommonState;
 
 #define TYPE_PIT_COMMON "pit-common"

@@ -35,6 +35,9 @@
 #define RW_STATE_WORD0 3
 #define RW_STATE_WORD1 4
 
+#define TYPE_ISA_PIT "isa-pit"
+#define ISA_PIT(obj) OBJECT_CHECK(PITCommonState, (obj), TYPE_ISA_PIT)
+
 static void pit_irq_timer_update(PITChannelState *s, int64_t current_time);
 
 static int pit_get_count(PITChannelState *s)
@@ -241,7 +244,7 @@ static void pit_irq_timer_update(PITChannelState *s, int64_t current_time)
     }
     expire_time = pit_get_next_transition_time(s, current_time);
     irq_level = pit_get_out(s, current_time);
-    qemu_set_irq(s->irq, irq_level);
+    pin_set_level(&s->irq, irq_level);
 #ifdef DEBUG_PIT
     printf("irq_level=%d next_delay=%f\n",
            irq_level,
@@ -311,20 +314,39 @@ static void pit_post_load(PITCommonState *s)
     }
 }
 
-static int pit_initfn(PITCommonState *pit)
+static int pit_realize(PITCommonState *pit)
 {
     PITChannelState *s;
 
     s = &pit->channels[0];
     /* the timer 0 is connected to an IRQ */
     s->irq_timer = qemu_new_timer_ns(vm_clock, pit_irq_timer, s);
-    qdev_init_gpio_out(&pit->dev.qdev, &s->irq, 1);
 
     memory_region_init_io(&pit->ioports, &pit_ioport_ops, pit, "pit", 4);
 
+    /* FIXME: need to refactor RTC to eliminate this */
     qdev_init_gpio_in(&pit->dev.qdev, pit_irq_control, 1);
 
     return 0;
+}
+
+ISADevice *pit_init(ISABus *bus, int base, int isa_irq, qemu_irq alt_irq)
+{
+    PITCommonState *pit;
+    PITChannelState *s;
+    ISADevice *dev;
+
+    dev = isa_create(bus, TYPE_ISA_PIT);
+    pit = ISA_PIT(dev);
+    s = &pit->channels[0];
+
+    qdev_prop_set_uint32(&dev->qdev, "iobase", base);
+    qdev_init_nofail(&dev->qdev);
+
+    pin_connect_qemu_irq(&s->irq,
+                         isa_irq >= 0 ? isa_get_irq(dev, isa_irq) : alt_irq);
+
+    return dev;
 }
 
 static Property pit_properties[] = {
@@ -337,7 +359,7 @@ static void pit_class_initfn(ObjectClass *klass, void *data)
     PITCommonClass *k = PIT_COMMON_CLASS(klass);
     DeviceClass *dc = DEVICE_CLASS(klass);
 
-    k->init = pit_initfn;
+    k->init = pit_realize;
     k->set_channel_gate = pit_set_channel_gate;
     k->get_channel_info = pit_get_channel_info_common;
     k->post_load = pit_post_load;
@@ -346,7 +368,7 @@ static void pit_class_initfn(ObjectClass *klass, void *data)
 }
 
 static TypeInfo pit_info = {
-    .name          = "isa-pit",
+    .name          = TYPE_ISA_PIT,
     .parent        = TYPE_PIT_COMMON,
     .instance_size = sizeof(PITCommonState),
     .class_init    = pit_class_initfn,

@@ -184,6 +184,25 @@ static int pit_init_common(ISADevice *dev)
     return 0;
 }
 
+static void pit_common_initfn(Object *obj)
+{
+    PITCommonState *pit = PIT_COMMON(obj);
+    int i;
+
+    for (i = 0; i < 3; i++) {
+        PITChannelState *s = &pit->channels[0];
+        char buffer[32];
+
+        object_initialize(&s->irq, TYPE_PIN);
+        snprintf(buffer, sizeof(buffer), "irq[%d]", i);
+        object_property_add_child(obj, buffer, OBJECT(&s->irq), NULL);
+    }
+
+    object_initialize(&pit->irq_control, TYPE_PIN);
+    object_property_add_child(obj, "irq_control",
+                              OBJECT(&pit->irq_control), NULL);
+}
+
 static const VMStateDescription vmstate_pit_channel = {
     .name = "pit channel",
     .version_id = 2,
@@ -297,6 +316,7 @@ static void pit_common_class_init(ObjectClass *klass, void *data)
 static TypeInfo pit_common_type = {
     .name          = TYPE_PIT_COMMON,
     .parent        = TYPE_ISA_DEVICE,
+    .instance_init = pit_common_initfn,
     .instance_size = sizeof(PITCommonState),
     .class_size    = sizeof(PITCommonClass),
     .class_init    = pit_common_class_init,
