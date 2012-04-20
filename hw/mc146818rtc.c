@@ -49,7 +49,7 @@
 #define RTC_REINJECT_ON_ACK_COUNT 20
 
 typedef struct RTCState {
-    ISADevice dev;
+    DeviceState dev;
     MemoryRegion io;
     uint8_t cmos_data[128];
     uint8_t cmos_index;
@@ -607,8 +607,7 @@ static void visit_type_int32(Visitor *v, int *value, const char *name, Error **e
 static void rtc_get_date(Object *obj, Visitor *v, void *opaque,
                          const char *name, Error **errp)
 {
-    ISADevice *isa = ISA_DEVICE(obj);
-    RTCState *s = DO_UPCAST(RTCState, dev, isa);
+    RTCState *s = RTC(obj);
 
     visit_start_struct(v, NULL, "struct tm", name, 0, errp);
     visit_type_int32(v, &s->current_tm.tm_year, "tm_year", errp);
@@ -620,10 +619,9 @@ static void rtc_get_date(Object *obj, Visitor *v, void *opaque,
     visit_end_struct(v, errp);
 }
 
-static int rtc_realize(ISADevice *dev)
+static int rtc_realize(DeviceState *dev)
 {
-    RTCState *s = DO_UPCAST(RTCState, dev, dev);
-    int base = 0x70;
+    RTCState *s = RTC(dev);
 
     s->cmos_data[RTC_REG_A] = 0x26;
     s->cmos_data[RTC_REG_B] = 0x02;
@@ -659,10 +657,6 @@ static int rtc_realize(ISADevice *dev)
         qemu_get_clock_ns(rtc_clock) + (get_ticks_per_sec() * 99) / 100;
     qemu_mod_timer(s->second_timer2, s->next_second_time);
 
-    memory_region_init_io(&s->io, &cmos_ops, s, "rtc", 2);
-    isa_register_ioport(dev, &s->io, base);
-
-    qdev_set_legacy_instance_id(&dev->qdev, base, 2);
     qemu_register_reset(rtc_reset, s);
 
     object_property_add(OBJECT(s), "date", "struct tm",
@@ -680,22 +674,31 @@ static void rtc_initfn(Object *obj)
 
     object_property_add_child(obj, "irq", OBJECT(&s->irq), NULL);
     object_property_add_child(obj, "sqw_irq", OBJECT(&s->sqw_irq), NULL);
+
+    memory_region_init_io(&s->io, &cmos_ops, s, "rtc", 2);
 }
 
-RTCState *rtc_init(ISABus *bus, int base_year, qemu_irq intercept_irq)
+Pin *rtc_get_irq(RTCState *s)
 {
-    ISADevice *dev;
+    return &s->irq;
+}
+
+MemoryRegion *rtc_get_io(RTCState *s)
+{
+    return &s->io;
+}
+
+RTCState *rtc_init(int base_year)
+{
+    DeviceState *dev;
     RTCState *s;
 
-    dev = isa_create(bus, "mc146818rtc");
-    s = DO_UPCAST(RTCState, dev, dev);
-    qdev_prop_set_int32(&dev->qdev, "base_year", base_year);
-    qdev_init_nofail(&dev->qdev);
-    if (intercept_irq) {
-        pin_connect_qemu_irq(&s->irq, intercept_irq);
-    } else {
-        isa_init_irq(dev, &s->irq, RTC_ISA_IRQ);
-    }
+    dev = qdev_create(NULL, "mc146818rtc");
+    s = RTC(dev);
+
+    qdev_prop_set_int32(dev, "base_year", base_year);
+    qdev_init_nofail(dev);
+
     return s;
 }
 
@@ -709,16 +712,16 @@ static Property mc146818rtc_properties[] = {
 static void rtc_class_initfn(ObjectClass *klass, void *data)
 {
     DeviceClass *dc = DEVICE_CLASS(klass);
-    ISADeviceClass *ic = ISA_DEVICE_CLASS(klass);
-    ic->init = rtc_realize;
+
+    dc->init = rtc_realize;
     dc->no_user = 1;
     dc->vmsd = &vmstate_rtc;
     dc->props = mc146818rtc_properties;
 }
 
 static TypeInfo mc146818rtc_info = {
-    .name          = "mc146818rtc",
-    .parent        = TYPE_ISA_DEVICE,
+    .name          = TYPE_RTC,
+    .parent        = TYPE_DEVICE,
     .instance_init = rtc_initfn,
     .instance_size = sizeof(RTCState),
     .class_init    = rtc_class_initfn,

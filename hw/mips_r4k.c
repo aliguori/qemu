@@ -264,7 +264,7 @@ void mips_r4k_init (ram_addr_t ram_size,
     i8259 = i8259_init(isa_bus, env->irq[2]);
     isa_bus_irqs(isa_bus, i8259);
 
-    rtc_init(isa_bus, 2000, NULL);
+    rtc_isa_init(isa_bus, 2000);
 
     /* Register 64 KB of ISA IO space at 0x14000000 */
     isa_mmio_init(0x14000000, 0x00010000);

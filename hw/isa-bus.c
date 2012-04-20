@@ -65,6 +65,11 @@ ISABus *isa_bus_new(DeviceState *dev, MemoryRegion *address_space_io)
     return isabus;
 }
 
+Pin *isa_get_pin(ISABus *bus, int isairq)
+{
+    return &bus->irq[isairq];
+}
+
 void isa_bus_irqs(ISABus *bus, qemu_irq *irqs)
 {
     int i;

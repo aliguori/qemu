@@ -1122,7 +1122,15 @@ void pc_basic_device_init(ISABus *isa_bus, qemu_irq *gsi,
             rtc_irq = qdev_get_gpio_in(hpet, HPET_LEGACY_RTC_INT);
         }
     }
-    *rtc_state = rtc_init(isa_bus, 2000, rtc_irq);
+
+    *rtc_state = rtc_init(2000);
+    if (rtc_irq) {
+        pin_connect_qemu_irq(rtc_get_irq(*rtc_state), rtc_irq);
+    } else {
+        pin_connect_pin(rtc_get_irq(*rtc_state), isa_get_pin(isa_bus, RTC_ISA_IRQ));
+    }
+    memory_region_add_subregion(isa_bus->address_space_io,
+                                RTC_IO_BASE, rtc_get_io(*rtc_state));
 
     qemu_register_boot_set(pc_boot_set, *rtc_state);
 
