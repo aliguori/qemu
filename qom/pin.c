@@ -90,9 +90,71 @@ static TypeInfo pin_info = {
     .instance_finalize = pin_fini,
 };
 
+static void wire_initfn(Object *obj)
+{
+    Wire *s = WIRE(obj);
+
+    object_property_add_link(obj, "in", TYPE_PIN, (Object **)&s->in, NULL);
+    object_property_add_link(obj, "out", TYPE_PIN, (Object **)&s->out, NULL);
+}
+
+static void wire_notify_update(Notifier *notifier, void *opaque)
+{
+    Wire *s = container_of(notifier, Wire, out_level_change);
+
+    pin_set_level(s->in, pin_get_level(s->out));
+}
+
+static void wire_notify_release(Notifier *notifier)
+{
+    Wire *s = container_of(notifier, Wire, out_level_change);
+
+    s->connected = false;
+}
+
+void wire_realize(Wire *s)
+{
+    g_assert(s->in && s->out);
+
+    s->out_level_change.notify = wire_notify_update;
+    s->out_level_change.release = wire_notify_release;
+    pin_add_level_change_notifier(s->out, &s->out_level_change);
+    s->connected = true;
+}
+
+static void wire_finalize(Object *obj)
+{
+    Wire *s = WIRE(obj);
+
+    if (s->connected) {
+        pin_del_level_change_notifier(s->out, &s->out_level_change);
+        s->connected = false;
+    }
+}
+
+static TypeInfo wire_info = {
+    .name = TYPE_WIRE,
+    .parent = TYPE_OBJECT,
+    .instance_size = sizeof(Wire),
+    .instance_init = wire_initfn,
+    .instance_finalize = wire_finalize,
+};
+
+void pin_connect_pin(Pin *out, Pin *in)
+{
+    /* FIXME: need to figure out how/when to free this */
+    Wire *s = WIRE(object_new(TYPE_WIRE));
+
+    s->in = in;
+    s->out = out;
+
+    wire_realize(s);
+}
+
 static void register_devices(void)
 {
     type_register_static(&pin_info);
+    type_register_static(&wire_info);
 }
 
 type_init(register_devices);
