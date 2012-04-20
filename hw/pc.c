@@ -1097,7 +1097,8 @@ void pc_basic_device_init(ISABus *isa_bus, qemu_irq *gsi,
     qemu_irq pit_alt_irq = NULL;
     qemu_irq rtc_irq = NULL;
     qemu_irq *a20_line;
-    ISADevice *i8042, *port92, *vmmouse, *pit;
+    ISADevice *port92, *vmmouse, *pit;
+    KBDState *i8042;
     qemu_irq *cpu_exit_irq;
 
     register_ioport_write(0x80, 1, 1, ioport80_write, NULL);
@@ -1158,8 +1159,7 @@ void pc_basic_device_init(ISABus *isa_bus, qemu_irq *gsi,
     }
 
     a20_line = qemu_allocate_irqs(handle_a20_line_change, first_cpu, 2);
-    i8042 = isa_create_simple(isa_bus, "i8042");
-    i8042_setup_a20_line(i8042, &a20_line[0]);
+    i8042 = i8042_init(isa_bus, 0x60, a20_line[0]);
     if (!no_vmport) {
         vmport_init(isa_bus);
         vmmouse = isa_try_create(isa_bus, "vmmouse");

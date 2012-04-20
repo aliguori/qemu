@@ -67,12 +67,14 @@ void vmmouse_set_data(const uint32_t *data);
 
 /* pckbd.c */
 
-void i8042_init(qemu_irq kbd_irq, qemu_irq mouse_irq, uint32_t io_base);
-void i8042_mm_init(qemu_irq kbd_irq, qemu_irq mouse_irq,
-                   MemoryRegion *region, ram_addr_t size,
-                   target_phys_addr_t mask);
-void i8042_isa_mouse_fake_event(void *opaque);
-void i8042_setup_a20_line(ISADevice *dev, qemu_irq *a20_out);
+typedef struct KBDState KBDState;
+
+KBDState *i8042_init(ISABus *isa_bus, int base, qemu_irq a20_line);
+void i8042_mm_init(MemoryRegion *address_space,
+                   qemu_irq kbd_irq, qemu_irq mouse_irq,
+                   target_phys_addr_t base, ram_addr_t size,
+                   int32_t it_shift);
+void i8042_mouse_fake_event(KBDState *s);
 
 /* pc.c */
 extern int fd_bootchk;

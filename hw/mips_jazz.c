@@ -249,8 +249,7 @@ static void mips_jazz_init(MemoryRegion *address_space,
     pin_connect_pin(rtc_get_irq(rtc), isa_get_pin(isa_bus, RTC_ISA_IRQ));
 
     /* Keyboard (i8042) */
-    i8042_mm_init(rc4030[6], rc4030[7], i8042, 0x1000, 0x1);
-    memory_region_add_subregion(address_space, 0x80005000, i8042);
+    i8042_mm_init(address_space, rc4030[6], rc4030[7], 0x80005000, 0x1000, 0)
 
     /* Serial ports */
     if (serial_hds[0]) {

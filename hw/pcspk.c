@@ -162,9 +162,11 @@ static const MemoryRegionOps pcspk_io_ops = {
 static int pcspk_initfn(ISADevice *dev)
 {
     PCSpkState *s = DO_UPCAST(PCSpkState, dev, dev);
+    ISABus *isa_bus = (ISABus *)dev->qdev.parent_bus; // FIXME
 
     memory_region_init_io(&s->ioport, &pcspk_io_ops, s, "elcr", 1);
-    isa_register_ioport(dev, &s->ioport, s->iobase);
+    memory_region_add_subregion_overlap(isa_bus->address_space_io,
+                                        s->iobase, &s->ioport, 1);
 
     pcspk_state = s;
 
