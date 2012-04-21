@@ -11,6 +11,7 @@
 #include "ioapic.h"
 #include "mc146818rtc.h"
 #include "isa-serial.h"
+#include "pckbd.h"
 
 /* PC-style peripherals (also used by other machines).  */
 
@@ -55,17 +56,6 @@ typedef struct GSIState {
 } GSIState;
 
 void gsi_handler(void *opaque, int n, int level);
-
-/* pckbd.c */
-
-typedef struct KBDState KBDState;
-
-KBDState *i8042_init(ISABus *isa_bus, int base, qemu_irq a20_line);
-void i8042_mm_init(MemoryRegion *address_space,
-                   qemu_irq kbd_irq, qemu_irq mouse_irq,
-                   target_phys_addr_t base, ram_addr_t size,
-                   int32_t it_shift);
-void i8042_mouse_fake_event(KBDState *s);
 
 /* pc.c */
 extern int fd_bootchk;

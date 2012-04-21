@@ -21,15 +21,8 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-#include "hw.h"
-#include "isa.h"
-#include "pc.h"
-#include "ps2.h"
+#include "pckbd.h"
 #include "sysemu.h"
-#include "qemu/pin.h"
-
-#define TYPE_I8042 "i8042"
-#define I8042(obj) OBJECT_CHECK(KBDState, (obj), TYPE_I8042)
 
 /* debug PC keyboard */
 //#define DEBUG_KBD
@@ -129,33 +122,6 @@
 
 #define KBD_PENDING_KBD         1
 #define KBD_PENDING_AUX         2
-
-struct KBDState
-{
-    DeviceState parent;
-
-    uint8_t write_cmd; /* if non zero, write data to port 60 is expected */
-    uint8_t status;
-    uint8_t mode;
-    uint8_t outport;
-    /* Bitmask of devices with data available.  */
-    uint8_t pending;
-    PS2KbdState kbd;
-    PS2MouseState mouse;
-
-    Notifier kbd_notifier;
-    Notifier mouse_notifier;
-
-    int32_t it_shift;
-    int32_t addr_size;
-
-    Pin irq_kbd;
-    Pin irq_mouse;
-    Pin a20_out;
-    target_phys_addr_t mask;
-
-    MemoryRegion io;
-};
 
 /* update irq and KBD_STAT_[MOUSE_]OBF */
 /* XXX: not generating the irqs if KBD_MODE_DISABLE_KBD is set may be
