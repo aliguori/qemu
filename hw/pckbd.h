@@ -13,14 +13,22 @@ typedef struct KBDState
 {
     DeviceState parent;
 
+    PS2KbdState kbd;
+    PS2MouseState mouse;
+
+    Pin irq_kbd;
+    Pin irq_mouse;
+    Pin a20_out;
+
+    MemoryRegion io;
+
+    /*< private >*/
     uint8_t write_cmd; /* if non zero, write data to port 60 is expected */
     uint8_t status;
     uint8_t mode;
     uint8_t outport;
     /* Bitmask of devices with data available.  */
     uint8_t pending;
-    PS2KbdState kbd;
-    PS2MouseState mouse;
 
     Notifier kbd_notifier;
     Notifier mouse_notifier;
@@ -28,12 +36,7 @@ typedef struct KBDState
     int32_t it_shift;
     int32_t addr_size;
 
-    Pin irq_kbd;
-    Pin irq_mouse;
-    Pin a20_out;
     target_phys_addr_t mask;
-
-    MemoryRegion io;
 } KBDState;
 
 KBDState *i8042_init(ISABus *isa_bus, int base, qemu_irq a20_line);
