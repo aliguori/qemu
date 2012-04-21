@@ -387,11 +387,6 @@ static Property i8042_properties[] = {
     DEFINE_PROP_END_OF_LIST(),
 };
 
-void i8042_mouse_fake_event(KBDState *s)
-{
-    ps2_mouse_fake_event(&s->mouse);
-}
-
 static int i8042_realize(DeviceState *dev)
 {
     KBDState *s = I8042(dev);

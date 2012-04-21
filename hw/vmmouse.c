@@ -22,6 +22,8 @@
  * THE SOFTWARE.
  */
 #include "vmmouse.h"
+#include "kvm.h"
+#include "pckbd.h"
 
 /* debug only vmmouse */
 //#define DEBUG_VMMOUSE
@@ -106,7 +108,7 @@ static void vmmouse_mouse_event(void *opaque, int x, int y, int dz, int buttons_
 
     /* need to still generate PS2 events to notify driver to
        read from queue */
-    i8042_mouse_fake_event(s->ps2_mouse);
+    ps2_mouse_fake_event(s->ps2_mouse);
 }
 
 static void vmmouse_remove_handler(VMMouseState *s)
@@ -191,12 +193,11 @@ static uint64_t vmmouse_read(void *opaque, target_phys_addr_t addr,
 {
     VMMouseState *s = opaque;
     uint32_t data[6];
-    uint16_t command;
 
     vmport_get_data(data);
 
     if (data[0] != VMPORT_MAGIC) {
-        return;
+        return ~0UL;
     }
 
     switch ((data[2] & 0xFFFF)) {
@@ -204,7 +205,7 @@ static uint64_t vmmouse_read(void *opaque, target_phys_addr_t addr,
         data[0] = 6;
         data[1] = VMPORT_MAGIC;
         break;
-    case VMPPORT_CMD_GETRAMSIZE:
+    case VMPORT_CMD_GETRAMSIZE:
         data[0] = ram_size;
         data[1] = 0x1177;
         break;
@@ -226,7 +227,7 @@ static uint64_t vmmouse_read(void *opaque, target_phys_addr_t addr,
             vmmouse_request_absolute(s);
             break;
         default:
-            printf("vmmouse: unknown command %x\n", data[1]);
+            DPRINTF("vmmouse: unknown command %x\n", data[1]);
             break;
         }
         break;
@@ -234,11 +235,13 @@ static uint64_t vmmouse_read(void *opaque, target_phys_addr_t addr,
         vmmouse_data(s, data, data[1]);
         break;
     default:
-        printf("vmmouse: unknown command %x\n", command);
+        DPRINTF("vmmouse: unknown command %x\n", (data[2] & 0xFFFF));
         break;
     }
 
-    vmmouse_set_data(data);
+    vmport_set_data(data);
+
+    return data[0];
 }
 
 static void vmmouse_write(void *opaque, target_phys_addr_t addr,
@@ -274,7 +277,7 @@ static const VMStateDescription vmstate_vmmouse = {
 
 static void vmmouse_reset(DeviceState *d)
 {
-    VMMouseState *s = container_of(d, VMMouseState, dev.qdev);
+    VMMouseState *s = VMMOUSE(d);
 
     s->status = 0xffff;
     s->queue_size = VMMOUSE_QUEUE_SIZE;
@@ -282,10 +285,10 @@ static void vmmouse_reset(DeviceState *d)
     vmmouse_disable(s);
 }
 
-static const MemoryRegionPortioOps vmmouse_ops = {
+static const MemoryRegionOps vmmouse_ops = {
     .read = vmmouse_read,
     .write = vmmouse_write,
-}
+};
 
 static void vmmouse_initfn(Object *obj)
 {

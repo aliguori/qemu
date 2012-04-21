@@ -1169,6 +1169,8 @@ void pc_basic_device_init(ISABus *isa_bus, qemu_irq *gsi,
         qdev_prop_set_globals(DEVICE(vmmouse));
         vmmouse->ps2_mouse = &i8042->mouse;
         qdev_init_nofail(DEVICE(vmmouse));
+        memory_region_add_subregion(isa_bus->address_space_io, 0x5658,
+                                    &vmmouse->io);
     }
     port92 = isa_create_simple(isa_bus, "port92");
     port92_init(port92, &a20_line[1]);

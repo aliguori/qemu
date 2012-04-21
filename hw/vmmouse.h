@@ -4,6 +4,7 @@
 #include "qdev.h"
 #include "console.h"
 #include "ps2.h"
+#include "memory.h"
 
 #define TYPE_VMMOUSE "vmmouse"
 #define VMMOUSE(obj) OBJECT_CHECK(VMMouseState, (obj), TYPE_VMMOUSE)

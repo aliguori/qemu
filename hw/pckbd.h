@@ -44,6 +44,5 @@ void i8042_mm_init(MemoryRegion *address_space,
                    qemu_irq kbd_irq, qemu_irq mouse_irq,
                    target_phys_addr_t base, ram_addr_t size,
                    int32_t it_shift);
-void i8042_mouse_fake_event(KBDState *s);
 
 #endif
