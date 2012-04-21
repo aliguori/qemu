@@ -56,15 +56,6 @@ typedef struct GSIState {
 
 void gsi_handler(void *opaque, int n, int level);
 
-/* vmport.c */
-static inline void vmport_init(ISABus *bus)
-{
-    isa_create_simple(bus, "vmport");
-}
-void vmport_register(unsigned char command, IOPortReadFunc *func, void *opaque);
-void vmmouse_get_data(uint32_t *data);
-void vmmouse_set_data(const uint32_t *data);
-
 /* pckbd.c */
 
 typedef struct KBDState KBDState;

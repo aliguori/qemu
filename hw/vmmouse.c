@@ -21,14 +21,15 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-#include "hw.h"
-#include "console.h"
-#include "ps2.h"
-#include "pc.h"
-#include "qdev.h"
+#include "vmmouse.h"
 
 /* debug only vmmouse */
 //#define DEBUG_VMMOUSE
+
+#define VMPORT_CMD_GETVERSION 0x0a
+#define VMPORT_CMD_GETRAMSIZE 0x14
+
+#define VMPORT_MAGIC   0x564D5868
 
 /* VMMouse Commands */
 #define VMMOUSE_GETVERSION	10
@@ -41,8 +42,6 @@
 #define VMMOUSE_REQUEST_RELATIVE	0x4c455252
 #define VMMOUSE_REQUEST_ABSOLUTE	0x53424152
 
-#define VMMOUSE_QUEUE_SIZE	1024
-
 #define VMMOUSE_VERSION		0x3442554a
 
 #ifdef DEBUG_VMMOUSE
@@ -51,17 +50,25 @@
 #define DPRINTF(fmt, ...) do { } while (0)
 #endif
 
-typedef struct _VMMouseState
+static void vmport_get_data(uint32_t *data)
 {
-    ISADevice dev;
-    uint32_t queue[VMMOUSE_QUEUE_SIZE];
-    int32_t queue_size;
-    uint16_t nb_queue;
-    uint16_t status;
-    uint8_t absolute;
-    QEMUPutMouseEntry *entry;
-    void *ps2_mouse;
-} VMMouseState;
+    CPUX86State *env = cpu_single_env;
+
+    cpu_synchronize_state(env);
+
+    data[0] = env->regs[R_EAX]; data[1] = env->regs[R_EBX];
+    data[2] = env->regs[R_ECX]; data[3] = env->regs[R_EDX];
+    data[4] = env->regs[R_ESI]; data[5] = env->regs[R_EDI];
+}
+
+static void vmport_set_data(const uint32_t *data)
+{
+    CPUX86State *env = cpu_single_env;
+
+    env->regs[R_EAX] = data[0]; env->regs[R_EBX] = data[1];
+    env->regs[R_ECX] = data[2]; env->regs[R_EDX] = data[3];
+    env->regs[R_ESI] = data[4]; env->regs[R_EDI] = data[5];
+}
 
 static uint32_t vmmouse_get_status(VMMouseState *s)
 {
@@ -164,7 +171,7 @@ static void vmmouse_data(VMMouseState *s, uint32_t *data, uint32_t size)
     DPRINTF("vmmouse_data(%d)\n", size);
 
     if (size == 0 || size > 6 || size > s->nb_queue) {
-        printf("vmmouse: driver requested too much data %d\n", size);
+        DPRINTF("vmmouse: driver requested too much data %d\n", size);
         s->status = 0xffff;
         vmmouse_remove_handler(s);
         return;
@@ -178,17 +185,29 @@ static void vmmouse_data(VMMouseState *s, uint32_t *data, uint32_t size)
         memmove(s->queue, &s->queue[size], sizeof(s->queue[0]) * s->nb_queue);
 }
 
-static uint32_t vmmouse_ioport_read(void *opaque, uint32_t addr)
+
+static uint64_t vmmouse_read(void *opaque, target_phys_addr_t addr,
+                             unsigned size)
 {
     VMMouseState *s = opaque;
     uint32_t data[6];
     uint16_t command;
 
-    vmmouse_get_data(data);
+    vmport_get_data(data);
 
-    command = data[2] & 0xFFFF;
+    if (data[0] != VMPORT_MAGIC) {
+        return;
+    }
 
-    switch (command) {
+    switch ((data[2] & 0xFFFF)) {
+    case VMPORT_CMD_GETVERSION:
+        data[0] = 6;
+        data[1] = VMPORT_MAGIC;
+        break;
+    case VMPPORT_CMD_GETRAMSIZE:
+        data[0] = ram_size;
+        data[1] = 0x1177;
+        break;
     case VMMOUSE_STATUS:
         data[0] = vmmouse_get_status(s);
         break;
@@ -220,7 +239,12 @@ static uint32_t vmmouse_ioport_read(void *opaque, uint32_t addr)
     }
 
     vmmouse_set_data(data);
-    return data[0];
+}
+
+static void vmmouse_write(void *opaque, target_phys_addr_t addr,
+                          uint64_t val, unsigned size)
+{
+    vmmouse_read(opaque, addr, size);
 }
 
 static int vmmouse_post_load(void *opaque, int version_id)
@@ -258,38 +282,45 @@ static void vmmouse_reset(DeviceState *d)
     vmmouse_disable(s);
 }
 
-static int vmmouse_initfn(ISADevice *dev)
+static const MemoryRegionPortioOps vmmouse_ops = {
+    .read = vmmouse_read,
+    .write = vmmouse_write,
+}
+
+static void vmmouse_initfn(Object *obj)
 {
-    VMMouseState *s = DO_UPCAST(VMMouseState, dev, dev);
+    VMMouseState *s = VMMOUSE(obj);
+
+    memory_region_init_io(&s->io, &vmmouse_ops, s, "vmmouse", 1);
+
+    object_property_add_link(obj, "ps2_mouse", TYPE_PS2_MOUSE,
+                             (Object **)&s->ps2_mouse, NULL);
+}
+
+static int vmmouse_realize(DeviceState *dev)
+{
+    VMMouseState *s = VMMOUSE(dev);
+
+    g_assert(s->ps2_mouse != NULL);
 
     DPRINTF("vmmouse_init\n");
-
-    vmport_register(VMMOUSE_STATUS, vmmouse_ioport_read, s);
-    vmport_register(VMMOUSE_COMMAND, vmmouse_ioport_read, s);
-    vmport_register(VMMOUSE_DATA, vmmouse_ioport_read, s);
 
     return 0;
 }
 
-static Property vmmouse_properties[] = {
-    DEFINE_PROP_PTR("ps2_mouse", VMMouseState, ps2_mouse),
-    DEFINE_PROP_END_OF_LIST(),
-};
-
 static void vmmouse_class_initfn(ObjectClass *klass, void *data)
 {
     DeviceClass *dc = DEVICE_CLASS(klass);
-    ISADeviceClass *ic = ISA_DEVICE_CLASS(klass);
-    ic->init = vmmouse_initfn;
-    dc->no_user = 1;
+
+    dc->init = vmmouse_realize;
     dc->reset = vmmouse_reset;
     dc->vmsd = &vmstate_vmmouse;
-    dc->props = vmmouse_properties;
 }
 
 static TypeInfo vmmouse_info = {
-    .name          = "vmmouse",
-    .parent        = TYPE_ISA_DEVICE,
+    .name          = TYPE_VMMOUSE,
+    .parent        = TYPE_DEVICE,
+    .instance_init = vmmouse_initfn,
     .instance_size = sizeof(VMMouseState),
     .class_init    = vmmouse_class_initfn,
 };

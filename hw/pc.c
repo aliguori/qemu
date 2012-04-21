@@ -47,6 +47,8 @@
 #include "ui/qemu-spice.h"
 #include "memory.h"
 #include "exec-memory.h"
+#include "vmmouse.h"
+#include "ps2.h"
 
 /* output Bochs bios info messages */
 //#define DEBUG_BIOS
@@ -1097,7 +1099,7 @@ void pc_basic_device_init(ISABus *isa_bus, qemu_irq *gsi,
     qemu_irq pit_alt_irq = NULL;
     qemu_irq rtc_irq = NULL;
     qemu_irq *a20_line;
-    ISADevice *port92, *vmmouse, *pit;
+    ISADevice *port92, *pit;
     KBDState *i8042;
     qemu_irq *cpu_exit_irq;
 
@@ -1161,14 +1163,12 @@ void pc_basic_device_init(ISABus *isa_bus, qemu_irq *gsi,
     a20_line = qemu_allocate_irqs(handle_a20_line_change, first_cpu, 2);
     i8042 = i8042_init(isa_bus, 0x60, a20_line[0]);
     if (!no_vmport) {
-        vmport_init(isa_bus);
-        vmmouse = isa_try_create(isa_bus, "vmmouse");
-    } else {
-        vmmouse = NULL;
-    }
-    if (vmmouse) {
-        qdev_prop_set_ptr(&vmmouse->qdev, "ps2_mouse", i8042);
-        qdev_init_nofail(&vmmouse->qdev);
+        VMMouseState *vmmouse;
+
+        vmmouse = VMMOUSE(object_new(TYPE_VMMOUSE));
+        qdev_prop_set_globals(DEVICE(vmmouse));
+        vmmouse->ps2_mouse = &i8042->ps2_mouse;
+        qdev_init_nofail(DEVICE(vmmouse));
     }
     port92 = isa_create_simple(isa_bus, "port92");
     port92_init(port92, &a20_line[1]);
