@@ -99,7 +99,6 @@ static void mips_jazz_init(MemoryRegion *address_space,
     qemu_irq *rc4030, *i8259;
     rc4030_dma *dmas;
     void* rc4030_opaque;
-    MemoryRegion *i8042 = g_new(MemoryRegion, 1);
     MemoryRegion *dma_dummy = g_new(MemoryRegion, 1);
     NICInfo *nd;
     DeviceState *dev;
@@ -249,7 +248,7 @@ static void mips_jazz_init(MemoryRegion *address_space,
     pin_connect_pin(rtc_get_irq(rtc), isa_get_pin(isa_bus, RTC_ISA_IRQ));
 
     /* Keyboard (i8042) */
-    i8042_mm_init(address_space, rc4030[6], rc4030[7], 0x80005000, 0x1000, 0)
+    i8042_mm_init(address_space, rc4030[6], rc4030[7], 0x80005000, 0x1000, 0);
 
     /* Serial ports */
     if (serial_hds[0]) {
