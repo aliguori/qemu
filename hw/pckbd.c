@@ -140,8 +140,11 @@ struct KBDState
     uint8_t outport;
     /* Bitmask of devices with data available.  */
     uint8_t pending;
-    void *kbd;
-    void *mouse;
+    PS2KbdState kbd;
+    PS2MouseState mouse;
+
+    Notifier kbd_notifier;
+    Notifier mouse_notifier;
 
     int32_t it_shift;
     int32_t addr_size;
@@ -184,22 +187,24 @@ static void kbd_update_irq(KBDState *s)
     pin_set_level(&s->irq_mouse, irq_mouse_level);
 }
 
-static void kbd_update_kbd_irq(void *opaque, int level)
+static void kbd_update_kbd_irq(Notifier *notifier, void *data)
 {
-    KBDState *s = (KBDState *)opaque;
+    KBDState *s = container_of(notifier, KBDState, kbd_notifier);
+    PS2State *dev = PS2_DEVICE(&s->kbd);
 
-    if (level)
+    if (pin_get_level(&dev->irq))
         s->pending |= KBD_PENDING_KBD;
     else
         s->pending &= ~KBD_PENDING_KBD;
     kbd_update_irq(s);
 }
 
-static void kbd_update_aux_irq(void *opaque, int level)
+static void kbd_update_aux_irq(Notifier *notifier, void *data)
 {
-    KBDState *s = (KBDState *)opaque;
+    KBDState *s = container_of(notifier, KBDState, mouse_notifier);
+    PS2State *dev = PS2_DEVICE(&s->mouse);
 
-    if (level)
+    if (pin_get_level(&dev->irq))
         s->pending |= KBD_PENDING_AUX;
     else
         s->pending &= ~KBD_PENDING_AUX;
@@ -217,9 +222,9 @@ static uint32_t kbd_read_status(KBDState *s, uint32_t addr)
 static void kbd_queue(KBDState *s, int b, int aux)
 {
     if (aux)
-        ps2_queue(s->mouse, b);
+        ps2_queue(PS2_DEVICE(&s->mouse), b);
     else
-        ps2_queue(s->kbd, b);
+        ps2_queue(PS2_DEVICE(&s->kbd), b);
 }
 
 static void outport_write(KBDState *s, uint32_t val)
@@ -316,9 +321,9 @@ static uint32_t kbd_read_data(KBDState *s, uint32_t addr)
     uint32_t val;
 
     if (s->pending == KBD_PENDING_AUX)
-        val = ps2_read_data(s->mouse);
+        val = ps2_read_data(PS2_DEVICE(&s->mouse));
     else
-        val = ps2_read_data(s->kbd);
+        val = ps2_read_data(PS2_DEVICE(&s->kbd));
 
     DPRINTF("kbd: read data=0x%02x\n", val);
     return val;
@@ -330,11 +335,11 @@ static void kbd_write_data(KBDState *s, uint32_t addr, uint32_t val)
 
     switch(s->write_cmd) {
     case 0:
-        ps2_write_keyboard(s->kbd, val);
+        ps2_write_keyboard(&s->kbd, val);
         break;
     case KBD_CCMD_WRITE_MODE:
         s->mode = val;
-        ps2_keyboard_set_translation(s->kbd, (s->mode & KBD_MODE_KCC) != 0);
+        ps2_keyboard_set_translation(&s->kbd, (s->mode & KBD_MODE_KCC) != 0);
         /* ??? */
         kbd_update_irq(s);
         break;
@@ -348,7 +353,7 @@ static void kbd_write_data(KBDState *s, uint32_t addr, uint32_t val)
         outport_write(s, val);
         break;
     case KBD_CCMD_WRITE_MOUSE:
-        ps2_write_mouse(s->mouse, val);
+        ps2_write_mouse(&s->mouse, val);
         break;
     default:
         break;
@@ -418,17 +423,31 @@ static Property i8042_properties[] = {
 
 void i8042_mouse_fake_event(KBDState *s)
 {
-    ps2_mouse_fake_event(s->mouse);
+    ps2_mouse_fake_event(&s->mouse);
 }
 
 static int i8042_realize(DeviceState *dev)
 {
     KBDState *s = I8042(dev);
+    int err;
+
+    err = qdev_init(DEVICE(&s->kbd));
+    if (err < 0) {
+        return err;
+    }
+
+    err = qdev_init(DEVICE(&s->mouse));
+    if (err < 0) {
+        return err;
+    }
 
     memory_region_init_io(&s->io, &i8042_ops, s, "i8042", s->addr_size);
 
-    s->kbd = ps2_kbd_init(kbd_update_kbd_irq, s);
-    s->mouse = ps2_mouse_init(kbd_update_aux_irq, s);
+    s->kbd_notifier.notify = kbd_update_kbd_irq;
+    pin_add_level_change_notifier(&s->kbd.common.irq, &s->kbd_notifier);
+
+    s->mouse_notifier.notify = kbd_update_aux_irq;
+    pin_add_level_change_notifier(&s->mouse.common.irq, &s->mouse_notifier);
 
     return 0;
 }
@@ -441,9 +460,19 @@ static void i8042_initfn(Object *obj)
     object_initialize(&s->irq_mouse, TYPE_PIN);
     object_initialize(&s->a20_out, TYPE_PIN);
 
+    object_initialize(&s->kbd, TYPE_PS2_KBD);
+    /* FIXME: make mouse a link<> */
+    object_initialize(&s->mouse, TYPE_PS2_MOUSE);
+
     object_property_add_child(obj, "irq_kbd", OBJECT(&s->irq_kbd), NULL);
     object_property_add_child(obj, "irq_mouse", OBJECT(&s->irq_mouse), NULL);
     object_property_add_child(obj, "a20_out", OBJECT(&s->a20_out), NULL);
+
+    object_property_add_child(obj, "kbd", OBJECT(&s->kbd), NULL);
+    object_property_add_child(obj, "mouse", OBJECT(&s->mouse), NULL);
+
+    qdev_prop_set_globals(DEVICE(&s->kbd));
+    qdev_prop_set_globals(DEVICE(&s->mouse));
 }
 
 static void i8042_class_initfn(ObjectClass *klass, void *data)

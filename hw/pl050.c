@@ -13,7 +13,8 @@
 typedef struct {
     SysBusDevice busdev;
     MemoryRegion iomem;
-    void *dev;
+    PS2State *dev;
+    Notifier notifier;
     uint32_t cr;
     uint32_t clk;
     uint32_t last;
@@ -47,12 +48,12 @@ static const VMStateDescription vmstate_pl050 = {
 static const unsigned char pl050_id[] =
 { 0x50, 0x10, 0x04, 0x00, 0x0d, 0xf0, 0x05, 0xb1 };
 
-static void pl050_update(void *opaque, int level)
+static void pl050_update(Notifier *notifier, void *data)
 {
-    pl050_state *s = (pl050_state *)opaque;
+    pl050_state *s = container_of(notifier, pl050_state, notifier);
     int raise;
 
-    s->pending = level;
+    s->pending = pin_get_level(&s->dev->irq);
     raise = (s->pending && (s->cr & 0x10) != 0)
             || (s->cr & 0x08) != 0;
     qemu_set_irq(s->irq, raise);
@@ -107,16 +108,16 @@ static void pl050_write(void *opaque, target_phys_addr_t offset,
     switch (offset >> 2) {
     case 0: /* KMICR */
         s->cr = value;
-        pl050_update(s, s->pending);
+        pl050_update(&s->notifier, NULL);
         /* ??? Need to implement the enable/disable bit.  */
         break;
     case 2: /* KMIDATA */
         /* ??? This should toggle the TX interrupt line.  */
         /* ??? This means kbd/mouse can block each other.  */
         if (s->is_mouse) {
-            ps2_write_mouse(s->dev, value);
+            ps2_write_mouse(PS2_MOUSE(s->dev), value);
         } else {
-            ps2_write_keyboard(s->dev, value);
+            ps2_write_keyboard(PS2_KBD(s->dev), value);
         }
         break;
     case 3: /* KMICLKDIV */
@@ -140,10 +141,16 @@ static int pl050_init(SysBusDevice *dev, int is_mouse)
     sysbus_init_mmio(dev, &s->iomem);
     sysbus_init_irq(dev, &s->irq);
     s->is_mouse = is_mouse;
-    if (s->is_mouse)
-        s->dev = ps2_mouse_init(pl050_update, s);
-    else
-        s->dev = ps2_kbd_init(pl050_update, s);
+    if (s->is_mouse) {
+        s->dev = PS2_DEVICE(object_new(TYPE_PS2_MOUSE));
+    } else {
+        s->dev = PS2_DEVICE(object_new(TYPE_PS2_KBD));
+    }
+    qdev_prop_set_globals(DEVICE(s->dev));
+    qdev_init_nofail(DEVICE(s->dev));
+
+    s->notifier.notify = pl050_update;
+    pin_add_level_change_notifier(&s->dev->irq, &s->notifier);
     return 0;
 }
 
