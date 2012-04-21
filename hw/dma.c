@@ -26,16 +26,18 @@
 
 /* #define DEBUG_DMA */
 
-#define dolog(...) fprintf (stderr, "dma: " __VA_ARGS__)
 #ifdef DEBUG_DMA
-#define linfo(...) fprintf (stderr, "dma: " __VA_ARGS__)
-#define ldebug(...) fprintf (stderr, "dma: " __VA_ARGS__)
+#define DPRINTF(...) do { fprintf (stderr, "dma: " __VA_ARGS__) } while (0)
 #else
-#define linfo(...)
-#define ldebug(...)
+#define DPRINTF(...) do { if (0) { fprintf(stderr, "dma: " __VA_ARGS__); } } while (0)
 #endif
 
-struct dma_regs {
+#define TYPE_DMA_CONTROLLER "dma-controller"
+#define DMA_CONTROLLER(obj) \
+    OBJECT_CHECK(DMAController, (obj), TYPE_DMA_CONTROLLER)
+
+typedef struct DMARegisters
+{
     int now[2];
     uint16_t base[2];
     uint8_t mode;
@@ -45,20 +47,23 @@ struct dma_regs {
     uint8_t eop;
     DMA_transfer_handler transfer_handler;
     void *opaque;
-};
+} DMARegisters;
 
 #define ADDR 0
 #define COUNT 1
 
-static struct dma_cont {
+typedef struct DMAController
+{
     uint8_t status;
     uint8_t command;
     uint8_t mask;
     uint8_t flip_flop;
     int dshift;
-    struct dma_regs regs[4];
+    DMARegisters regs[4];
     qemu_irq *cpu_request_exit;
-} dma_controllers[2];
+} DMAController;
+
+static DMAController dma_controllers[2];
 
 enum {
     CMD_MEMORY_TO_MEMORY = 0x01,
@@ -75,72 +80,72 @@ enum {
 
 };
 
-static void DMA_run (void);
+static void DMA_run(void);
 
-static int channels[8] = {-1, 2, 3, 1, -1, -1, -1, 0};
+static const int channels[8] = {-1, 2, 3, 1, -1, -1, -1, 0};
 
-static void write_page (void *opaque, uint32_t nport, uint32_t data)
+static void write_page(void *opaque, uint32_t nport, uint32_t data)
 {
-    struct dma_cont *d = opaque;
+    DMAController *d = opaque;
     int ichan;
 
     ichan = channels[nport & 7];
     if (-1 == ichan) {
-        dolog ("invalid channel %#x %#x\n", nport, data);
+        DPRINTF("invalid channel %#x %#x\n", nport, data);
         return;
     }
     d->regs[ichan].page = data;
 }
 
-static void write_pageh (void *opaque, uint32_t nport, uint32_t data)
+static void write_pageh(void *opaque, uint32_t nport, uint32_t data)
 {
-    struct dma_cont *d = opaque;
+    DMAController *d = opaque;
     int ichan;
 
     ichan = channels[nport & 7];
     if (-1 == ichan) {
-        dolog ("invalid channel %#x %#x\n", nport, data);
+        DPRINTF("invalid channel %#x %#x\n", nport, data);
         return;
     }
     d->regs[ichan].pageh = data;
 }
 
-static uint32_t read_page (void *opaque, uint32_t nport)
+static uint32_t read_page(void *opaque, uint32_t nport)
 {
-    struct dma_cont *d = opaque;
+    DMAController *d = opaque;
     int ichan;
 
     ichan = channels[nport & 7];
     if (-1 == ichan) {
-        dolog ("invalid channel read %#x\n", nport);
+        DPRINTF("invalid channel read %#x\n", nport);
         return 0;
     }
     return d->regs[ichan].page;
 }
 
-static uint32_t read_pageh (void *opaque, uint32_t nport)
+static uint32_t read_pageh(void *opaque, uint32_t nport)
 {
-    struct dma_cont *d = opaque;
+    DMAController *d = opaque;
     int ichan;
 
     ichan = channels[nport & 7];
     if (-1 == ichan) {
-        dolog ("invalid channel read %#x\n", nport);
+        DPRINTF("invalid channel read %#x\n", nport);
         return 0;
     }
     return d->regs[ichan].pageh;
 }
 
-static inline void init_chan (struct dma_cont *d, int ichan)
+static void init_chan(DMAController *d, int ichan)
 {
-    struct dma_regs *r;
+    DMARegisters *r;
 
     r = d->regs + ichan;
     r->now[ADDR] = r->base[ADDR] << d->dshift;
     r->now[COUNT] = 0;
 }
 
-static inline int getff (struct dma_cont *d)
+static int getff(DMAController *d)
 {
     int ff;
 
@@ -149,11 +154,11 @@ static inline int getff (struct dma_cont *d)
     return ff;
 }
 
-static uint32_t read_chan (void *opaque, uint32_t nport)
+static uint32_t read_chan(void *opaque, uint32_t nport)
 {
-    struct dma_cont *d = opaque;
+    DMAController *d = opaque;
     int ichan, nreg, iport, ff, val, dir;
-    struct dma_regs *r;
+    DMARegisters *r;
 
     iport = (nport >> d->dshift) & 0x0f;
     ichan = iport >> 1;
@@ -161,44 +166,45 @@ static uint32_t read_chan (void *opaque, uint32_t nport)
     r = d->regs + ichan;
 
     dir = ((r->mode >> 5) & 1) ? -1 : 1;
-    ff = getff (d);
-    if (nreg)
+    ff = getff(d);
+    if (nreg) {
         val = (r->base[COUNT] << d->dshift) - r->now[COUNT];
-    else
+    } else {
         val = r->now[ADDR] + r->now[COUNT] * dir;
+    }
 
-    ldebug ("read_chan %#x -> %d\n", iport, val);
+    DPRINTF("read_chan %#x -> %d\n", iport, val);
     return (val >> (d->dshift + (ff << 3))) & 0xff;
 }
 
-static void write_chan (void *opaque, uint32_t nport, uint32_t data)
+static void write_chan(void *opaque, uint32_t nport, uint32_t data)
 {
-    struct dma_cont *d = opaque;
+    DMAController *d = opaque;
     int iport, ichan, nreg;
-    struct dma_regs *r;
+    DMARegisters *r;
 
     iport = (nport >> d->dshift) & 0x0f;
     ichan = iport >> 1;
     nreg = iport & 1;
     r = d->regs + ichan;
-    if (getff (d)) {
+    if (getff(d)) {
         r->base[nreg] = (r->base[nreg] & 0xff) | ((data << 8) & 0xff00);
-        init_chan (d, ichan);
+        init_chan(d, ichan);
     } else {
         r->base[nreg] = (r->base[nreg] & 0xff00) | (data & 0xff);
     }
 }
 
-static void write_cont (void *opaque, uint32_t nport, uint32_t data)
+static void write_cont(void *opaque, uint32_t nport, uint32_t data)
 {
-    struct dma_cont *d = opaque;
+    DMAController *d = opaque;
     int iport, ichan = 0;
 
     iport = (nport >> d->dshift) & 0x0f;
     switch (iport) {
     case 0x08:                  /* command */
         if ((data != 0) && (data & CMD_NOT_SUPPORTED)) {
-            dolog ("command %#x not supported\n", data);
+            DPRINTF("command %#x not supported\n", data);
             return;
         }
         d->command = data;
@@ -208,8 +214,7 @@ static void write_cont (void *opaque, uint32_t nport, uint32_t data)
         ichan = data & 3;
         if (data & 4) {
             d->status |= 1 << (ichan + 4);
-        }
-        else {
+        } else {
             d->status &= ~(1 << (ichan + 4));
         }
         d->status &= ~(1 << ichan);
@@ -217,17 +222,17 @@ static void write_cont (void *opaque, uint32_t nport, uint32_t data)
         break;
 
     case 0x0a:                  /* single mask */
-        if (data & 4)
+        if (data & 4) {
             d->mask |= 1 << (data & 3);
-        else
+        } else {
             d->mask &= ~(1 << (data & 3));
+        }
         DMA_run();
         break;
 
     case 0x0b:                  /* mode */
         {
             ichan = data & 3;
-#ifdef DEBUG_DMA
             {
                 int op, ai, dir, opmode;
                 op = (data >> 2) & 3;
@@ -235,10 +240,9 @@ static void write_cont (void *opaque, uint32_t nport, uint32_t data)
                 dir = (data >> 5) & 1;
                 opmode = (data >> 6) & 3;
 
-                linfo ("ichan %d, op %d, ai %d, dir %d, opmode %d\n",
-                       ichan, op, ai, dir, opmode);
+                DPRINTF("ichan %d, op %d, ai %d, dir %d, opmode %d\n",
+                        ichan, op, ai, dir, opmode);
             }
-#endif
             d->regs[ichan].mode = data;
             break;
         }
@@ -265,21 +269,19 @@ static void write_cont (void *opaque, uint32_t nport, uint32_t data)
         break;
 
     default:
-        dolog ("unknown iport %#x\n", iport);
+        DPRINTF("unknown iport %#x\n", iport);
         break;
     }
 
-#ifdef DEBUG_DMA
     if (0xc != iport) {
-        linfo ("write_cont: nport %#06x, ichan % 2d, val %#06x\n",
-               nport, ichan, data);
+        DPRINTF("write_cont: nport %#06x, ichan % 2d, val %#06x\n",
+                nport, ichan, data);
     }
-#endif
 }
 
-static uint32_t read_cont (void *opaque, uint32_t nport)
+static uint32_t read_cont(void *opaque, uint32_t nport)
 {
-    struct dma_cont *d = opaque;
+    DMAController *d = opaque;
     int iport, val;
 
     iport = (nport >> d->dshift) & 0x0f;
@@ -296,66 +298,64 @@ static uint32_t read_cont (void *opaque, uint32_t nport)
         break;
     }
 
-    ldebug ("read_cont: nport %#06x, iport %#04x val %#x\n", nport, iport, val);
+    DPRINTF("read_cont: nport %#06x, iport %#04x val %#x\n", nport, iport, val);
     return val;
 }
 
-int DMA_get_channel_mode (int nchan)
+int DMA_get_channel_mode(int nchan)
 {
     return dma_controllers[nchan > 3].regs[nchan & 3].mode;
 }
 
-void DMA_hold_DREQ (int nchan)
+void DMA_hold_DREQ(int nchan)
 {
     int ncont, ichan;
 
     ncont = nchan > 3;
     ichan = nchan & 3;
-    linfo ("held cont=%d chan=%d\n", ncont, ichan);
+    DPRINTF("held cont=%d chan=%d\n", ncont, ichan);
     dma_controllers[ncont].status |= 1 << (ichan + 4);
     DMA_run();
 }
 
-void DMA_release_DREQ (int nchan)
+void DMA_release_DREQ(int nchan)
 {
     int ncont, ichan;
 
     ncont = nchan > 3;
     ichan = nchan & 3;
-    linfo ("released cont=%d chan=%d\n", ncont, ichan);
+    DPRINTF("released cont=%d chan=%d\n", ncont, ichan);
     dma_controllers[ncont].status &= ~(1 << (ichan + 4));
     DMA_run();
 }
 
-static void channel_run (int ncont, int ichan)
+static void channel_run(int ncont, int ichan)
 {
     int n;
-    struct dma_regs *r = &dma_controllers[ncont].regs[ichan];
-#ifdef DEBUG_DMA
+    DMARegisters *r = &dma_controllers[ncont].regs[ichan];
     int dir, opmode;
 
     dir = (r->mode >> 5) & 1;
     opmode = (r->mode >> 6) & 3;
 
     if (dir) {
-        dolog ("DMA in address decrement mode\n");
+        DPRINTF("DMA in address decrement mode\n");
     }
     if (opmode != 1) {
-        dolog ("DMA not in single mode select %#x\n", opmode);
+        DPRINTF("DMA not in single mode select %#x\n", opmode);
     }
-#endif
 
-    n = r->transfer_handler (r->opaque, ichan + (ncont << 2),
-                             r->now[COUNT], (r->base[COUNT] + 1) << ncont);
+    n = r->transfer_handler(r->opaque, ichan + (ncont << 2),
+                            r->now[COUNT], (r->base[COUNT] + 1) << ncont);
     r->now[COUNT] = n;
-    ldebug ("dma_pos %d size %d\n", n, (r->base[COUNT] + 1) << ncont);
+    DPRINTF("dma_pos %d size %d\n", n, (r->base[COUNT] + 1) << ncont);
 }
 
 static QEMUBH *dma_bh;
 
-static void DMA_run (void)
+static void DMA_run(void)
 {
-    struct dma_cont *d;
+    DMAController *d;
     int icont, ichan;
     int rearm = 0;
     static int running = 0;
@@ -376,7 +376,7 @@ static void DMA_run (void)
             mask = 1 << ichan;
 
             if ((0 == (d->mask & mask)) && (0 != (d->status & (mask << 4)))) {
-                channel_run (icont, ichan);
+                channel_run(icont, ichan);
                 rearm = 1;
             }
         }
@@ -384,8 +384,9 @@ static void DMA_run (void)
 
     running = 0;
 out:
-    if (rearm)
+    if (rearm) {
         qemu_bh_schedule_idle(dma_bh);
+    }
 }
 
 static void DMA_run_bh(void *unused)
@@ -393,11 +394,11 @@ static void DMA_run_bh(void *unused)
     DMA_run();
 }
 
-void DMA_register_channel (int nchan,
-                           DMA_transfer_handler transfer_handler,
-                           void *opaque)
+void DMA_register_channel(int nchan,
+                          DMA_transfer_handler transfer_handler,
+                          void *opaque)
 {
-    struct dma_regs *r;
+    DMARegisters *r;
     int ichan, ncont;
 
     ncont = nchan > 3;
@@ -408,46 +409,46 @@ void DMA_register_channel (int nchan,
     r->opaque = opaque;
 }
 
-int DMA_read_memory (int nchan, void *buf, int pos, int len)
+int DMA_read_memory(int nchan, void *buf, int pos, int len)
 {
-    struct dma_regs *r = &dma_controllers[nchan > 3].regs[nchan & 3];
+    DMARegisters *r = &dma_controllers[nchan > 3].regs[nchan & 3];
     target_phys_addr_t addr = ((r->pageh & 0x7f) << 24) | (r->page << 16) | r->now[ADDR];
 
     if (r->mode & 0x20) {
         int i;
         uint8_t *p = buf;
 
-        cpu_physical_memory_read (addr - pos - len, buf, len);
+        cpu_physical_memory_read(addr - pos - len, buf, len);
         /* What about 16bit transfers? */
         for (i = 0; i < len >> 1; i++) {
             uint8_t b = p[len - i - 1];
             p[i] = b;
         }
+    } else {
+        cpu_physical_memory_read(addr + pos, buf, len);
     }
-    else
-        cpu_physical_memory_read (addr + pos, buf, len);
 
     return len;
 }
 
-int DMA_write_memory (int nchan, void *buf, int pos, int len)
+int DMA_write_memory(int nchan, void *buf, int pos, int len)
 {
-    struct dma_regs *r = &dma_controllers[nchan > 3].regs[nchan & 3];
+    DMARegisters *r = &dma_controllers[nchan > 3].regs[nchan & 3];
     target_phys_addr_t addr = ((r->pageh & 0x7f) << 24) | (r->page << 16) | r->now[ADDR];
 
     if (r->mode & 0x20) {
         int i;
         uint8_t *p = buf;
 
-        cpu_physical_memory_write (addr - pos - len, buf, len);
+        cpu_physical_memory_write(addr - pos - len, buf, len);
         /* What about 16bit transfers? */
         for (i = 0; i < len; i++) {
             uint8_t b = p[len - i - 1];
             p[i] = b;
         }
+    } else {
+        cpu_physical_memory_write(addr + pos, buf, len);
     }
-    else
-        cpu_physical_memory_write (addr + pos, buf, len);
 
     return len;
 }
@@ -455,26 +456,26 @@ int DMA_write_memory (int nchan, void *buf, int pos, int len)
 /* request the emulator to transfer a new DMA memory block ASAP */
 void DMA_schedule(int nchan)
 {
-    struct dma_cont *d = &dma_controllers[nchan > 3];
+    DMAController *d = &dma_controllers[nchan > 3];
 
     qemu_irq_pulse(*d->cpu_request_exit);
 }
 
 static void dma_reset(void *opaque)
 {
-    struct dma_cont *d = opaque;
-    write_cont (d, (0x0d << d->dshift), 0);
+    DMAController *d = opaque;
+    write_cont(d, (0x0d << d->dshift), 0);
 }
 
-static int dma_phony_handler (void *opaque, int nchan, int dma_pos, int dma_len)
+static int dma_phony_handler(void *opaque, int nchan, int dma_pos, int dma_len)
 {
-    dolog ("unregistered DMA channel used nchan=%d dma_pos=%d dma_len=%d\n",
+    DPRINTF("unregistered DMA channel used nchan=%d dma_pos=%d dma_len=%d\n",
            nchan, dma_pos, dma_len);
     return dma_pos;
 }
 
 /* dshift = 0: 8 bit DMA, 1 = 16 bit DMA */
-static void dma_init2(struct dma_cont *d, int base, int dshift,
+static void dma_init2(DMAController *d, int base, int dshift,
                       int page_base, int pageh_base,
                       qemu_irq *cpu_request_exit)
 {
@@ -484,26 +485,26 @@ static void dma_init2(struct dma_cont *d, int base, int dshift,
     d->dshift = dshift;
     d->cpu_request_exit = cpu_request_exit;
     for (i = 0; i < 8; i++) {
-        register_ioport_write (base + (i << dshift), 1, 1, write_chan, d);
-        register_ioport_read (base + (i << dshift), 1, 1, read_chan, d);
+        register_ioport_write(base + (i << dshift), 1, 1, write_chan, d);
+        register_ioport_read(base + (i << dshift), 1, 1, read_chan, d);
     }
-    for (i = 0; i < ARRAY_SIZE (page_port_list); i++) {
-        register_ioport_write (page_base + page_port_list[i], 1, 1,
-                               write_page, d);
-        register_ioport_read (page_base + page_port_list[i], 1, 1,
-                              read_page, d);
+    for (i = 0; i < ARRAY_SIZE(page_port_list); i++) {
+        register_ioport_write(page_base + page_port_list[i], 1, 1,
+                              write_page, d);
+        register_ioport_read(page_base + page_port_list[i], 1, 1,
+                             read_page, d);
         if (pageh_base >= 0) {
-            register_ioport_write (pageh_base + page_port_list[i], 1, 1,
-                                   write_pageh, d);
-            register_ioport_read (pageh_base + page_port_list[i], 1, 1,
-                                  read_pageh, d);
+            register_ioport_write(pageh_base + page_port_list[i], 1, 1,
+                                  write_pageh, d);
+            register_ioport_read(pageh_base + page_port_list[i], 1, 1,
+                                 read_pageh, d);
         }
     }
     for (i = 0; i < 8; i++) {
-        register_ioport_write (base + ((i + 8) << dshift), 1, 1,
-                               write_cont, d);
-        register_ioport_read (base + ((i + 8) << dshift), 1, 1,
-                              read_cont, d);
+        register_ioport_write(base + ((i + 8) << dshift), 1, 1,
+                              write_cont, d);
+        register_ioport_read(base + ((i + 8) << dshift), 1, 1,
+                             read_cont, d);
     }
     qemu_register_reset(dma_reset, d);
     dma_reset(d);
@@ -518,13 +519,13 @@ static const VMStateDescription vmstate_dma_regs = {
     .minimum_version_id = 1,
     .minimum_version_id_old = 1,
     .fields      = (VMStateField []) {
-        VMSTATE_INT32_ARRAY(now, struct dma_regs, 2),
-        VMSTATE_UINT16_ARRAY(base, struct dma_regs, 2),
-        VMSTATE_UINT8(mode, struct dma_regs),
-        VMSTATE_UINT8(page, struct dma_regs),
-        VMSTATE_UINT8(pageh, struct dma_regs),
-        VMSTATE_UINT8(dack, struct dma_regs),
-        VMSTATE_UINT8(eop, struct dma_regs),
+        VMSTATE_INT32_ARRAY(now, DMARegisters, 2),
+        VMSTATE_UINT16_ARRAY(base, DMARegisters, 2),
+        VMSTATE_UINT8(mode, DMARegisters),
+        VMSTATE_UINT8(page, DMARegisters),
+        VMSTATE_UINT8(pageh, DMARegisters),
+        VMSTATE_UINT8(dack, DMARegisters),
+        VMSTATE_UINT8(eop, DMARegisters),
         VMSTATE_END_OF_LIST()
     }
 };
@@ -543,11 +544,11 @@ static const VMStateDescription vmstate_dma = {
     .minimum_version_id_old = 1,
     .post_load = dma_post_load,
     .fields      = (VMStateField []) {
-        VMSTATE_UINT8(command, struct dma_cont),
-        VMSTATE_UINT8(mask, struct dma_cont),
-        VMSTATE_UINT8(flip_flop, struct dma_cont),
-        VMSTATE_INT32(dshift, struct dma_cont),
-        VMSTATE_STRUCT_ARRAY(regs, struct dma_cont, 4, 1, vmstate_dma_regs, struct dma_regs),
+        VMSTATE_UINT8(command, DMAController),
+        VMSTATE_UINT8(mask, DMAController),
+        VMSTATE_UINT8(flip_flop, DMAController),
+        VMSTATE_INT32(dshift, DMAController),
+        VMSTATE_STRUCT_ARRAY(regs, DMAController, 4, 1, vmstate_dma_regs, DMARegisters),
         VMSTATE_END_OF_LIST()
     }
 };
@@ -558,8 +559,8 @@ void DMA_init(int high_page_enable, qemu_irq *cpu_request_exit)
               high_page_enable ? 0x480 : -1, cpu_request_exit);
     dma_init2(&dma_controllers[1], 0xc0, 1, 0x88,
               high_page_enable ? 0x488 : -1, cpu_request_exit);
-    vmstate_register (NULL, 0, &vmstate_dma, &dma_controllers[0]);
-    vmstate_register (NULL, 1, &vmstate_dma, &dma_controllers[1]);
+    vmstate_register(NULL, 0, &vmstate_dma, &dma_controllers[0]);
+    vmstate_register(NULL, 1, &vmstate_dma, &dma_controllers[1]);
 
     dma_bh = qemu_bh_new(DMA_run_bh, NULL);
 }
