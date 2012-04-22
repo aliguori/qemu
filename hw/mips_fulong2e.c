@@ -246,15 +246,6 @@ static void network_init (void)
     }
 }
 
-static void cpu_request_exit(void *opaque, int irq, int level)
-{
-    CPUMIPSState *env = cpu_single_env;
-
-    if (env && level) {
-        cpu_exit(env);
-    }
-}
-
 static void mips_fulong2e_init(ram_addr_t ram_size, const char *boot_device,
                         const char *kernel_filename, const char *kernel_cmdline,
                         const char *initrd_filename, const char *cpu_model)
@@ -266,7 +257,6 @@ static void mips_fulong2e_init(ram_addr_t ram_size, const char *boot_device,
     long bios_size;
     int64_t kernel_entry;
     qemu_irq *i8259;
-    qemu_irq *cpu_exit_irq;
     PCIBus *pci_bus;
     ISABus *isa_bus;
     i2c_bus *smbus;
@@ -366,8 +356,6 @@ static void mips_fulong2e_init(ram_addr_t ram_size, const char *boot_device,
 
     /* init other devices */
     pit = pit_init(isa_bus, 0x40, 0, NULL);
-    cpu_exit_irq = qemu_allocate_irqs(cpu_request_exit, NULL, 1);
-    DMA_init(0, cpu_exit_irq);
 
     /* Super I/O */
     isa_create_simple(isa_bus, "i8042");

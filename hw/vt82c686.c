@@ -498,8 +498,10 @@ static int vt82c686b_initfn(PCIDevice *d)
     uint8_t *pci_conf;
     uint8_t *wmask;
     int i;
+    DMAController *dma;
 
-    isa_bus_new(&d->qdev, pci_address_space_io(d), NULL);
+    dma = DMA_init(0);
+    isa_bus_new(&d->qdev, pci_address_space_io(d), dma);
 
     pci_conf = d->config;
     pci_config_set_prog_interface(pci_conf, 0x0);
