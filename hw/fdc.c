@@ -1830,7 +1830,7 @@ static bool fdctrl_isa_start_transfer(DMAOps *ops, int direction)
     int dma_mode;
 
     /* DMA transfer are enabled. Check if DMA channel is well programmed */
-    dma_mode = DMA_get_channel_mode(fdctrl->dma_chann);
+    dma_mode = isa_get_dma_channel_mode(ISA_DEVICE(isa), fdctrl->dma_chann);
     dma_mode = (dma_mode >> 2) & 3;
     FLOPPY_DPRINTF("dma_mode=%d direction=%d (%d - %d)\n",
                    dma_mode, direction,
@@ -1845,7 +1845,7 @@ static bool fdctrl_isa_start_transfer(DMAOps *ops, int direction)
         /* Now, we just have to wait for the DMA controller to
          * recall us...
          */
-        DMA_hold_DREQ(fdctrl->dma_chann);
+        isa_hold_DREQ(ISA_DEVICE(isa), fdctrl->dma_chann);
         return true;
     } else {
         FLOPPY_ERROR("dma_mode=%d direction=%d\n", dma_mode, direction);
@@ -1859,19 +1859,19 @@ static void fdctrl_isa_stop_transfer(DMAOps *ops)
     FDCtrlISABus *isa = container_of(ops, FDCtrlISABus, dma_ops);
     FDCtrl *fdctrl = &isa->state;
 
-    DMA_release_DREQ(fdctrl->dma_chann);
+    isa_release_DREQ(ISA_DEVICE(isa), fdctrl->dma_chann);
 }
 
 /* handlers for DMA transfers */
 static int fdctrl_isa_transfer_handler(void *opaque, int nchan,
                                        int dma_pos, int dma_len)
 {
-    FDCtrl *fdctrl;
+    FDCtrlISABus *isa = opaque;
+    FDCtrl *fdctrl = &isa->state;
     FDrive *cur_drv;
     int len, start_pos, rel_pos;
     uint8_t status0 = 0x00, status1 = 0x00, status2 = 0x00;
 
-    fdctrl = opaque;
     if (fdctrl->msr & FD_MSR_RQM) {
         FLOPPY_DPRINTF("Not in DMA transfer mode !\n");
         return 0;
@@ -1914,8 +1914,8 @@ static int fdctrl_isa_transfer_handler(void *opaque, int nchan,
         switch (fdctrl->data_dir) {
         case FD_DIR_READ:
             /* READ commands */
-            DMA_write_memory (nchan, fdctrl->fifo + rel_pos,
-                              fdctrl->data_pos, len);
+            isa_write_memory(ISA_DEVICE(isa), nchan, fdctrl->fifo + rel_pos,
+                             fdctrl->data_pos, len);
             break;
         case FD_DIR_WRITE:
             /* WRITE commands */
@@ -1929,8 +1929,8 @@ static int fdctrl_isa_transfer_handler(void *opaque, int nchan,
                 goto transfer_error;
             }
 
-            DMA_read_memory (nchan, fdctrl->fifo + rel_pos,
-                             fdctrl->data_pos, len);
+            isa_read_memory(ISA_DEVICE(isa), nchan, fdctrl->fifo + rel_pos,
+                            fdctrl->data_pos, len);
             if (bdrv_write(cur_drv->bs, fd_sector(cur_drv),
                            fdctrl->fifo, 1) < 0) {
                 FLOPPY_ERROR("writing sector %d\n", fd_sector(cur_drv));
@@ -1943,7 +1943,8 @@ static int fdctrl_isa_transfer_handler(void *opaque, int nchan,
             {
                 uint8_t tmpbuf[FD_SECTOR_LEN];
                 int ret;
-                DMA_read_memory (nchan, tmpbuf, fdctrl->data_pos, len);
+                isa_read_memory(ISA_DEVICE(isa), nchan, tmpbuf,
+                                fdctrl->data_pos, len);
                 ret = memcmp(tmpbuf, fdctrl->fifo + rel_pos, len);
                 if (ret == 0) {
                     status2 = FD_SR2_SEH;
@@ -2007,8 +2008,9 @@ static int isabus_fdc_init1(ISADevice *dev)
     ret = fdctrl_init_common(fdctrl);
 
     if (fdctrl->dma_chann != -1) {
-        DMA_register_channel(fdctrl->dma_chann, &fdctrl_isa_transfer_handler,
-                             fdctrl);
+        isa_register_dma_channel(ISA_DEVICE(isa), fdctrl->dma_chann, 
+                                 fdctrl_isa_transfer_handler,
+                                 isa);
     }
 
     add_boot_device_path(isa->bootindexA, &dev->qdev, "/floppy@0");
