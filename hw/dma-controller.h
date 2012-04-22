@@ -7,7 +7,7 @@
 #include "qemu/pin.h"
 #include "isa.h"
 
-#define TYPE_DMA_CONTROLLER "dma-controller"
+#define TYPE_DMA_CONTROLLER "i8237"
 #define DMA_CONTROLLER(obj) \
     OBJECT_CHECK(DMAController, (obj), TYPE_DMA_CONTROLLER)
 
@@ -27,6 +27,8 @@ typedef struct DMARegisters
 
 struct DMAController
 {
+    DeviceState parent;
+
     uint8_t status;
     uint8_t command;
     uint8_t mask;

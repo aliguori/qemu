@@ -412,9 +412,10 @@ int DMA_write_memory(DMAController *d, int nchan, void *buf, int pos, int len)
     return len;
 }
 
-static void dma_reset(void *opaque)
+static void dma_reset(DeviceState *dev)
 {
-    DMAController *d = opaque;
+    DMAController *d = DMA_CONTROLLER(dev);
+
     write_cont(d, (0x0d << d->dshift), 0);
 }
 
@@ -425,42 +426,21 @@ static int dma_phony_handler(void *opaque, int nchan, int dma_pos, int dma_len)
     return dma_pos;
 }
 
-/* dshift = 0: 8 bit DMA, 1 = 16 bit DMA */
-static void dma_init2(DMAController *d, int base, int dshift,
-                      int page_base, int pageh_base)
+static void dma_initfn(Object *obj)
 {
-    static const int page_port_list[] = { 0x1, 0x2, 0x3, 0x7 };
+    DMAController *d = DMA_CONTROLLER(obj);
     int i;
 
     d->dma_timer = qemu_new_timer_ns(vm_clock, DMA_run_timer, d);
-    d->dshift = dshift;
-    for (i = 0; i < 8; i++) {
-        register_ioport_write(base + (i << dshift), 1, 1, write_chan, d);
-        register_ioport_read(base + (i << dshift), 1, 1, read_chan, d);
-    }
-    for (i = 0; i < ARRAY_SIZE(page_port_list); i++) {
-        register_ioport_write(page_base + page_port_list[i], 1, 1,
-                              write_page, d);
-        register_ioport_read(page_base + page_port_list[i], 1, 1,
-                             read_page, d);
-        if (pageh_base >= 0) {
-            register_ioport_write(pageh_base + page_port_list[i], 1, 1,
-                                  write_pageh, d);
-            register_ioport_read(pageh_base + page_port_list[i], 1, 1,
-                                 read_pageh, d);
-        }
-    }
-    for (i = 0; i < 8; i++) {
-        register_ioport_write(base + ((i + 8) << dshift), 1, 1,
-                              write_cont, d);
-        register_ioport_read(base + ((i + 8) << dshift), 1, 1,
-                             read_cont, d);
-    }
-    qemu_register_reset(dma_reset, d);
-    dma_reset(d);
+
     for (i = 0; i < ARRAY_SIZE (d->regs); ++i) {
         d->regs[i].transfer_handler = dma_phony_handler;
     }
+}
+
+static int dma_realize(DeviceState *dev)
+{
+    return 0;
 }
 
 static const VMStateDescription vmstate_dma_regs = {
@@ -504,6 +484,73 @@ static const VMStateDescription vmstate_dma = {
         VMSTATE_END_OF_LIST()
     }
 };
+
+static Property dma_properties[] = {
+    DEFINE_PROP_INT32("dshift", DMAController, dshift, 0),
+    DEFINE_PROP_END_OF_LIST(),
+};
+
+static void dma_class_initfn(ObjectClass *klass, void *data)
+{
+    DeviceClass *dc = DEVICE_CLASS(klass);
+
+    dc->init = dma_realize;
+    dc->reset = dma_reset;
+    dc->vmsd = &vmstate_dma;
+    dc->props = dma_properties;
+}
+
+static TypeInfo dma_info = {
+    .name = TYPE_DMA_CONTROLLER,
+    .parent = TYPE_DEVICE,
+    .class_init = dma_class_initfn,
+    .instance_size = sizeof(DMAController),
+    .instance_init = dma_initfn,
+};
+
+static void register_types(void)
+{
+    type_register_static(&dma_info);
+}
+
+type_init(register_types);    
+
+/* dshift = 0: 8 bit DMA, 1 = 16 bit DMA */
+static void dma_init2(DMAController *d, int base, int dshift,
+                      int page_base, int pageh_base)
+{
+    static const int page_port_list[] = { 0x1, 0x2, 0x3, 0x7 };
+    int i;
+
+    object_initialize(d, TYPE_DMA_CONTROLLER);
+    qdev_prop_set_globals(DEVICE(d));
+    qdev_prop_set_int32(DEVICE(d), "dshift", dshift);
+
+    qdev_init_nofail(DEVICE(d));
+
+    for (i = 0; i < 8; i++) {
+        register_ioport_write(base + (i << dshift), 1, 1, write_chan, d);
+        register_ioport_read(base + (i << dshift), 1, 1, read_chan, d);
+    }
+    for (i = 0; i < ARRAY_SIZE(page_port_list); i++) {
+        register_ioport_write(page_base + page_port_list[i], 1, 1,
+                              write_page, d);
+        register_ioport_read(page_base + page_port_list[i], 1, 1,
+                             read_page, d);
+        if (pageh_base >= 0) {
+            register_ioport_write(pageh_base + page_port_list[i], 1, 1,
+                                  write_pageh, d);
+            register_ioport_read(pageh_base + page_port_list[i], 1, 1,
+                                 read_pageh, d);
+        }
+    }
+    for (i = 0; i < 8; i++) {
+        register_ioport_write(base + ((i + 8) << dshift), 1, 1,
+                              write_cont, d);
+        register_ioport_read(base + ((i + 8) << dshift), 1, 1,
+                             read_cont, d);
+    }
+}
 
 DMAController *DMA_init(int high_page_enable)
 {
