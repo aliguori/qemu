@@ -79,8 +79,6 @@ enum {
 
 };
 
-static void DMA_run(void);
-
 static const int channels[8] = {-1, 2, 3, 1, -1, -1, -1, 0};
 
 static void write_page(void *opaque, uint32_t nport, uint32_t data)
@@ -217,7 +215,7 @@ static void write_cont(void *opaque, uint32_t nport, uint32_t data)
             d->status &= ~(1 << (ichan + 4));
         }
         d->status &= ~(1 << ichan);
-        DMA_run();
+        DMA_schedule(nport);
         break;
 
     case 0x0a:                  /* single mask */
@@ -226,7 +224,7 @@ static void write_cont(void *opaque, uint32_t nport, uint32_t data)
         } else {
             d->mask &= ~(1 << (data & 3));
         }
-        DMA_run();
+        DMA_schedule(nport);
         break;
 
     case 0x0b:                  /* mode */
@@ -259,12 +257,12 @@ static void write_cont(void *opaque, uint32_t nport, uint32_t data)
 
     case 0x0e:                  /* clear mask for all channels */
         d->mask = 0;
-        DMA_run();
+        DMA_schedule(nport);
         break;
 
     case 0x0f:                  /* write mask for all channels */
         d->mask = data;
-        DMA_run();
+        DMA_schedule(nport);
         break;
 
     default:
@@ -314,7 +312,7 @@ void DMA_hold_DREQ(int nchan)
     ichan = nchan & 3;
     DPRINTF("held cont=%d chan=%d\n", ncont, ichan);
     dma_controllers[ncont].status |= 1 << (ichan + 4);
-    DMA_run();
+    DMA_schedule(nchan);
 }
 
 void DMA_release_DREQ(int nchan)
@@ -325,7 +323,7 @@ void DMA_release_DREQ(int nchan)
     ichan = nchan & 3;
     DPRINTF("released cont=%d chan=%d\n", ncont, ichan);
     dma_controllers[ncont].status &= ~(1 << (ichan + 4));
-    DMA_run();
+    DMA_schedule(nchan);
 }
 
 static void channel_run(int ncont, int ichan)
@@ -352,7 +350,7 @@ static void channel_run(int ncont, int ichan)
 
 static QEMUTimer *dma_timer;
 
-static void DMA_run(void)
+static void DMA_run_timer(void *unused)
 {
     DMAController *d;
     int icont, ichan;
@@ -386,11 +384,6 @@ out:
     if (rearm) {
         qemu_mod_timer_ns(dma_timer, qemu_get_clock_ns(vm_clock) + 1 * SCALE_MS);
     }
-}
-
-static void DMA_run_timer(void *unused)
-{
-    DMA_run();
 }
 
 void DMA_register_channel(int nchan,
@@ -527,7 +520,7 @@ static const VMStateDescription vmstate_dma_regs = {
 
 static int dma_post_load(void *opaque, int version_id)
 {
-    DMA_run();
+    DMA_schedule(0);
 
     return 0;
 }
