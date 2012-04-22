@@ -764,15 +764,6 @@ static void main_cpu_reset(void *opaque)
     malta_mips_config(env);
 }
 
-static void cpu_request_exit(void *opaque, int irq, int level)
-{
-    CPUMIPSState *env = cpu_single_env;
-
-    if (env && level) {
-        cpu_exit(env);
-    }
-}
-
 static
 void mips_malta_init (ram_addr_t ram_size,
                       const char *boot_device,
@@ -790,7 +781,6 @@ void mips_malta_init (ram_addr_t ram_size,
     ISABus *isa_bus;
     CPUMIPSState *env;
     qemu_irq *isa_irq;
-    qemu_irq *cpu_exit_irq;
     int piix4_devfn;
     i2c_bus *smbus;
     int i;
@@ -958,8 +948,7 @@ void mips_malta_init (ram_addr_t ram_size,
     /* TODO: Populate SPD eeprom data.  */
     smbus_eeprom_init(smbus, 8, NULL, 0);
     pit = pit_init(isa_bus, 0x40, 0, NULL);
-    cpu_exit_irq = qemu_allocate_irqs(cpu_request_exit, NULL, 1);
-    DMA_init(0, cpu_exit_irq);
+    DMA_init(0);
 
     /* Super I/O */
     isa_create_simple(isa_bus, "i8042");

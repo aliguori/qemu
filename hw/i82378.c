@@ -199,7 +199,7 @@ static void i82378_init(DeviceState *dev, I82378State *s)
     pcspk_init(isabus, pit);
 
     /* 2 82C37 (dma) */
-    DMA_init(1, &s->out[1]);
+    DMA_init(1);
     isa_create_simple(isabus, "i82374");
 
     /* timer */
