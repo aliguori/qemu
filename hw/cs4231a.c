@@ -328,7 +328,7 @@ static void cs_reset_voices (CSState *s, uint32_t val)
 
     if (s->dregs[Interface_Configuration] & PEN) {
         if (!s->dma_running) {
-            DMA_hold_DREQ (s->dma);
+            isa_hold_DREQ (ISA_DEVICE (s), s->dma);
             AUD_set_active_out (s->voice, 1);
             s->transferred = 0;
         }
@@ -336,7 +336,7 @@ static void cs_reset_voices (CSState *s, uint32_t val)
     }
     else {
         if (s->dma_running) {
-            DMA_release_DREQ (s->dma);
+            isa_release_DREQ (ISA_DEVICE (s), s->dma);
             AUD_set_active_out (s->voice, 0);
         }
         s->dma_running = 0;
@@ -345,7 +345,7 @@ static void cs_reset_voices (CSState *s, uint32_t val)
 
  error:
     if (s->dma_running) {
-        DMA_release_DREQ (s->dma);
+        isa_release_DREQ (ISA_DEVICE (s), s->dma);
         AUD_set_active_out (s->voice, 0);
     }
 }
@@ -453,7 +453,7 @@ static void cs_write (void *opaque, target_phys_addr_t addr,
             }
             else {
                 if (s->dma_running) {
-                    DMA_release_DREQ (s->dma);
+                    isa_release_DREQ (ISA_DEVICE (s), s->dma);
                     AUD_set_active_out (s->voice, 0);
                     s->dma_running = 0;
                 }
@@ -532,7 +532,8 @@ static int cs_write_audio (CSState *s, int nchan, int dma_pos,
             to_copy = sizeof (tmpbuf);
         }
 
-        copied = DMA_read_memory (nchan, tmpbuf, dma_pos, to_copy);
+        copied = isa_read_memory (ISA_DEVICE (s), nchan, tmpbuf,
+                                  dma_pos, to_copy);
         if (s->tab) {
             int i;
             int16_t linbuf[4096];
@@ -600,7 +601,7 @@ static int cs4231a_pre_load (void *opaque)
     CSState *s = opaque;
 
     if (s->dma_running) {
-        DMA_release_DREQ (s->dma);
+        isa_release_DREQ (ISA_DEVICE (s), s->dma);
         AUD_set_active_out (s->voice, 0);
     }
     s->dma_running = 0;
@@ -654,7 +655,7 @@ static int cs4231a_realize (ISADevice *dev)
     memory_region_init_io (&s->ioports, &cs_ioport_ops, s, "cs4231a", 4);
     isa_register_ioport (dev, &s->ioports, s->port);
 
-    DMA_register_channel (s->dma, cs_dma_read, s);
+    isa_register_dma_channel (ISA_DEVICE (s), s->dma, cs_dma_read, s);
 
     qemu_register_reset (cs_reset, s);
     cs_reset (s);
