@@ -81,6 +81,14 @@ enum {
 
 static const int channels[8] = {-1, 2, 3, 1, -1, -1, -1, 0};
 
+static QEMUTimer *dma_timer;
+
+/* request the emulator to transfer a new DMA memory block ASAP */
+static void DMA_schedule(int nchan)
+{
+    qemu_mod_timer_ns(dma_timer, qemu_get_clock_ns(vm_clock));
+}
+
 static void write_page(void *opaque, uint32_t nport, uint32_t data)
 {
     DMAController *d = opaque;
@@ -348,8 +356,6 @@ static void channel_run(int ncont, int ichan)
     DPRINTF("dma_pos %d size %d\n", n, (r->base[COUNT] + 1) << ncont);
 }
 
-static QEMUTimer *dma_timer;
-
 static void DMA_run_timer(void *unused)
 {
     DMAController *d;
@@ -443,12 +449,6 @@ int DMA_write_memory(int nchan, void *buf, int pos, int len)
     }
 
     return len;
-}
-
-/* request the emulator to transfer a new DMA memory block ASAP */
-void DMA_schedule(int nchan)
-{
-    qemu_mod_timer_ns(dma_timer, qemu_get_clock_ns(vm_clock));
 }
 
 static void dma_reset(void *opaque)

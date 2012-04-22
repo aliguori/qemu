@@ -1146,7 +1146,6 @@ static void fdctrl_start_transfer(FDCtrl *fdctrl, int direction)
              * recall us...
              */
             DMA_hold_DREQ(fdctrl->dma_chann);
-            DMA_schedule(fdctrl->dma_chann);
             return;
         } else {
             FLOPPY_ERROR("dma_mode=%d direction=%d\n", dma_mode, direction);
