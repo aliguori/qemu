@@ -582,8 +582,6 @@ DMAController *DMA_init(int high_page_enable)
               high_page_enable ? 0x480 : -1);
     dma_init2(&dma_controllers[1], 0xc0, 1, 0x88,
               high_page_enable ? 0x488 : -1);
-    vmstate_register(NULL, 0, &vmstate_dma, &dma_controllers[0]);
-    vmstate_register(NULL, 1, &vmstate_dma, &dma_controllers[1]);
 
     return dma_controllers;
 }
