@@ -242,7 +242,6 @@ hw-obj-$(CONFIG_USB_XHCI) += usb/hcd-xhci.o
 hw-obj-$(CONFIG_FDC) += fdc.o
 hw-obj-$(CONFIG_ACPI) += acpi.o acpi_piix4.o
 hw-obj-$(CONFIG_APM) += pm_smbus.o apm.o
-hw-obj-$(CONFIG_DMA) += dma.o
 hw-obj-$(CONFIG_I82374) += i82374.o
 hw-obj-$(CONFIG_HPET) += hpet.o
 hw-obj-$(CONFIG_APPLESMC) += applesmc.o
@@ -308,7 +307,7 @@ hw-obj-$(CONFIG_AHCI) += ide/ich.o
 hw-obj-$(CONFIG_LSI_SCSI_PCI) += lsi53c895a.o
 hw-obj-$(CONFIG_ESP) += esp.o
 
-hw-obj-y += dma-helpers.o sysbus.o isa-bus.o
+hw-obj-y += dma-helpers.o sysbus.o isa-bus.o dma.o
 hw-obj-y += qdev-addr.o
 
 # VGA

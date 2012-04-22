@@ -98,31 +98,6 @@ typedef struct EbusState {
     MemoryRegion bar1;
 } EbusState;
 
-int DMA_get_channel_mode (int nchan)
-{
-    return 0;
-}
-int DMA_read_memory (int nchan, void *buf, int pos, int size)
-{
-    return 0;
-}
-int DMA_write_memory (int nchan, void *buf, int pos, int size)
-{
-    return 0;
-}
-void DMA_hold_DREQ (int nchan) {}
-void DMA_release_DREQ (int nchan) {}
-
-void DMA_init(int high_page_enable)
-{
-}
-
-void DMA_register_channel (int nchan,
-                           DMA_transfer_handler transfer_handler,
-                           void *opaque)
-{
-}
-
 static int fw_cfg_boot_set(void *opaque, const char *boot_device)
 {
     fw_cfg_add_i16(opaque, FW_CFG_BOOT_DEVICE, boot_device[0]);
@@ -575,7 +550,7 @@ pci_ebus_init1(PCIDevice *pci_dev)
 {
     EbusState *s = DO_UPCAST(EbusState, pci_dev, pci_dev);
 
-    isa_bus_new(&pci_dev->qdev, pci_address_space_io(pci_dev));
+    isa_bus_new(&pci_dev->qdev, pci_address_space_io(pci_dev), NULL);
 
     pci_dev->config[0x04] = 0x06; // command = bus master, pci mem
     pci_dev->config[0x05] = 0x00;

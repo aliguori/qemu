@@ -199,7 +199,6 @@ static void i82378_init(DeviceState *dev, I82378State *s)
     pcspk_init(isabus, pit);
 
     /* 2 82C37 (dma) */
-    DMA_init(1);
     isa_create_simple(isabus, "i82374");
 
     /* timer */
@@ -211,6 +210,7 @@ static int pci_i82378_init(PCIDevice *dev)
     PCIi82378State *pci = DO_UPCAST(PCIi82378State, pci_dev, dev);
     I82378State *s = &pci->state;
     uint8_t *pci_conf;
+    DMAController *dma;
 
     pci_conf = dev->config;
     pci_set_word(pci_conf + PCI_COMMAND,
@@ -233,7 +233,8 @@ static int pci_i82378_init(PCIDevice *dev)
     pci_set_long(pci_conf + PCI_BASE_ADDRESS_0, pci->isa_io_base);
 
     isa_mem_base = pci->isa_mem_base;
-    isa_bus_new(&dev->qdev, pci_address_space_io(dev));
+    dma = DMA_init(1);
+    isa_bus_new(&dev->qdev, pci_address_space_io(dev), dma);
 
     i82378_init(&dev->qdev, s);
 

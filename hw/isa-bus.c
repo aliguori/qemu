@@ -49,7 +49,8 @@ static TypeInfo isa_bus_info = {
     .instance_size = sizeof(ISABus),
 };
 
-ISABus *isa_bus_new(DeviceState *dev, MemoryRegion *address_space_io)
+ISABus *isa_bus_new(DeviceState *dev, MemoryRegion *address_space_io,
+                    DMAController *dma)
 {
     if (isabus) {
         fprintf(stderr, "Can't create a second ISA bus\n");
@@ -62,6 +63,7 @@ ISABus *isa_bus_new(DeviceState *dev, MemoryRegion *address_space_io)
 
     isabus = FROM_QBUS(ISABus, qbus_create(TYPE_ISA_BUS, dev, NULL));
     isabus->address_space_io = address_space_io;
+    isabus->controllers = dma;
     return isabus;
 }
 

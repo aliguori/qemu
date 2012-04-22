@@ -7,6 +7,7 @@
 #include "memory.h"
 #include "qdev.h"
 #include "qemu/pin.h"
+#include "dma-controller.h"
 
 #define ISA_NUM_IRQS 16
 
@@ -30,6 +31,7 @@ struct ISABus {
     MemoryRegion *address_space_io;
     Pin in[ISA_NUM_IRQS];
     qemu_irq *out;
+    DMAController *controllers;
 };
 
 struct ISADevice {
@@ -39,7 +41,8 @@ struct ISADevice {
     int ioport_id;
 };
 
-ISABus *isa_bus_new(DeviceState *dev, MemoryRegion *address_space_io);
+ISABus *isa_bus_new(DeviceState *dev, MemoryRegion *address_space_io,
+                    DMAController *controllers);
 void isa_bus_realize(ISABus *bus);
 void isa_bus_irqs(ISABus *bus, qemu_irq *irqs);
 qemu_irq isa_get_irq(ISADevice *dev, int isairq);
@@ -85,14 +88,4 @@ extern target_phys_addr_t isa_mem_base;
 void isa_mmio_setup(MemoryRegion *mr, target_phys_addr_t size);
 void isa_mmio_init(target_phys_addr_t base, target_phys_addr_t size);
 
-/* dma.c */
-int DMA_get_channel_mode (int nchan);
-int DMA_read_memory (int nchan, void *buf, int pos, int size);
-int DMA_write_memory (int nchan, void *buf, int pos, int size);
-void DMA_hold_DREQ (int nchan);
-void DMA_release_DREQ (int nchan);
-void DMA_init(int high_page_enable);
-void DMA_register_channel (int nchan,
-                           DMA_transfer_handler transfer_handler,
-                           void *opaque);
 #endif

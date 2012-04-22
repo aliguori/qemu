@@ -495,8 +495,10 @@ static const VMStateDescription vmstate_piix3 = {
 static int piix3_initfn(PCIDevice *dev)
 {
     PIIX3State *d = DO_UPCAST(PIIX3State, dev, dev);
+    DMAController *dma;
 
-    isa_bus_new(&d->dev.qdev, pci_address_space_io(dev));
+    dma = DMA_init(0);
+    isa_bus_new(&d->dev.qdev, pci_address_space_io(dev), dma);
     qemu_register_reset(piix3_reset, d);
     return 0;
 }

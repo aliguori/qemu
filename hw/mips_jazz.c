@@ -102,6 +102,7 @@ static void mips_jazz_init(MemoryRegion *address_space,
     MemoryRegion *bios = g_new(MemoryRegion, 1);
     MemoryRegion *bios2 = g_new(MemoryRegion, 1);
     RTCState *rtc;
+    DMAController *dma;
 
     /* init CPUs */
     if (cpu_model == NULL) {
@@ -160,10 +161,10 @@ static void mips_jazz_init(MemoryRegion *address_space,
     memory_region_add_subregion(address_space, 0x8000d000, dma_dummy);
 
     /* ISA devices */
-    isa_bus = isa_bus_new(NULL, address_space_io);
+    dma = DMA_init(0);
+    isa_bus = isa_bus_new(NULL, address_space_io, dma);
     i8259 = i8259_init(isa_bus, env->irq[4]);
     isa_bus_irqs(isa_bus, i8259);
-    DMA_init(0);
     pit = pit_init(isa_bus, 0x40, 0, NULL);
     pcspk_init(isa_bus, pit);
 

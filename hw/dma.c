@@ -52,7 +52,7 @@ typedef struct DMARegisters
 #define ADDR 0
 #define COUNT 1
 
-typedef struct DMAController
+struct DMAController
 {
     uint8_t status;
     uint8_t command;
@@ -60,7 +60,7 @@ typedef struct DMAController
     uint8_t flip_flop;
     int dshift;
     DMARegisters regs[4];
-} DMAController;
+};
 
 static DMAController dma_controllers[2];
 
@@ -541,7 +541,7 @@ static const VMStateDescription vmstate_dma = {
     }
 };
 
-void DMA_init(int high_page_enable)
+DMAController *DMA_init(int high_page_enable)
 {
     dma_init2(&dma_controllers[0], 0x00, 0, 0x80,
               high_page_enable ? 0x480 : -1);
@@ -551,4 +551,6 @@ void DMA_init(int high_page_enable)
     vmstate_register(NULL, 1, &vmstate_dma, &dma_controllers[1]);
 
     dma_timer = qemu_new_timer_ns(vm_clock, DMA_run_timer, NULL);
+
+    return dma_controllers;
 }
