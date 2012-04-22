@@ -22,6 +22,7 @@
  * THE SOFTWARE.
  */
 #include "dma-controller.h"
+#include "exec-memory.h"
 
 /* #define DEBUG_DMA */
 
@@ -57,53 +58,57 @@ static void DMA_schedule(DMAController *d)
     qemu_mod_timer_ns(d->dma_timer, qemu_get_clock_ns(vm_clock));
 }
 
-static void write_page(void *opaque, uint32_t nport, uint32_t data)
+static void write_page(void *opaque, target_phys_addr_t nport,
+                       uint64_t data, unsigned size)
 {
     DMAController *d = opaque;
     int ichan;
 
     ichan = channels[nport & 7];
     if (-1 == ichan) {
-        DPRINTF("invalid channel %#x %#x\n", nport, data);
+        DPRINTF("invalid channel %#x %#x\n", (uint32_t)nport, (uint32_t)data);
         return;
     }
     d->regs[ichan].page = data;
 }
 
-static void write_pageh(void *opaque, uint32_t nport, uint32_t data)
+static void write_pageh(void *opaque, target_phys_addr_t nport,
+                        uint64_t data, unsigned size)
 {
     DMAController *d = opaque;
     int ichan;
 
     ichan = channels[nport & 7];
     if (-1 == ichan) {
-        DPRINTF("invalid channel %#x %#x\n", nport, data);
+        DPRINTF("invalid channel %#x %#x\n", (uint32_t)nport, (uint32_t)data);
         return;
     }
     d->regs[ichan].pageh = data;
 }
 
-static uint32_t read_page(void *opaque, uint32_t nport)
+static uint64_t read_page(void *opaque, target_phys_addr_t nport,
+                          unsigned size)
 {
     DMAController *d = opaque;
     int ichan;
 
     ichan = channels[nport & 7];
     if (-1 == ichan) {
-        DPRINTF("invalid channel read %#x\n", nport);
+        DPRINTF("invalid channel read %#x\n", (uint32_t)nport);
         return 0;
     }
     return d->regs[ichan].page;
 }
 
-static uint32_t read_pageh(void *opaque, uint32_t nport)
+static uint64_t read_pageh(void *opaque, target_phys_addr_t nport,
+                           unsigned size)
 {
     DMAController *d = opaque;
     int ichan;
 
     ichan = channels[nport & 7];
     if (-1 == ichan) {
-        DPRINTF("invalid channel read %#x\n", nport);
+        DPRINTF("invalid channel read %#x\n", (uint32_t)nport);
         return 0;
     }
     return d->regs[ichan].pageh;
@@ -127,7 +132,8 @@ static int getff(DMAController *d)
     return ff;
 }
 
-static uint32_t read_chan(void *opaque, uint32_t nport)
+static uint64_t read_chan(void *opaque, target_phys_addr_t nport,
+                          unsigned size)
 {
     DMAController *d = opaque;
     int ichan, nreg, iport, ff, val, dir;
@@ -150,7 +156,8 @@ static uint32_t read_chan(void *opaque, uint32_t nport)
     return (val >> (d->dshift + (ff << 3))) & 0xff;
 }
 
-static void write_chan(void *opaque, uint32_t nport, uint32_t data)
+static void write_chan(void *opaque, target_phys_addr_t nport,
+                       uint64_t data, unsigned size)
 {
     DMAController *d = opaque;
     int iport, ichan, nreg;
@@ -168,22 +175,23 @@ static void write_chan(void *opaque, uint32_t nport, uint32_t data)
     }
 }
 
-static void write_cont(void *opaque, uint32_t nport, uint32_t data)
+static void write_cont(void *opaque, target_phys_addr_t nport,
+                       uint64_t data, unsigned size)
 {
     DMAController *d = opaque;
     int iport, ichan = 0;
 
     iport = (nport >> d->dshift) & 0x0f;
     switch (iport) {
-    case 0x08:                  /* command */
+    case 0x00:                  /* command */
         if ((data != 0) && (data & CMD_NOT_SUPPORTED)) {
-            DPRINTF("command %#x not supported\n", data);
+            DPRINTF("command %#x not supported\n", (uint32_t)data);
             return;
         }
         d->command = data;
         break;
 
-    case 0x09:
+    case 0x01:
         ichan = data & 3;
         if (data & 4) {
             d->status |= 1 << (ichan + 4);
@@ -194,7 +202,7 @@ static void write_cont(void *opaque, uint32_t nport, uint32_t data)
         DMA_schedule(d);
         break;
 
-    case 0x0a:                  /* single mask */
+    case 0x02:                  /* single mask */
         if (data & 4) {
             d->mask |= 1 << (data & 3);
         } else {
@@ -203,7 +211,7 @@ static void write_cont(void *opaque, uint32_t nport, uint32_t data)
         DMA_schedule(d);
         break;
 
-    case 0x0b:                  /* mode */
+    case 0x03:                  /* mode */
         {
             ichan = data & 3;
             {
@@ -220,23 +228,23 @@ static void write_cont(void *opaque, uint32_t nport, uint32_t data)
             break;
         }
 
-    case 0x0c:                  /* clear flip flop */
+    case 0x04:                  /* clear flip flop */
         d->flip_flop = 0;
         break;
 
-    case 0x0d:                  /* reset */
+    case 0x05:                  /* reset */
         d->flip_flop = 0;
         d->mask = ~0;
         d->status = 0;
         d->command = 0;
         break;
 
-    case 0x0e:                  /* clear mask for all channels */
+    case 0x06:                  /* clear mask for all channels */
         d->mask = 0;
         DMA_schedule(d);
         break;
 
-    case 0x0f:                  /* write mask for all channels */
+    case 0x07:                  /* write mask for all channels */
         d->mask = data;
         DMA_schedule(d);
         break;
@@ -246,24 +254,25 @@ static void write_cont(void *opaque, uint32_t nport, uint32_t data)
         break;
     }
 
-    if (0xc != iport) {
+    if (0x4 != iport) {
         DPRINTF("write_cont: nport %#06x, ichan % 2d, val %#06x\n",
-                nport, ichan, data);
+                (uint32_t)nport, ichan, (uint32_t)data);
     }
 }
 
-static uint32_t read_cont(void *opaque, uint32_t nport)
+static uint64_t read_cont(void *opaque, target_phys_addr_t nport,
+                          unsigned size)
 {
     DMAController *d = opaque;
     int iport, val;
 
     iport = (nport >> d->dshift) & 0x0f;
     switch (iport) {
-    case 0x08:                  /* status */
+    case 0x00:                  /* status */
         val = d->status;
         d->status &= 0xf0;
         break;
-    case 0x0f:                  /* mask */
+    case 0x07:                  /* mask */
         val = d->mask;
         break;
     default:
@@ -271,7 +280,8 @@ static uint32_t read_cont(void *opaque, uint32_t nport)
         break;
     }
 
-    DPRINTF("read_cont: nport %#06x, iport %#04x val %#x\n", nport, iport, val);
+    DPRINTF("read_cont: nport %#06x, iport %#04x val %#x\n",
+            (uint32_t)nport, iport, val);
     return val;
 }
 
@@ -416,7 +426,7 @@ static void dma_reset(DeviceState *dev)
 {
     DMAController *d = DMA_CONTROLLER(dev);
 
-    write_cont(d, (0x0d << d->dshift), 0);
+    write_cont(d, (0x05 << d->dshift), 0, 1);
 }
 
 static int dma_phony_handler(void *opaque, int nchan, int dma_pos, int dma_len)
@@ -425,6 +435,26 @@ static int dma_phony_handler(void *opaque, int nchan, int dma_pos, int dma_len)
            nchan, dma_pos, dma_len);
     return dma_pos;
 }
+
+static MemoryRegionOps chan_ops = {
+    .read = read_chan,
+    .write = write_chan,
+};
+
+static MemoryRegionOps cont_ops = {
+    .read = read_cont,
+    .write = write_cont,
+};
+
+static MemoryRegionOps page_ops = {
+    .read = read_page,
+    .write = write_page,
+};
+
+static MemoryRegionOps pageh_ops = {
+    .read = read_pageh,
+    .write = write_pageh,
+};
 
 static void dma_initfn(Object *obj)
 {
@@ -436,10 +466,20 @@ static void dma_initfn(Object *obj)
     for (i = 0; i < ARRAY_SIZE (d->regs); ++i) {
         d->regs[i].transfer_handler = dma_phony_handler;
     }
+
+    memory_region_init_io(&d->page_io, &page_ops, d, "DMA::page", 8);
+    memory_region_init_io(&d->pageh_io, &pageh_ops, d, "DMA::pageh", 8);
 }
 
 static int dma_realize(DeviceState *dev)
 {
+    DMAController *d = DMA_CONTROLLER(dev);
+
+    memory_region_init_io(&d->chan_io, &chan_ops, d,
+                          "DMA::chan", 8 << d->dshift);
+    memory_region_init_io(&d->cont_io, &cont_ops, d,
+                          "DMA::cont", 8 << d->dshift);
+
     return 0;
 }
 
@@ -519,36 +559,18 @@ type_init(register_types);
 static void dma_init2(DMAController *d, int base, int dshift,
                       int page_base, int pageh_base)
 {
-    static const int page_port_list[] = { 0x1, 0x2, 0x3, 0x7 };
-    int i;
-
     object_initialize(d, TYPE_DMA_CONTROLLER);
     qdev_prop_set_globals(DEVICE(d));
     qdev_prop_set_int32(DEVICE(d), "dshift", dshift);
 
     qdev_init_nofail(DEVICE(d));
 
-    for (i = 0; i < 8; i++) {
-        register_ioport_write(base + (i << dshift), 1, 1, write_chan, d);
-        register_ioport_read(base + (i << dshift), 1, 1, read_chan, d);
-    }
-    for (i = 0; i < ARRAY_SIZE(page_port_list); i++) {
-        register_ioport_write(page_base + page_port_list[i], 1, 1,
-                              write_page, d);
-        register_ioport_read(page_base + page_port_list[i], 1, 1,
-                             read_page, d);
-        if (pageh_base >= 0) {
-            register_ioport_write(pageh_base + page_port_list[i], 1, 1,
-                                  write_pageh, d);
-            register_ioport_read(pageh_base + page_port_list[i], 1, 1,
-                                 read_pageh, d);
-        }
-    }
-    for (i = 0; i < 8; i++) {
-        register_ioport_write(base + ((i + 8) << dshift), 1, 1,
-                              write_cont, d);
-        register_ioport_read(base + ((i + 8) << dshift), 1, 1,
-                             read_cont, d);
+    memory_region_add_subregion(get_system_io(), base, &d->chan_io);
+    memory_region_add_subregion(get_system_io(), base + (8 << dshift),
+                                &d->cont_io);
+    memory_region_add_subregion(get_system_io(), page_base, &d->page_io);
+    if (pageh_base >= 0) {
+        memory_region_add_subregion(get_system_io(), pageh_base, &d->pageh_io);
     }
 }
 

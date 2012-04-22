@@ -37,6 +37,11 @@ struct DMAController
     DMARegisters regs[4];
     QEMUTimer *dma_timer;
     int running;
+
+    MemoryRegion chan_io;
+    MemoryRegion cont_io;
+    MemoryRegion page_io;
+    MemoryRegion pageh_io;
 };
 
 int DMA_get_channel_mode (DMAController *d, int nchan);

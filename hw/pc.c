@@ -101,10 +101,6 @@ void gsi_handler(void *opaque, int n, int level)
     qemu_set_irq(s->ioapic_irq[n], level);
 }
 
-static void ioport80_write(void *opaque, uint32_t addr, uint32_t data)
-{
-}
-
 /* MSDOS compatibility mode FPU exception support */
 static qemu_irq ferr_irq;
 
@@ -1092,8 +1088,6 @@ void pc_basic_device_init(ISABus *isa_bus, qemu_irq *gsi,
     qemu_irq *a20_line;
     ISADevice *port92, *pit;
     KBDState *i8042;
-
-    register_ioport_write(0x80, 1, 1, ioport80_write, NULL);
 
     register_ioport_write(0xf0, 1, 1, ioportF0_write, NULL);
 
