@@ -7,6 +7,10 @@
 #include "qemu/pin.h"
 #include "isa.h"
 
+#define TYPE_DMA_CONTROLLER "dma-controller"
+#define DMA_CONTROLLER(obj) \
+    OBJECT_CHECK(DMAController, (obj), TYPE_DMA_CONTROLLER)
+
 /* dma.c */
 typedef struct DMARegisters
 {
@@ -29,6 +33,8 @@ struct DMAController
     uint8_t flip_flop;
     int dshift;
     DMARegisters regs[4];
+    QEMUTimer *dma_timer;
+    int running;
 };
 
 int DMA_get_channel_mode (DMAController *d, int nchan);

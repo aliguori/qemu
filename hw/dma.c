@@ -31,10 +31,6 @@
 #define DPRINTF(...) do { if (0) { fprintf(stderr, "dma: " __VA_ARGS__); } } while (0)
 #endif
 
-#define TYPE_DMA_CONTROLLER "dma-controller"
-#define DMA_CONTROLLER(obj) \
-    OBJECT_CHECK(DMAController, (obj), TYPE_DMA_CONTROLLER)
-
 #define ADDR 0
 #define COUNT 1
 
@@ -55,12 +51,10 @@ enum {
 
 static const int channels[8] = {-1, 2, 3, 1, -1, -1, -1, 0};
 
-static QEMUTimer *dma_timer;
-
 /* request the emulator to transfer a new DMA memory block ASAP */
-static void DMA_schedule(int nchan)
+static void DMA_schedule(DMAController *d)
 {
-    qemu_mod_timer_ns(dma_timer, qemu_get_clock_ns(vm_clock));
+    qemu_mod_timer_ns(d->dma_timer, qemu_get_clock_ns(vm_clock));
 }
 
 static void write_page(void *opaque, uint32_t nport, uint32_t data)
@@ -197,7 +191,7 @@ static void write_cont(void *opaque, uint32_t nport, uint32_t data)
             d->status &= ~(1 << (ichan + 4));
         }
         d->status &= ~(1 << ichan);
-        DMA_schedule(nport);
+        DMA_schedule(d);
         break;
 
     case 0x0a:                  /* single mask */
@@ -206,7 +200,7 @@ static void write_cont(void *opaque, uint32_t nport, uint32_t data)
         } else {
             d->mask &= ~(1 << (data & 3));
         }
-        DMA_schedule(nport);
+        DMA_schedule(d);
         break;
 
     case 0x0b:                  /* mode */
@@ -239,12 +233,12 @@ static void write_cont(void *opaque, uint32_t nport, uint32_t data)
 
     case 0x0e:                  /* clear mask for all channels */
         d->mask = 0;
-        DMA_schedule(nport);
+        DMA_schedule(d);
         break;
 
     case 0x0f:                  /* write mask for all channels */
         d->mask = data;
-        DMA_schedule(nport);
+        DMA_schedule(d);
         break;
 
     default:
@@ -293,7 +287,7 @@ void DMA_hold_DREQ(DMAController *d, int nchan)
     ichan = nchan & 3;
     DPRINTF("held cont=%d chan=%d\n", d->dshift, ichan);
     d->status |= 1 << (ichan + 4);
-    DMA_schedule(nchan);
+    DMA_schedule(d);
 }
 
 void DMA_release_DREQ(DMAController *d, int nchan)
@@ -303,10 +297,10 @@ void DMA_release_DREQ(DMAController *d, int nchan)
     ichan = nchan & 3;
     DPRINTF("released cont=%d chan=%d\n", d->dshift, ichan);
     d->status &= ~(1 << (ichan + 4));
-    DMA_schedule(nchan);
+    DMA_schedule(d);
 }
 
-static void channel_run(DMAController *d, int ncont, int ichan)
+static void channel_run(DMAController *d, int ichan)
 {
     int n;
     DMARegisters *r = &d->regs[ichan];
@@ -322,46 +316,41 @@ static void channel_run(DMAController *d, int ncont, int ichan)
         DPRINTF("DMA not in single mode select %#x\n", opmode);
     }
 
-    n = r->transfer_handler(r->opaque, ichan + (ncont << 2),
-                            r->now[COUNT], (r->base[COUNT] + 1) << ncont);
+    n = r->transfer_handler(r->opaque, ichan + (d->dshift << 2),
+                            r->now[COUNT], (r->base[COUNT] + 1) << d->dshift);
     r->now[COUNT] = n;
-    DPRINTF("dma_pos %d size %d\n", n, (r->base[COUNT] + 1) << ncont);
+    DPRINTF("dma_pos %d size %d\n", n, (r->base[COUNT] + 1) << d->dshift);
 }
 
 static void DMA_run_timer(void *opaque)
 {
-    DMAController *dma_controllers = opaque;
-    DMAController *d;
-    int icont, ichan;
+    DMAController *d = opaque;
+    int ichan;
     int rearm = 0;
-    static int running = 0;
 
-    if (running) {
+    if (d->running) {
         rearm = 1;
         goto out;
     } else {
-        running = 1;
+        d->running = 1;
     }
 
-    d = dma_controllers;
+    for (ichan = 0; ichan < 4; ichan++) {
+        int mask;
 
-    for (icont = 0; icont < 2; icont++, d++) {
-        for (ichan = 0; ichan < 4; ichan++) {
-            int mask;
+        mask = 1 << ichan;
 
-            mask = 1 << ichan;
-
-            if ((0 == (d->mask & mask)) && (0 != (d->status & (mask << 4)))) {
-                channel_run(d, icont, ichan);
-                rearm = 1;
-            }
+        if ((0 == (d->mask & mask)) && (0 != (d->status & (mask << 4)))) {
+            channel_run(d, ichan);
+            rearm = 1;
         }
     }
 
-    running = 0;
+    d->running = 0;
 out:
     if (rearm) {
-        qemu_mod_timer_ns(dma_timer, qemu_get_clock_ns(vm_clock) + 1 * SCALE_MS);
+        qemu_mod_timer_ns(d->dma_timer,
+                          qemu_get_clock_ns(vm_clock) + 1 * SCALE_MS);
     }
 }
 
@@ -443,6 +432,7 @@ static void dma_init2(DMAController *d, int base, int dshift,
     static const int page_port_list[] = { 0x1, 0x2, 0x3, 0x7 };
     int i;
 
+    d->dma_timer = qemu_new_timer_ns(vm_clock, DMA_run_timer, d);
     d->dshift = dshift;
     for (i = 0; i < 8; i++) {
         register_ioport_write(base + (i << dshift), 1, 1, write_chan, d);
@@ -492,7 +482,9 @@ static const VMStateDescription vmstate_dma_regs = {
 
 static int dma_post_load(void *opaque, int version_id)
 {
-    DMA_schedule(0);
+    DMAController *d = opaque;
+
+    DMA_schedule(d);
 
     return 0;
 }
@@ -523,8 +515,6 @@ DMAController *DMA_init(int high_page_enable)
               high_page_enable ? 0x488 : -1);
     vmstate_register(NULL, 0, &vmstate_dma, &dma_controllers[0]);
     vmstate_register(NULL, 1, &vmstate_dma, &dma_controllers[1]);
-
-    dma_timer = qemu_new_timer_ns(vm_clock, DMA_run_timer, dma_controllers);
 
     return dma_controllers;
 }
