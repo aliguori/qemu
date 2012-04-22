@@ -53,6 +53,15 @@ ISADevice *isa_create(ISABus *bus, const char *name);
 ISADevice *isa_try_create(ISABus *bus, const char *name);
 ISADevice *isa_create_simple(ISABus *bus, const char *name);
 
+int isa_get_dma_channel_mode(ISADevice *dev, int nchan);
+int isa_read_memory(ISADevice *dev, int nchan, void *buf, int pos, int size);
+int isa_write_memory(ISADevice *dev, int nchan, void *buf, int pos, int size);
+void isa_hold_DREQ(ISADevice *dev, int nchan);
+void isa_release_DREQ(ISADevice *dev, int nchan);
+void isa_register_dma_channel(ISADevice *dev, int nchan,
+                              DMA_transfer_handler transfer_handler,
+                              void *opaque);
+
 /**
  * isa_register_ioport: Install an I/O port region on the ISA bus.
  *
