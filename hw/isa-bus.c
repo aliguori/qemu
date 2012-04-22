@@ -21,6 +21,7 @@
 #include "sysbus.h"
 #include "isa.h"
 #include "exec-memory.h"
+#include "dma-controller.h"
 
 static ISABus *isabus;
 target_phys_addr_t isa_mem_base = 0;
@@ -270,36 +271,42 @@ MemoryRegion *isa_address_space(ISADevice *dev)
     return get_system_memory();
 }
 
+static DMAController *isa_get_controller(ISADevice *dev, int nchan)
+{
+    ISABus *bus = (ISABus *)DEVICE(dev)->parent_bus;
+    return &bus->controllers[nchan > 3];
+}
+
 int isa_get_dma_channel_mode(ISADevice *dev, int nchan)
 {
-    return DMA_get_channel_mode(nchan);
+    return DMA_get_channel_mode(isa_get_controller(dev, nchan), nchan);
 }
 
 int isa_read_memory(ISADevice *dev, int nchan, void *buf, int pos, int size)
 {
-    return DMA_read_memory(nchan, buf, pos, size);
+    return DMA_read_memory(isa_get_controller(dev, nchan), nchan, buf, pos, size);
 }
 
 int isa_write_memory(ISADevice *dev, int nchan, void *buf, int pos, int size)
 {
-    return DMA_write_memory(nchan, buf, pos, size);
+    return DMA_write_memory(isa_get_controller(dev, nchan), nchan, buf, pos, size);
 }
 
 void isa_hold_DREQ(ISADevice *dev, int nchan)
 {
-    DMA_hold_DREQ(nchan);
+    DMA_hold_DREQ(isa_get_controller(dev, nchan), nchan);
 }
 
 void isa_release_DREQ(ISADevice *dev, int nchan)
 {
-    DMA_release_DREQ(nchan);
+    DMA_release_DREQ(isa_get_controller(dev, nchan), nchan);
 }
 
 void isa_register_dma_channel(ISADevice *dev, int nchan,
                               DMA_transfer_handler transfer_handler,
                               void *opaque)
 {
-    return DMA_register_channel(nchan, transfer_handler, opaque);
+    return DMA_register_channel(isa_get_controller(dev, nchan), nchan, transfer_handler, opaque);
 }
 
 type_init(isabus_register_types)

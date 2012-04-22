@@ -21,8 +21,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-#include "hw.h"
-#include "isa.h"
+#include "dma-controller.h"
 
 /* #define DEBUG_DMA */
 
@@ -36,33 +35,8 @@
 #define DMA_CONTROLLER(obj) \
     OBJECT_CHECK(DMAController, (obj), TYPE_DMA_CONTROLLER)
 
-typedef struct DMARegisters
-{
-    int now[2];
-    uint16_t base[2];
-    uint8_t mode;
-    uint8_t page;
-    uint8_t pageh;
-    uint8_t dack;
-    uint8_t eop;
-    DMA_transfer_handler transfer_handler;
-    void *opaque;
-} DMARegisters;
-
 #define ADDR 0
 #define COUNT 1
-
-struct DMAController
-{
-    uint8_t status;
-    uint8_t command;
-    uint8_t mask;
-    uint8_t flip_flop;
-    int dshift;
-    DMARegisters regs[4];
-};
-
-static DMAController dma_controllers[2];
 
 enum {
     CMD_MEMORY_TO_MEMORY = 0x01,
@@ -307,37 +281,35 @@ static uint32_t read_cont(void *opaque, uint32_t nport)
     return val;
 }
 
-int DMA_get_channel_mode(int nchan)
+int DMA_get_channel_mode(DMAController *d, int nchan)
 {
-    return dma_controllers[nchan > 3].regs[nchan & 3].mode;
+    return d->regs[nchan & 3].mode;
 }
 
-void DMA_hold_DREQ(int nchan)
+void DMA_hold_DREQ(DMAController *d, int nchan)
 {
-    int ncont, ichan;
+    int ichan;
 
-    ncont = nchan > 3;
     ichan = nchan & 3;
-    DPRINTF("held cont=%d chan=%d\n", ncont, ichan);
-    dma_controllers[ncont].status |= 1 << (ichan + 4);
+    DPRINTF("held cont=%d chan=%d\n", d->dshift, ichan);
+    d->status |= 1 << (ichan + 4);
     DMA_schedule(nchan);
 }
 
-void DMA_release_DREQ(int nchan)
+void DMA_release_DREQ(DMAController *d, int nchan)
 {
-    int ncont, ichan;
+    int ichan;
 
-    ncont = nchan > 3;
     ichan = nchan & 3;
-    DPRINTF("released cont=%d chan=%d\n", ncont, ichan);
-    dma_controllers[ncont].status &= ~(1 << (ichan + 4));
+    DPRINTF("released cont=%d chan=%d\n", d->dshift, ichan);
+    d->status &= ~(1 << (ichan + 4));
     DMA_schedule(nchan);
 }
 
-static void channel_run(int ncont, int ichan)
+static void channel_run(DMAController *d, int ncont, int ichan)
 {
     int n;
-    DMARegisters *r = &dma_controllers[ncont].regs[ichan];
+    DMARegisters *r = &d->regs[ichan];
     int dir, opmode;
 
     dir = (r->mode >> 5) & 1;
@@ -356,8 +328,9 @@ static void channel_run(int ncont, int ichan)
     DPRINTF("dma_pos %d size %d\n", n, (r->base[COUNT] + 1) << ncont);
 }
 
-static void DMA_run_timer(void *unused)
+static void DMA_run_timer(void *opaque)
 {
+    DMAController *dma_controllers = opaque;
     DMAController *d;
     int icont, ichan;
     int rearm = 0;
@@ -379,7 +352,7 @@ static void DMA_run_timer(void *unused)
             mask = 1 << ichan;
 
             if ((0 == (d->mask & mask)) && (0 != (d->status & (mask << 4)))) {
-                channel_run(icont, ichan);
+                channel_run(d, icont, ichan);
                 rearm = 1;
             }
         }
@@ -392,24 +365,23 @@ out:
     }
 }
 
-void DMA_register_channel(int nchan,
+void DMA_register_channel(DMAController *d, int nchan,
                           DMA_transfer_handler transfer_handler,
                           void *opaque)
 {
     DMARegisters *r;
-    int ichan, ncont;
+    int ichan;
 
-    ncont = nchan > 3;
     ichan = nchan & 3;
 
-    r = dma_controllers[ncont].regs + ichan;
+    r = d->regs + ichan;
     r->transfer_handler = transfer_handler;
     r->opaque = opaque;
 }
 
-int DMA_read_memory(int nchan, void *buf, int pos, int len)
+int DMA_read_memory(DMAController *d, int nchan, void *buf, int pos, int len)
 {
-    DMARegisters *r = &dma_controllers[nchan > 3].regs[nchan & 3];
+    DMARegisters *r = &d->regs[nchan & 3];
     target_phys_addr_t addr = ((r->pageh & 0x7f) << 24) | (r->page << 16) | r->now[ADDR];
 
     if (r->mode & 0x20) {
@@ -429,9 +401,9 @@ int DMA_read_memory(int nchan, void *buf, int pos, int len)
     return len;
 }
 
-int DMA_write_memory(int nchan, void *buf, int pos, int len)
+int DMA_write_memory(DMAController *d, int nchan, void *buf, int pos, int len)
 {
-    DMARegisters *r = &dma_controllers[nchan > 3].regs[nchan & 3];
+    DMARegisters *r = &d->regs[nchan & 3];
     target_phys_addr_t addr = ((r->pageh & 0x7f) << 24) | (r->page << 16) | r->now[ADDR];
 
     if (r->mode & 0x20) {
@@ -543,6 +515,8 @@ static const VMStateDescription vmstate_dma = {
 
 DMAController *DMA_init(int high_page_enable)
 {
+    DMAController *dma_controllers = g_malloc0(sizeof(*dma_controllers) * 2);
+
     dma_init2(&dma_controllers[0], 0x00, 0, 0x80,
               high_page_enable ? 0x480 : -1);
     dma_init2(&dma_controllers[1], 0xc0, 1, 0x88,
@@ -550,7 +524,7 @@ DMAController *DMA_init(int high_page_enable)
     vmstate_register(NULL, 0, &vmstate_dma, &dma_controllers[0]);
     vmstate_register(NULL, 1, &vmstate_dma, &dma_controllers[1]);
 
-    dma_timer = qemu_new_timer_ns(vm_clock, DMA_run_timer, NULL);
+    dma_timer = qemu_new_timer_ns(vm_clock, DMA_run_timer, dma_controllers);
 
     return dma_controllers;
 }

@@ -7,9 +7,12 @@
 #include "memory.h"
 #include "qdev.h"
 #include "qemu/pin.h"
-#include "dma-controller.h"
 
 #define ISA_NUM_IRQS 16
+
+typedef struct DMAController DMAController;
+
+DMAController *DMA_init(int high_page_enable);
 
 typedef struct ISADevice ISADevice;
 
