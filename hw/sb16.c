@@ -172,11 +172,11 @@ static void control (SB16State *s, int hold)
     ldebug ("hold %d high %d dma %d\n", hold, s->use_hdma, dma);
 
     if (hold) {
-        DMA_hold_DREQ (dma);
+        isa_hold_DREQ (ISA_DEVICE (s), dma);
         AUD_set_active_out (s->voice, 1);
     }
     else {
-        DMA_release_DREQ (dma);
+        isa_release_DREQ (ISA_DEVICE (s), dma);
         AUD_set_active_out (s->voice, 0);
     }
 }
@@ -1160,7 +1160,8 @@ static int write_audio (SB16State *s, int nchan, int dma_pos,
             to_copy = sizeof (tmpbuf);
         }
 
-        copied = DMA_read_memory (nchan, tmpbuf, dma_pos, to_copy);
+        copied = isa_read_memory (ISA_DEVICE (s), nchan, tmpbuf,
+                                  dma_pos, to_copy);
         copied = AUD_write (s->voice, tmpbuf, copied);
 
         temp -= copied;
@@ -1377,8 +1378,8 @@ static int sb16_realize (ISADevice *dev)
 
     isa_register_portio_list (dev, s->port, sb16_ioport_list, s, "sb16");
 
-    DMA_register_channel (s->hdma, SB_read_DMA, s);
-    DMA_register_channel (s->dma, SB_read_DMA, s);
+    isa_register_dma_channel (dev, s->hdma, SB_read_DMA, s);
+    isa_register_dma_channel (dev, s->dma, SB_read_DMA, s);
     s->can_write = 1;
 
     AUD_register_card ("sb16", &s->card);
