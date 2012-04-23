@@ -32,7 +32,7 @@ static const int ide_iobase[2] = { 0x1f0, 0x170 };
 static const int ide_iobase2[2] = { 0x3f6, 0x376 };
 static const int ide_irq[2] = { 14, 15 };
 
-static ISADevice *pit; /* PIT i8254 */
+static PITCommonState *pit; /* PIT i8254 */
 
 /* i8254 PIT is attached to the IRQ0 at PIC i8259 */
 

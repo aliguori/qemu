@@ -1086,7 +1086,8 @@ void pc_basic_device_init(ISABus *isa_bus, qemu_irq *gsi,
     qemu_irq pit_alt_irq = NULL;
     qemu_irq rtc_irq = NULL;
     qemu_irq *a20_line;
-    ISADevice *port92, *pit;
+    ISADevice *port92;
+    PITCommonState *pit;
     KBDState *i8042;
 
     register_ioport_write(0xf0, 1, 1, ioportF0_write, NULL);
@@ -1128,7 +1129,7 @@ void pc_basic_device_init(ISABus *isa_bus, qemu_irq *gsi,
     }
     if (hpet) {
         /* connect PIT to output control line of the HPET */
-        qdev_connect_gpio_out(hpet, 0, qdev_get_gpio_in(&pit->qdev, 0));
+        qdev_connect_gpio_out(hpet, 0, qdev_get_gpio_in(DEVICE(pit), 0));
     }
     pcspk_init(isa_bus, pit);
 

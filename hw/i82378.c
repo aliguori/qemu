@@ -169,7 +169,7 @@ static void i82378_request_pic_irq(void *opaque, int irq, int level)
 static void i82378_init(DeviceState *dev, I82378State *s)
 {
     ISABus *isabus = DO_UPCAST(ISABus, qbus, qdev_get_child_bus(dev, "isa.0"));
-    ISADevice *pit;
+    PITCommonState *pit;
     qemu_irq *out0_irq;
 
     /* This device has:

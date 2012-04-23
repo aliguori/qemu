@@ -29,6 +29,9 @@
 
 #define KVM_PIT_REINJECT_BIT 0
 
+#define TYPE_KVM_PIT "kvm-pit"
+#define KVM_PIT(obj) OBJECT_CHECK(KVMPITState, (obj), TYPE_KVM_PIT)
+
 typedef struct KVMPITState {
     PITCommonState pit;
     LostTickPolicy lost_tick_policy;
@@ -154,7 +157,7 @@ static void kvm_pit_get_channel_info(PITCommonState *s, PITChannelState *sc,
 
 static void kvm_pit_reset(DeviceState *dev)
 {
-    PITCommonState *s = DO_UPCAST(PITCommonState, dev.qdev, dev);
+    PITCommonState *s = PIT_COMMON(dev);
 
     pit_reset_common(s);
 
@@ -175,7 +178,7 @@ static void kvm_pit_irq_control(void *opaque, int n, int enable)
 
 static int kvm_pit_initfn(PITCommonState *pit)
 {
-    KVMPITState *s = DO_UPCAST(KVMPITState, pit, pit);
+    KVMPITState *s = KVM_PIT(pit);
     struct kvm_pit_config config = {
         .flags = 0,
     };
@@ -213,13 +216,12 @@ static int kvm_pit_initfn(PITCommonState *pit)
 
     memory_region_init_reservation(&pit->ioports, "kvm-pit", 4);
 
-    qdev_init_gpio_in(&pit->dev.qdev, kvm_pit_irq_control, 1);
+    qdev_init_gpio_in(DEVICE(pit), kvm_pit_irq_control, 1);
 
     return 0;
 }
 
 static Property kvm_pit_properties[] = {
-    DEFINE_PROP_HEX32("iobase", KVMPITState, pit.iobase,  -1),
     DEFINE_PROP_LOSTTICKPOLICY("lost_tick_policy", KVMPITState,
                                lost_tick_policy, LOST_TICK_DELAY),
     DEFINE_PROP_END_OF_LIST(),

@@ -85,7 +85,7 @@ typedef struct {
     qemu_irq *i8259;
 } MaltaState;
 
-static ISADevice *pit;
+static PITCommonState *pit;
 
 static struct _loaderparams {
     int ram_size;

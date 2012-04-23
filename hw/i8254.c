@@ -35,8 +35,9 @@
 #define RW_STATE_WORD0 3
 #define RW_STATE_WORD1 4
 
-#define TYPE_ISA_PIT "isa-pit"
-#define ISA_PIT(obj) OBJECT_CHECK(PITCommonState, (obj), TYPE_ISA_PIT)
+/* sad, but necessary to maintain compat */
+#define TYPE_PIT "isa-pit"
+#define PIT(obj) OBJECT_CHECK(PITCommonState, (obj), TYPE_PIT)
 
 static void pit_irq_timer_update(PITChannelState *s, int64_t current_time);
 
@@ -266,7 +267,7 @@ static void pit_irq_timer(void *opaque)
 
 static void pit_reset(DeviceState *dev)
 {
-    PITCommonState *pit = DO_UPCAST(PITCommonState, dev.qdev, dev);
+    PITCommonState *pit = PIT(dev);
     PITChannelState *s;
 
     pit_reset_common(pit);
@@ -316,43 +317,45 @@ static void pit_post_load(PITCommonState *s)
 
 static int pit_realize(PITCommonState *pit)
 {
+    return 0;
+}
+
+static void pit_initfn(Object *obj)
+{
+    PITCommonState *pit = PIT(obj);
     PITChannelState *s;
 
     s = &pit->channels[0];
     /* the timer 0 is connected to an IRQ */
     s->irq_timer = qemu_new_timer_ns(vm_clock, pit_irq_timer, s);
-
+    
     memory_region_init_io(&pit->ioports, &pit_ioport_ops, pit, "pit", 4);
 
     /* FIXME: need to refactor RTC to eliminate this */
-    qdev_init_gpio_in(&pit->dev.qdev, pit_irq_control, 1);
-
-    return 0;
+    qdev_init_gpio_in(DEVICE(pit), pit_irq_control, 1);
 }
 
-ISADevice *pit_init(ISABus *bus, int base, int isa_irq, qemu_irq alt_irq)
+PITCommonState *pit_init(ISABus *bus, int base, int isa_irq, qemu_irq alt_irq)
 {
     PITCommonState *pit;
     PITChannelState *s;
-    ISADevice *dev;
 
-    dev = isa_create(bus, TYPE_ISA_PIT);
-    pit = ISA_PIT(dev);
+    pit = PIT(object_new(TYPE_PIT));
+    qdev_prop_set_globals(DEVICE(pit));
+    qdev_init_nofail(DEVICE(pit));
+    
     s = &pit->channels[0];
 
-    qdev_prop_set_uint32(&dev->qdev, "iobase", base);
-    qdev_init_nofail(&dev->qdev);
+    memory_region_add_subregion(bus->address_space_io, base, &pit->ioports);
 
-    pin_connect_qemu_irq(&s->irq,
-                         isa_irq >= 0 ? isa_get_irq(dev, isa_irq) : alt_irq);
+    if (isa_irq >= 0) {
+        pin_connect_pin(&s->irq, isa_get_pin(bus, isa_irq));
+    } else {
+        pin_connect_qemu_irq(&s->irq, alt_irq);
+    }
 
-    return dev;
+    return pit;
 }
-
-static Property pit_properties[] = {
-    DEFINE_PROP_HEX32("iobase", PITCommonState, iobase,  -1),
-    DEFINE_PROP_END_OF_LIST(),
-};
 
 static void pit_class_initfn(ObjectClass *klass, void *data)
 {
@@ -364,12 +367,12 @@ static void pit_class_initfn(ObjectClass *klass, void *data)
     k->get_channel_info = pit_get_channel_info_common;
     k->post_load = pit_post_load;
     dc->reset = pit_reset;
-    dc->props = pit_properties;
 }
 
 static TypeInfo pit_info = {
-    .name          = TYPE_ISA_PIT,
+    .name          = TYPE_PIT,
     .parent        = TYPE_PIT_COMMON,
+    .instance_init = pit_initfn,
     .instance_size = sizeof(PITCommonState),
     .class_init    = pit_class_initfn,
 };

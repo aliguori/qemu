@@ -27,8 +27,9 @@
 
 #include "hw.h"
 #include "isa.h"
+#include "i8254.h"
 
-static inline ISADevice *pcspk_init(ISABus *bus, ISADevice *pit)
+static inline ISADevice *pcspk_init(ISABus *bus, PITCommonState *pit)
 {
     ISADevice *dev;
 

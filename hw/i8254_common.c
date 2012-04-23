@@ -30,9 +30,8 @@
 #include "i8254_internal.h"
 
 /* val must be 0 or 1 */
-void pit_set_gate(ISADevice *dev, int channel, int val)
+void pit_set_gate(PITCommonState *pit, int channel, int val)
 {
-    PITCommonState *pit = PIT_COMMON(dev);
     PITChannelState *s = &pit->channels[channel];
     PITCommonClass *c = PIT_COMMON_GET_CLASS(pit);
 
@@ -139,9 +138,8 @@ void pit_get_channel_info_common(PITCommonState *s, PITChannelState *sc,
     info->out = pit_get_out(sc, qemu_get_clock_ns(vm_clock));
 }
 
-void pit_get_channel_info(ISADevice *dev, int channel, PITChannelInfo *info)
+void pit_get_channel_info(PITCommonState *pit, int channel, PITChannelInfo *info)
 {
-    PITCommonState *pit = PIT_COMMON(dev);
     PITChannelState *s = &pit->channels[channel];
     PITCommonClass *c = PIT_COMMON_GET_CLASS(pit);
 
@@ -166,7 +164,7 @@ void pit_reset_common(PITCommonState *pit)
     }
 }
 
-static int pit_init_common(ISADevice *dev)
+static int pit_init_common(DeviceState *dev)
 {
     PITCommonState *pit = PIT_COMMON(dev);
     PITCommonClass *c = PIT_COMMON_GET_CLASS(pit);
@@ -176,10 +174,6 @@ static int pit_init_common(ISADevice *dev)
     if (ret < 0) {
         return ret;
     }
-
-    isa_register_ioport(dev, &pit->ioports, pit->iobase);
-
-    qdev_set_legacy_instance_id(&dev->qdev, pit->iobase, 2);
 
     return 0;
 }
@@ -288,7 +282,7 @@ static int pit_dispatch_post_load(void *opaque, int version_id)
 static const VMStateDescription vmstate_pit_common = {
     .name = "i8254",
     .version_id = 3,
-    .minimum_version_id = 2,
+    .minimum_version_id = 3,
     .minimum_version_id_old = 1,
     .load_state_old = pit_load_old,
     .pre_save = pit_dispatch_pre_save,
@@ -305,17 +299,16 @@ static const VMStateDescription vmstate_pit_common = {
 
 static void pit_common_class_init(ObjectClass *klass, void *data)
 {
-    ISADeviceClass *ic = ISA_DEVICE_CLASS(klass);
     DeviceClass *dc = DEVICE_CLASS(klass);
 
-    ic->init = pit_init_common;
+    dc->init = pit_init_common;
     dc->vmsd = &vmstate_pit_common;
     dc->no_user = 1;
 }
 
 static TypeInfo pit_common_type = {
     .name          = TYPE_PIT_COMMON,
-    .parent        = TYPE_ISA_DEVICE,
+    .parent        = TYPE_DEVICE,
     .instance_init = pit_common_initfn,
     .instance_size = sizeof(PITCommonState),
     .class_size    = sizeof(PITCommonClass),

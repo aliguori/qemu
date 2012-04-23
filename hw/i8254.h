@@ -37,20 +37,23 @@ typedef struct PITChannelInfo {
     int out;
 } PITChannelInfo;
 
-ISADevice *pit_init(ISABus *bus, int base, int isa_irq, qemu_irq alt_irq);
+typedef struct PITCommonState PITCommonState;
 
-static inline ISADevice *kvm_pit_init(ISABus *bus, int base)
+PITCommonState *pit_init(ISABus *bus, int base, int isa_irq, qemu_irq alt_irq);
+
+static inline PITCommonState *kvm_pit_init(ISABus *bus, int base)
 {
-    ISADevice *dev;
+    DeviceState *dev;
 
-    dev = isa_create(bus, "kvm-pit");
-    qdev_prop_set_uint32(&dev->qdev, "iobase", base);
-    qdev_init_nofail(&dev->qdev);
+    dev = DEVICE(object_new("kvm-pit"));
+    qdev_prop_set_globals(dev);
+    qdev_prop_set_uint32(dev, "iobase", base);
+    qdev_init_nofail(dev);
 
-    return dev;
+    return (PITCommonState *)dev;
 }
 
-void pit_set_gate(ISADevice *dev, int channel, int val);
-void pit_get_channel_info(ISADevice *dev, int channel, PITChannelInfo *info);
+void pit_set_gate(PITCommonState *dev, int channel, int val);
+void pit_get_channel_info(PITCommonState *dev, int channel, PITChannelInfo *info);
 
 #endif /* !HW_I8254_H */

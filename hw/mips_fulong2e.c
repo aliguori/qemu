@@ -71,7 +71,7 @@
 #define FULONG2E_ATI_SLOT        6
 #define FULONG2E_RTL8139_SLOT    7
 
-static ISADevice *pit;
+static PITCommonState *pit;
 
 static struct _loaderparams {
     int ram_size;

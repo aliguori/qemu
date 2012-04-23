@@ -95,7 +95,7 @@ static void mips_jazz_init(MemoryRegion *address_space,
     DeviceState *dev;
     SysBusDevice *sysbus;
     ISABus *isa_bus;
-    ISADevice *pit;
+    PITCommonState *pit;
     DriveInfo *fds[MAX_FD];
     qemu_irq esp_reset, dma_enable;
     MemoryRegion *ram = g_new(MemoryRegion, 1);

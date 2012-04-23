@@ -51,13 +51,12 @@ typedef struct PITChannelState {
     uint32_t irq_disabled;
 } PITChannelState;
 
-typedef struct PITCommonState {
-    ISADevice dev;
+struct PITCommonState {
+    DeviceState dev;
     MemoryRegion ioports;
-    uint32_t iobase;
     PITChannelState channels[3];
     Pin irq_control;
-} PITCommonState;
+};
 
 #define TYPE_PIT_COMMON "pit-common"
 #define PIT_COMMON(obj) \
@@ -68,7 +67,7 @@ typedef struct PITCommonState {
      OBJECT_GET_CLASS(PITCommonClass, (obj), TYPE_PIT_COMMON)
 
 typedef struct PITCommonClass {
-    ISADeviceClass parent_class;
+    DeviceClass parent_class;
 
     int (*init)(PITCommonState *s);
     void (*set_channel_gate)(PITCommonState *s, PITChannelState *sc, int val);
