@@ -38,7 +38,6 @@ bool parallel_mm_init(MemoryRegion *address_space,
 
 /* i8259.c */
 
-extern DeviceState *isa_pic;
 qemu_irq *i8259_init(ISABus *bus, qemu_irq parent_irq);
 qemu_irq *kvm_i8259_init(ISABus *bus);
 int pic_read_irq(DeviceState *d);
