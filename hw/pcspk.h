@@ -29,18 +29,9 @@
 #include "isa.h"
 #include "i8254.h"
 
-static inline ISADevice *pcspk_init(ISABus *bus, PITCommonState *pit)
-{
-    ISADevice *dev;
+typedef struct PCSpkState PCSpkState;
 
-    dev = isa_create(bus, "isa-pcspk");
-    qdev_prop_set_uint32(&dev->qdev, "iobase", 0x61);
-    qdev_prop_set_ptr(&dev->qdev, "pit", pit);
-    qdev_init_nofail(&dev->qdev);
-
-    return dev;
-}
-
+PCSpkState *pcspk_init(ISABus *bus, PITCommonState *pit);
 int pcspk_audio_init(ISABus *bus);
 
 #endif /* !HW_PCSPK_H */

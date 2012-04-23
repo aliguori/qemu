@@ -37,6 +37,14 @@ typedef struct PITChannelInfo {
     int out;
 } PITChannelInfo;
 
+#define TYPE_PIT_COMMON "pit-common"
+#define PIT_COMMON(obj) \
+     OBJECT_CHECK(PITCommonState, (obj), TYPE_PIT_COMMON)
+#define PIT_COMMON_CLASS(klass) \
+     OBJECT_CLASS_CHECK(PITCommonClass, (klass), TYPE_PIT_COMMON)
+#define PIT_COMMON_GET_CLASS(obj) \
+     OBJECT_GET_CLASS(PITCommonClass, (obj), TYPE_PIT_COMMON)
+
 typedef struct PITCommonState PITCommonState;
 
 PITCommonState *pit_init(ISABus *bus, int base, int isa_irq, qemu_irq alt_irq);

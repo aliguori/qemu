@@ -35,8 +35,12 @@
 #define PCSPK_MAX_FREQ (PCSPK_SAMPLE_RATE >> 1)
 #define PCSPK_MIN_COUNT ((PIT_FREQ + PCSPK_MAX_FREQ - 1) / PCSPK_MAX_FREQ)
 
-typedef struct {
-    ISADevice dev;
+/* need to keep the 'isa-' prefix for backwards compat */
+#define TYPE_PCSPK "isa-pcspk"
+#define PCSPK(obj) OBJECT_CHECK(PCSpkState, (obj), TYPE_PCSPK)
+
+struct PCSpkState {
+    DeviceState dev;
     MemoryRegion ioport;
     uint32_t iobase;
     uint8_t sample_buf[PCSPK_BUF_LEN];
@@ -48,10 +52,7 @@ typedef struct {
     unsigned int play_pos;
     int data_on;
     int dummy_refresh_clock;
-} PCSpkState;
-
-static const char *s_spk = "pcspk";
-static PCSpkState *pcspk_state;
+};
 
 static inline void generate_samples(PCSpkState *s)
 {
@@ -105,22 +106,6 @@ static void pcspk_callback(void *opaque, int free)
     }
 }
 
-int pcspk_audio_init(ISABus *bus)
-{
-    PCSpkState *s = pcspk_state;
-    struct audsettings as = {PCSPK_SAMPLE_RATE, 1, AUD_FMT_U8, 0};
-
-    AUD_register_card(s_spk, &s->card);
-
-    s->voice = AUD_open_out(&s->card, s->voice, s_spk, s, pcspk_callback, &as);
-    if (!s->voice) {
-        AUD_log(s_spk, "Could not open voice\n");
-        return -1;
-    }
-
-    return 0;
-}
-
 static uint64_t pcspk_io_read(void *opaque, target_phys_addr_t addr,
                               unsigned size)
 {
@@ -159,39 +144,36 @@ static const MemoryRegionOps pcspk_io_ops = {
     },
 };
 
-static int pcspk_initfn(ISADevice *dev)
+static int pcspk_realize(DeviceState *dev)
 {
-    PCSpkState *s = DO_UPCAST(PCSpkState, dev, dev);
-    ISABus *isa_bus = (ISABus *)dev->qdev.parent_bus; // FIXME
+    PCSpkState *s = PCSPK(dev);
 
-    memory_region_init_io(&s->ioport, &pcspk_io_ops, s, "elcr", 1);
-    memory_region_add_subregion_overlap(isa_bus->address_space_io,
-                                        s->iobase, &s->ioport, 1);
-
-    pcspk_state = s;
+    g_assert(s->pit != NULL);
 
     return 0;
 }
 
-static Property pcspk_properties[] = {
-    DEFINE_PROP_HEX32("iobase", PCSpkState, iobase,  -1),
-    DEFINE_PROP_PTR("pit", PCSpkState, pit),
-    DEFINE_PROP_END_OF_LIST(),
-};
+static void pcspk_initfn(Object *obj)
+{
+    PCSpkState *s = PCSPK(obj);
+
+    memory_region_init_io(&s->ioport, &pcspk_io_ops, s, "elcr", 1);
+
+    object_property_add_link(obj, "pit", TYPE_PIT_COMMON, (Object **)&s->pit,
+                             NULL);
+}
 
 static void pcspk_class_initfn(ObjectClass *klass, void *data)
 {
     DeviceClass *dc = DEVICE_CLASS(klass);
-    ISADeviceClass *ic = ISA_DEVICE_CLASS(klass);
 
-    ic->init = pcspk_initfn;
-    dc->no_user = 1;
-    dc->props = pcspk_properties;
+    dc->init = pcspk_realize;
 }
 
 static TypeInfo pcspk_info = {
-    .name           = "isa-pcspk",
-    .parent         = TYPE_ISA_DEVICE,
+    .name           = TYPE_PCSPK,
+    .parent         = TYPE_DEVICE,
+    .instance_init  = pcspk_initfn,
     .instance_size  = sizeof(PCSpkState),
     .class_init     = pcspk_class_initfn,
 };
@@ -201,3 +183,40 @@ static void pcspk_register(void)
     type_register_static(&pcspk_info);
 }
 type_init(pcspk_register)
+
+static PCSpkState *pcspk_state;
+static const char *s_spk = "pcspk";
+
+int pcspk_audio_init(ISABus *bus)
+{
+    PCSpkState *s = pcspk_state;
+    struct audsettings as = {PCSPK_SAMPLE_RATE, 1, AUD_FMT_U8, 0};
+
+    AUD_register_card(s_spk, &s->card);
+
+    s->voice = AUD_open_out(&s->card, s->voice, s_spk, s, pcspk_callback, &as);
+    if (!s->voice) {
+        AUD_log(s_spk, "Could not open voice\n");
+        return -1;
+    }
+
+    return 0;
+}
+
+PCSpkState *pcspk_init(ISABus *bus, PITCommonState *pit)
+{
+    PCSpkState *s;
+
+    s = PCSPK(object_new(TYPE_PCSPK));
+    qdev_prop_set_globals(DEVICE(s));
+    s->pit = pit;
+    qdev_init_nofail(DEVICE(s));
+
+    memory_region_add_subregion_overlap(bus->address_space_io,
+                                        0x61, &s->ioport, 1);
+
+    /* FIXME: need to clean up audio initialization first */
+    pcspk_state = s;
+
+    return s;
+}
