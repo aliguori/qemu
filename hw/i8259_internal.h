@@ -34,7 +34,7 @@ typedef struct PICCommonState PICCommonState;
 
 #define TYPE_PIC_COMMON "pic-common"
 #define PIC_COMMON(obj) \
-     OBJECT_CHECK(PICCommonState, (obj), TYPE_PIC_COMMON)
+     OBJECT_CHECK(PICCommon, (obj), TYPE_PIC_COMMON)
 #define PIC_COMMON_CLASS(klass) \
      OBJECT_CLASS_CHECK(PICCommonClass, (klass), TYPE_PIC_COMMON)
 #define PIC_COMMON_GET_CLASS(obj) \
@@ -49,7 +49,7 @@ typedef struct PICCommonClass
 } PICCommonClass;
 
 struct PICCommonState {
-    DeviceState dev;
+    ISADevice dev;
     uint8_t last_irr; /* edge detection */
     uint8_t irr; /* interrupt request register */
     uint8_t imr; /* interrupt mask register */
@@ -73,14 +73,11 @@ struct PICCommonState {
     uint32_t elcr_addr;
     MemoryRegion base_io;
     MemoryRegion elcr_io;
-
-    PICCommonState *slave;
 };
 
 void pic_reset_common(PICCommonState *s);
 
-PICCommonState *i8259_init_chip(const char *name, ISABus *bus,
-                                PICCommonState *slave);
+ISADevice *i8259_init_chip(const char *name, ISABus *bus, bool master);
 
 
 #endif /* !QEMU_I8259_INTERNAL_H */

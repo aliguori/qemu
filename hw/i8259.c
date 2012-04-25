@@ -50,10 +50,11 @@ static uint64_t irq_count[16];
 #ifdef DEBUG_IRQ_LATENCY
 static int64_t irq_time[16];
 #endif
+DeviceState *isa_pic;
+static PICCommonState *slave_pic;
 
-/* Need to keep isa- prefix for backwards compat */
-#define TYPE_I8259 "isa-i8259"
-#define I8259(obj) OBJECT_CHECK(PICCommonState, (obj), TYPE_I8259)
+#define TYPE_ISA_I8259 "isa-i8259"
+#define ISA_I8259(obj) OBJECT_CHECK(PICCommonState, (obj), TYPE_ISA_I8259)
 
 /* return the highest priority found in mask (highest = smallest
    number). Return 8 if no irq */
@@ -182,21 +183,22 @@ static void pic_intack(PICCommonState *s, int irq)
     pic_update_irq(s);
 }
 
-int pic_read_irq(PICCommonState *s)
+int pic_read_irq(DeviceState *d)
 {
+    PICCommonState *s = DO_UPCAST(PICCommonState, dev.qdev, d);
     int irq, irq2, intno;
 
     irq = pic_get_irq(s);
     if (irq >= 0) {
         if (irq == 2) {
-            irq2 = pic_get_irq(s->slave);
+            irq2 = pic_get_irq(slave_pic);
             if (irq2 >= 0) {
-                pic_intack(s->slave, irq2);
+                pic_intack(slave_pic, irq2);
             } else {
                 /* spurious IRQ on slave controller */
                 irq2 = 7;
             }
-            intno = s->slave->irq_base + irq2;
+            intno = slave_pic->irq_base + irq2;
         } else {
             intno = s->irq_base + irq;
         }
@@ -399,61 +401,24 @@ static const MemoryRegionOps pic_elcr_ioport_ops = {
     },
 };
 
-static void pic_realize(PICCommonState *s)
+static void pic_init(PICCommonState *s)
 {
-}
-
-static void i8259_initfn(Object *obj)
-{
-    PICCommonState *s = I8259(obj);
-
     memory_region_init_io(&s->base_io, &pic_base_ioport_ops, s, "pic", 2);
     memory_region_init_io(&s->elcr_io, &pic_elcr_ioport_ops, s, "elcr", 1);
 
     qdev_init_gpio_in(&s->dev.qdev, pic_set_irq, 8);
 }
 
-static void i8259_class_init(ObjectClass *klass, void *data)
-{
-    PICCommonClass *k = PIC_COMMON_CLASS(klass);
-    DeviceClass *dc = DEVICE_CLASS(klass);
-
-    k->init = pic_realize;
-    dc->reset = pic_reset;
-}
-
-static TypeInfo i8259_info = {
-    .name       = TYPE_I8259,
-    .instance_init = i8259_initfn,
-    .instance_size = sizeof(PICCommonState),
-    .parent     = TYPE_PIC_COMMON,
-    .class_init = i8259_class_init,
-};
-
-static void pic_register_types(void)
-{
-    type_register_static(&i8259_info);
-}
-
-type_init(pic_register_types)
-
-static PICCommonState *master_pic;
-static PICCommonState *slave_pic;
-
 void pic_info(Monitor *mon)
 {
     int i;
     PICCommonState *s;
 
-    if (!master_pic) {
+    if (!isa_pic) {
         return;
     }
     for (i = 0; i < 2; i++) {
-        if (i == 0) {
-            s = master_pic;
-        } else {
-            s = slave_pic;
-        }
+        s = i == 0 ? DO_UPCAST(PICCommonState, dev.qdev, isa_pic) : slave_pic;
         monitor_printf(mon, "pic%d: irr=%02x imr=%02x isr=%02x hprio=%d "
                        "irq_base=%02x rr_sel=%d elcr=%02x fnm=%d\n",
                        i, s->irr, s->imr, s->isr, s->priority_add,
@@ -482,29 +447,55 @@ void irq_info(Monitor *mon)
 
 qemu_irq *i8259_init(ISABus *bus, qemu_irq parent_irq)
 {
-    PICCommonState *master, *slave;
+    PICCommonState *s;
     qemu_irq *irq_set;
+    ISADevice *dev;
     int i;
 
     irq_set = g_malloc(ISA_NUM_IRQS * sizeof(qemu_irq));
 
-    slave = I8259(i8259_init_chip("isa-i8259", bus, NULL));
+    dev = i8259_init_chip("isa-i8259", bus, true);
+    s = ISA_I8259(dev);
 
-    pin_connect_qemu_irq(&slave->int_out[0], irq_set[2]);
+    pin_connect_qemu_irq(&s->int_out[0], parent_irq);
     for (i = 0 ; i < 8; i++) {
-        irq_set[i + 8] = qdev_get_gpio_in(DEVICE(slave), i);
+        irq_set[i] = qdev_get_gpio_in(&dev->qdev, i);
     }
 
-    master = I8259(i8259_init_chip("isa-i8259", bus, slave));
+    isa_pic = &dev->qdev;
 
-    pin_connect_qemu_irq(&master->int_out[0], parent_irq);
+    dev = i8259_init_chip("isa-i8259", bus, false);
+    s = ISA_I8259(dev);
+
+    pin_connect_qemu_irq(&s->int_out[0], irq_set[2]);
     for (i = 0 ; i < 8; i++) {
-        irq_set[i] = qdev_get_gpio_in(DEVICE(master), i);
+        irq_set[i + 8] = qdev_get_gpio_in(&dev->qdev, i);
     }
 
-    isa_pic = DEVICE(master);
-    slave_pic = slave;
-
+    slave_pic = DO_UPCAST(PICCommonState, dev, dev);
 
     return irq_set;
 }
+
+static void i8259_class_init(ObjectClass *klass, void *data)
+{
+    PICCommonClass *k = PIC_COMMON_CLASS(klass);
+    DeviceClass *dc = DEVICE_CLASS(klass);
+
+    k->init = pic_init;
+    dc->reset = pic_reset;
+}
+
+static TypeInfo i8259_info = {
+    .name       = TYPE_ISA_I8259,
+    .instance_size = sizeof(PICCommonState),
+    .parent     = TYPE_PIC_COMMON,
+    .class_init = i8259_class_init,
+};
+
+static void pic_register_types(void)
+{
+    type_register_static(&i8259_info);
+}
+
+type_init(pic_register_types)
