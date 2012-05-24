@@ -266,11 +266,6 @@ static int raw_open_common(BlockDriverState *bs, const char *filename,
     }
     s->fd = fd;
 
-    /* We're falling back to POSIX AIO in some cases so init always */
-    if (paio_init() < 0) {
-        goto out_close;
-    }
-
 #ifdef CONFIG_LINUX_AIO
     if (raw_set_aio(&s->aio_ctx, &s->use_aio, bdrv_flags)) {
         goto out_close;
