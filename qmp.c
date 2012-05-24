@@ -522,3 +522,30 @@ void qmp_add_client(const char *protocol, const char *fdname,
     error_setg(errp, "protocol '%s' is invalid", protocol);
     close(fd);
 }
+
+char *qmp_qom_new(const char *parent, const char *prop_name,
+                  const char *type_name, Error **errp)
+{
+    Object *p, *obj;
+    Type type;
+
+    // TODO anything fancy with containger_get() needed?
+    p = object_resolve_path(parent, NULL);
+    if (!p) {
+        error_set(errp, QERR_DEVICE_NOT_FOUND, parent);
+        return NULL;
+    }
+
+    type = type_get_by_name(type_name);
+    if (!type) {
+        error_set(errp, QERR_INVALID_PARAMETER_VALUE,
+                  "type-name", "a type name");
+        return NULL;
+    }
+    obj = object_new_with_type(type);
+
+    // TODO bombs if p is an interface object; can this happen?
+    object_property_add_child(p, prop_name, obj, NULL);
+
+    return object_get_canonical_path(obj);
+}

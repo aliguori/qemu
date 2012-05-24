@@ -2576,3 +2576,8 @@ EQMP
         .args_type  = "",
         .mhandler.cmd_new = qmp_marshal_input_query_target,
     },
+    {
+        .name       = "qom-new",
+        .args_type  = "parent:s,prop-name:s,type-name:s",
+        .mhandler.cmd_new = qmp_marshal_input_qom_new,
+    },

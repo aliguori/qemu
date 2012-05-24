@@ -2062,6 +2062,28 @@
   'returns': [ 'DevicePropertyInfo' ] }
 
 ##
+# qom-new:
+#
+# Create a new object
+#
+# @parent: the parent's path within the object model.  See @qom-get
+# for a description of paths.
+#
+# @prop-name: the name of the property to add to the parent.
+#
+# @type: the new object's type name
+#
+# Returns: The new object's canonical absolute path
+#
+# Since: 1.2
+#
+# Notes: This command is experimental and may change syntax in future releases.
+##
+{ 'command': 'qom-new',
+  'data': { 'parent': 'str', 'prop-name': 'str', 'type-name': 'str' },
+  'returns': 'str' }
+
+##
 # @migrate
 #
 # Migrates the current running guest to another Virtual Machine.
