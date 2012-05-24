@@ -134,7 +134,7 @@ TypeImpl *type_register_static(const TypeInfo *info)
     return type_register(info);
 }
 
-static TypeImpl *type_get_by_name(const char *name)
+TypeImpl *type_get_by_name(const char *name)
 {
     if (name == NULL) {
         return NULL;

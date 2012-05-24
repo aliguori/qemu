@@ -553,6 +553,14 @@ Type type_register_static(const TypeInfo *info);
 Type type_register(const TypeInfo *info);
 
 /**
+ * type_get_by_name:
+ * @name: The name of the type
+ *
+ * Returns: The #Type with that name if it exists, else NULL.
+ */
+Type type_get_by_name(const char *name);
+
+/**
  * object_class_dynamic_cast_assert:
  * @klass: The #ObjectClass to attempt to cast.
  * @typename: The QOM typename of the class to cast to.
