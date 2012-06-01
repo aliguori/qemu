@@ -29,9 +29,13 @@ typedef struct CSTLWatchdogState {
 static uint64_t cwd_io_read(void *opaque, target_phys_addr_t addr,
                             unsigned size)
 {
+    CSTLWatchdogState *s = CSTL_WATCHDOG(opaque);
+
     switch (addr) {
     case 0x00:
         return 0x42;
+    case 0x01:
+        return s->activated;
     default:
         break;
     }
