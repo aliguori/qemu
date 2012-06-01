@@ -13,6 +13,7 @@
 
 #include "hw.h"
 #include "pci.h"
+#include "sysemu.h"
 
 #define DEBUG_CSTL_WATCHDOG
 
