@@ -17,6 +17,8 @@
 typedef struct CSTLWatchdogState {
     PCIDevice dev;
 
+    uint8_t activated;
+
     MemoryRegion io;
 } CSTLWatchdogState;
 
@@ -40,6 +42,23 @@ static uint64_t cwd_io_read(void *opaque, target_phys_addr_t addr,
 static void cwd_io_write(void *opaque, target_phys_addr_t addr,
                          uint64_t val, unsigned size)
 {
+    CSTLWatchdogState *s = CSTL_WATCHDOG(opaque);
+
+    switch (addr) {
+    case 0x00:
+        /* read-only */
+        break;
+    case 0x01:
+        if (val) {
+            printf("Activated!\n");
+        } else {
+            printf("Deactivated!\n");
+        }
+        s->activated = !!val;
+        break;
+    default:
+        break;
+    }
 }
 
 static const MemoryRegionOps cwd_io_ops = {
@@ -53,6 +72,7 @@ static const VMStateDescription vmstate_cwd = {
     .version_id = 1,
     .fields      = (VMStateField []) {
         VMSTATE_PCI_DEVICE(dev, CSTLWatchdogState),
+        VMSTATE_UINT8(activated, CSTLWatchdogState),
         VMSTATE_END_OF_LIST()
     }
 };
@@ -73,7 +93,9 @@ static int cwd_realize(PCIDevice *pci_dev)
 
 static void cwd_reset(DeviceState *dev)
 {
-//    CSTLWatchdogState *s = CSTL_WATCHDOG(dev);
+    CSTLWatchdogState *s = CSTL_WATCHDOG(dev);
+
+    s->activated = 0;
 }
 
 static void cwd_initfn(Object *obj)
