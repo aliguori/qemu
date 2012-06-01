@@ -60,6 +60,7 @@ static void cwd_timer_event(void *opaque)
 
     if (s->missed_ticks > 10) {
         dprintf("Watchdog expired!\n");
+        qemu_system_reset_request();
     }
 
     if (s->activated) {
