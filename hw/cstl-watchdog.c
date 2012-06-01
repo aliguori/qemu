@@ -14,6 +14,15 @@
 #include "hw.h"
 #include "pci.h"
 
+#define DEBUG_CSTL_WATCHDOG
+
+#ifdef DEBUG_CSTL_WATCHDOG
+#define dprintf(fmt, ...) \
+    do { fprintf(stderr, "cstl-watchdog: " fmt, ## __VA_ARGS__); } while (0)
+#else
+#define dprintf(fmt, ...) do { } while (0)
+#endif
+
 typedef struct CSTLWatchdogState {
     PCIDevice dev;
 
@@ -38,10 +47,10 @@ static void cwd_timer_event(void *opaque)
 
     (void)s;
 
-    printf("watch dog fire!\n");
+    dprintf("watch dog fire!\n");
 
     if (s->activated) {
-        printf("rearming\n");
+        dprintf("rearming\n");
         qemu_mod_timer(s->watchdog_timer,
                        qemu_get_clock_ms(rt_clock) + 1000);
     }
@@ -77,10 +86,10 @@ static void cwd_io_write(void *opaque, target_phys_addr_t addr,
         s->activated = !!val;
 
         if (s->activated) {
-            printf("Activated!\n");
+            dprintf("Activated!\n");
             cwd_timer_event(s);
         } else {
-            printf("Deactivated!\n");
+            dprintf("Deactivated!\n");
             qemu_del_timer(s->watchdog_timer);
         }
         break;
