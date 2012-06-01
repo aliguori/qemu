@@ -15,6 +15,7 @@
 #include "hw/pci_regs.h"
 
 #include <glib.h>
+#include <unistd.h>
 
 static uint32_t pci_config_read(uint8_t bus, uint8_t devfn,
                                 uint8_t addr, int size)
@@ -55,6 +56,10 @@ static void cwd_probe(uint8_t bus, uint8_t devfn)
 
     outb(bar0 + 0x01, 0x03); // activate device
     g_assert_cmpint(inb(bar0 + 0x01), ==, 0x01); // confirm activation
+
+    sleep(10);
+
+    outb(bar0 + 0x01, 0x00); // deactivate device
 }
 
 static void basic_init(void)
