@@ -43,13 +43,15 @@ static void pci_config_write(uint8_t bus, uint8_t devfn,
 
 static void cwd_probe(uint8_t bus, uint8_t devfn)
 {
-    uint32_t bar0 = 0xc0000;
+    uint32_t bar0 = 0xc000;
 
     pci_config_write(bus, devfn, PCI_COMMAND, 2,
                      (PCI_COMMAND_IO | PCI_COMMAND_MEMORY));
     pci_config_write(bus, devfn, PCI_BASE_ADDRESS_0, 4, bar0);
 
     outb(bar0, 0x42);
+
+    g_assert_cmpint(inb(bar0), ==, 0x42);
 }
 
 static void basic_init(void)
