@@ -34,6 +34,8 @@ typedef struct CSTLWatchdogState {
 
     QEMUTimer *watchdog_timer;
 
+    uint32_t expiration_ticks;
+
     MemoryRegion io;
 } CSTLWatchdogState;
 
@@ -58,7 +60,7 @@ static void cwd_timer_event(void *opaque)
         dprintf("WARNING: missed watchdog tick\n");
     }
 
-    if (s->missed_ticks > 10) {
+    if (s->missed_ticks > s->expiration_ticks) {
         dprintf("Watchdog expired!\n");
         qemu_system_reset_request();
     }
@@ -168,6 +170,8 @@ static void cwd_initfn(Object *obj)
 }
 
 static Property cwd_properties[] = {
+    DEFINE_PROP_UINT32("expiration-ticks", CSTLWatchdogState,
+                       expiration_ticks, 10),
     DEFINE_PROP_END_OF_LIST(),
 };
 
