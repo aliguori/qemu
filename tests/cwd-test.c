@@ -52,6 +52,9 @@ static void cwd_probe(uint8_t bus, uint8_t devfn)
     outb(bar0, 0x42);
 
     g_assert_cmpint(inb(bar0), ==, 0x42);
+
+    outb(bar0 + 0x01, 0x03); // activate device
+    g_assert_cmpint(inb(bar0 + 0x01), ==, 0x01); // confirm activation
 }
 
 static void basic_init(void)
