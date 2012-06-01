@@ -103,7 +103,7 @@ static const VMStateDescription vmstate_cwd = {
         VMSTATE_UINT8(activated, CSTLWatchdogState),
         VMSTATE_TIMER(watchdog_timer, CSTLWatchdogState),
         VMSTATE_UINT8(triggered, CSTLWatchdogState),
-        VMSTATE_UINT32(missed_ticks, CSTLWatchdogState);
+        VMSTATE_UINT32(missed_ticks, CSTLWatchdogState),
         VMSTATE_END_OF_LIST()
     }
 };
