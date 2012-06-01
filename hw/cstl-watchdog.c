@@ -48,6 +48,19 @@ static void cwd_timer_event(void *opaque)
     (void)s;
 
     dprintf("watch dog fire!\n");
+    if (!s->triggered) {
+        s->missed_ticks++;
+    }
+
+    s->triggered = 0;
+
+    if (s->missed_ticks > 1) {
+        dprintf("WARNING: missed watchdog tick\n");
+    }
+
+    if (s->missed_ticks > 10) {
+        dprintf("Watchdog expired!\n");
+    }
 
     if (s->activated) {
         dprintf("rearming\n");
@@ -92,6 +105,10 @@ static void cwd_io_write(void *opaque, target_phys_addr_t addr,
             dprintf("Deactivated!\n");
             qemu_del_timer(s->watchdog_timer);
         }
+        break;
+    case 0x02:
+        s->triggered = 1;
+        s->missed_ticks = 0;
         break;
     default:
         break;
