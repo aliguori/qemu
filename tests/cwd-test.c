@@ -94,11 +94,17 @@ static void basic_init(void)
 int main(int argc, char **argv)
 {
     QTestState *s = NULL;
+    char *cmd;
     int ret;
 
     g_test_init(&argc, &argv, NULL);
 
-    s = qtest_start("-device cstl-watchdog");
+    cmd = g_strdup_printf("-device cstl-watchdog,expiration-ticks=%d",
+                          g_test_rand_int_range(2, 11));
+
+    s = qtest_start(cmd);
+
+    g_free(cmd);
 
     qtest_add_func("/basic/init", basic_init);
 
