@@ -19,6 +19,10 @@ typedef struct CSTLWatchdogState {
 
     uint8_t activated;
 
+    uint8_t triggered;
+
+    uint32_t missed_ticks;
+
     QEMUTimer *watchdog_timer;
 
     MemoryRegion io;
@@ -97,6 +101,8 @@ static const VMStateDescription vmstate_cwd = {
     .fields      = (VMStateField []) {
         VMSTATE_PCI_DEVICE(dev, CSTLWatchdogState),
         VMSTATE_UINT8(activated, CSTLWatchdogState),
+        VMSTATE_UINT8(triggered, CSTLWatchdogState),
+        VMSTATE_UINT32(missed_ticks, CSTLWatchdogState);
         VMSTATE_END_OF_LIST()
     }
 };
@@ -120,6 +126,8 @@ static void cwd_reset(DeviceState *dev)
     CSTLWatchdogState *s = CSTL_WATCHDOG(dev);
 
     s->activated = 0;
+    s->triggered = 0;
+    s->missed_ticks = 0;
 }
 
 static void cwd_initfn(Object *obj)
