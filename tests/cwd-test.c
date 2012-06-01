@@ -45,6 +45,7 @@ static void pci_config_write(uint8_t bus, uint8_t devfn,
 static void cwd_probe(uint8_t bus, uint8_t devfn)
 {
     uint32_t bar0 = 0xc000;
+    int i;
 
     pci_config_write(bus, devfn, PCI_COMMAND, 2,
                      (PCI_COMMAND_IO | PCI_COMMAND_MEMORY));
@@ -57,7 +58,10 @@ static void cwd_probe(uint8_t bus, uint8_t devfn)
     outb(bar0 + 0x01, 0x03); // activate device
     g_assert_cmpint(inb(bar0 + 0x01), ==, 0x01); // confirm activation
 
-    sleep(10);
+    for (i = 0; i < 2 * 10; i++) {
+        outb(bar0 + 0x02, 0x32);
+        g_usleep(500000);
+    }
 
     outb(bar0 + 0x01, 0x00); // deactivate device
 }
