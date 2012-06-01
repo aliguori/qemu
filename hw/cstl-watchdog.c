@@ -73,7 +73,7 @@ static void cwd_initfn(Object *obj)
 {
     CSTLWatchdogState *s = CSTL_WATCHDOG(obj);
 
-    memory_region_init_io(&s->io, &cwd_io_ops, s, "cstl-watchdog-io", 0x16);
+    memory_region_init_io(&s->io, &cwd_io_ops, s, "cstl-watchdog-io", 64);
 }
 
 static Property cwd_properties[] = {
