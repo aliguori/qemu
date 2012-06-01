@@ -19,12 +19,28 @@ typedef struct CSTLWatchdogState {
 
     uint8_t activated;
 
+    QEMUTimer *watchdog_timer;
+
     MemoryRegion io;
 } CSTLWatchdogState;
 
 #define TYPE_CSTL_WATCHDOG "cstl-watchdog"
 #define CSTL_WATCHDOG(obj) \
     OBJECT_CHECK(CSTLWatchdogState, (obj), TYPE_CSTL_WATCHDOG)
+
+static void cwd_timer_event(void *opaque)
+{
+    CSTLWatchdogState *s = CSTL_WATCHDOG(opaque);
+
+    (void)s;
+
+    printf("watch dog fire!\n");
+
+    if (s->activated) {
+        qemu_mod_timer(s->watchdog_timer,
+                       qemu_get_clock_ms(vm_clock) + 1000);
+    }
+}
 
 static uint64_t cwd_io_read(void *opaque, target_phys_addr_t addr,
                             unsigned size)
@@ -53,12 +69,15 @@ static void cwd_io_write(void *opaque, target_phys_addr_t addr,
         /* read-only */
         break;
     case 0x01:
-        if (val) {
+        s->activated = !!val;
+
+        if (s->activated) {
             printf("Activated!\n");
+            cwd_timer_event(s);
         } else {
             printf("Deactivated!\n");
+            qemu_del_timer(s->watchdog_timer);
         }
-        s->activated = !!val;
         break;
     default:
         break;
@@ -107,6 +126,8 @@ static void cwd_initfn(Object *obj)
     CSTLWatchdogState *s = CSTL_WATCHDOG(obj);
 
     memory_region_init_io(&s->io, &cwd_io_ops, s, "cstl-watchdog-io", 64);
+
+    s->watchdog_timer = qemu_new_timer_ms(vm_clock, cwd_timer_event, s);
 }
 
 static Property cwd_properties[] = {
