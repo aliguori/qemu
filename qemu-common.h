@@ -273,6 +273,12 @@ typedef enum LostTickPolicy {
     LOST_TICK_MAX
 } LostTickPolicy;
 
+typedef enum WatchdogAction {
+    WATCHDOG_ACTION_RESET,
+    WATCHDOG_ACTION_NOTIFY,
+    WATCHDOG_ACTION_LAST,
+} WatchdogAction;
+
 void tcg_exec_init(unsigned long tb_size);
 bool tcg_enabled(void);
 

@@ -814,6 +814,19 @@ PropertyInfo qdev_prop_losttickpolicy = {
     .set   = set_enum,
 };
 
+static const char *watchdog_action_table[WATCHDOG_ACTION_LAST+1] = {
+    [WATCHDOG_ACTION_RESET] = "reset",
+    [WATCHDOG_ACTION_NOTIFY] = "notify",
+    [WATCHDOG_ACTION_LAST] = NULL,
+};
+
+PropertyInfo qdev_prop_watchdog_action = {
+    .name  = "WatchdogAction",
+    .enum_table  = watchdog_action_table,
+    .get   = get_enum,
+    .set   = set_enum,
+};
+
 /* --- pci address --- */
 
 /*

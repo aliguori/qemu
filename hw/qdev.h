@@ -220,6 +220,7 @@ extern PropertyInfo qdev_prop_chr;
 extern PropertyInfo qdev_prop_ptr;
 extern PropertyInfo qdev_prop_macaddr;
 extern PropertyInfo qdev_prop_losttickpolicy;
+extern PropertyInfo qdev_prop_watchdog_action;
 extern PropertyInfo qdev_prop_drive;
 extern PropertyInfo qdev_prop_netdev;
 extern PropertyInfo qdev_prop_vlan;
@@ -286,6 +287,9 @@ extern PropertyInfo qdev_prop_blocksize;
 #define DEFINE_PROP_LOSTTICKPOLICY(_n, _s, _f, _d) \
     DEFINE_PROP_DEFAULT(_n, _s, _f, _d, qdev_prop_losttickpolicy, \
                         LostTickPolicy)
+#define DEFINE_PROP_WATCHDOG_ACTION(_n, _s, _f, _d) \
+    DEFINE_PROP_DEFAULT(_n, _s, _f, _d, qdev_prop_watchdog_action, \
+                        WatchdogAction)
 #define DEFINE_PROP_BLOCKSIZE(_n, _s, _f, _d) \
     DEFINE_PROP_DEFAULT(_n, _s, _f, _d, qdev_prop_blocksize, uint16_t)
 
