@@ -101,6 +101,7 @@ static const VMStateDescription vmstate_cwd = {
     .fields      = (VMStateField []) {
         VMSTATE_PCI_DEVICE(dev, CSTLWatchdogState),
         VMSTATE_UINT8(activated, CSTLWatchdogState),
+        VMSTATE_TIMER(watchdog_timer, CSTLWatchdogState),
         VMSTATE_UINT8(triggered, CSTLWatchdogState),
         VMSTATE_UINT32(missed_ticks, CSTLWatchdogState);
         VMSTATE_END_OF_LIST()
