@@ -37,8 +37,9 @@ static void cwd_timer_event(void *opaque)
     printf("watch dog fire!\n");
 
     if (s->activated) {
+        printf("rearming\n");
         qemu_mod_timer(s->watchdog_timer,
-                       qemu_get_clock_ms(vm_clock) + 1000);
+                       qemu_get_clock_ms(rt_clock) + 1000);
     }
 }
 
@@ -127,7 +128,7 @@ static void cwd_initfn(Object *obj)
 
     memory_region_init_io(&s->io, &cwd_io_ops, s, "cstl-watchdog-io", 64);
 
-    s->watchdog_timer = qemu_new_timer_ms(vm_clock, cwd_timer_event, s);
+    s->watchdog_timer = qemu_new_timer_ms(rt_clock, cwd_timer_event, s);
 }
 
 static Property cwd_properties[] = {
