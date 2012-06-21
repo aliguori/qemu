@@ -1,6 +1,7 @@
 #include "qdev.h"
 #include "qdev-addr.h"
 #include "targphys.h"
+#include "qapi/qapi-visit-core.h"
 
 /* --- target physical address --- */
 

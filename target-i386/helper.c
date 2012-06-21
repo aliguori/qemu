@@ -23,6 +23,7 @@
 #include "sysemu.h"
 #include "monitor.h"
 #endif
+#include "hw/qdev.h"
 
 //#define DEBUG_MMU
 
@@ -1158,6 +1159,7 @@ X86CPU *cpu_x86_init(const char *cpu_model)
     static int inited;
 
     cpu = X86_CPU(object_new(TYPE_X86_CPU));
+    qdev_init_nofail(DEVICE(cpu));
     env = &cpu->env;
     env->cpu_model_str = cpu_model;
 
