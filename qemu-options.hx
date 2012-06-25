@@ -2858,6 +2858,18 @@ DEF("object", HAS_ARG, QEMU_OPTION_object,
     "                '/objects' path.\n",
     QEMU_ARCH_ALL)
 
+DEF("late-object", HAS_ARG, QEMU_OPTION_late_object,
+    "-late-object TYPENAME[,PROP1=VALUE1,...]\n"
+    "                create an new object of type TYPENAME setting properties\n"
+    "                in the order they are specified.  Note that the 'id'\n"
+    "                property must be set.  These objects are placed in the\n"
+    "                '/objects' path.\n"
+    "\n"
+    "                Late objects are made after machine\n"
+    "                initialization so they can refer to objects created by\n"
+    "                the machine init function.\n",
+    QEMU_ARCH_ALL)
+
 HXCOMM This is the last statement. Insert new options before this line!
 STEXI
 @end table
