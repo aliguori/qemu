@@ -662,6 +662,15 @@ static QemuOptsList qemu_object_opts = {
     },
 };
 
+static QemuOptsList qemu_late_object_opts = {
+    .name = "late-object",
+    .implied_opt_name = "qom-type",
+    .head = QTAILQ_HEAD_INITIALIZER(qemu_late_object_opts.head),
+    .desc = {
+        { }
+    },
+};
+
 static QemuOptsList *vm_config_groups[32] = {
     &qemu_drive_opts,
     &qemu_chardev_opts,
@@ -679,6 +688,7 @@ static QemuOptsList *vm_config_groups[32] = {
     &qemu_iscsi_opts,
     &qemu_sandbox_opts,
     &qemu_object_opts,
+    &qemu_late_object_opts,
     NULL,
 };
 
