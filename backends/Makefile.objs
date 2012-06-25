@@ -1,1 +1,1 @@
-common-obj-y += rng.o rng-urandom.o
+common-obj-y += rng.o rng-urandom.o rng-egd.o
