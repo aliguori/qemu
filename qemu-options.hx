@@ -2850,6 +2850,14 @@ STEXI
 Enable FIPS 140-2 compliance mode.
 ETEXI
 
+DEF("object", HAS_ARG, QEMU_OPTION_object,
+    "-object TYPENAME[,PROP1=VALUE1,...]\n"
+    "                create an new object of type TYPENAME setting properties\n"
+    "                in the order they are specified.  Note that the 'id'\n"
+    "                property must be set.  These objects are placed in the\n"
+    "                '/objects' path.\n",
+    QEMU_ARCH_ALL)
+
 HXCOMM This is the last statement. Insert new options before this line!
 STEXI
 @end table
