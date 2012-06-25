@@ -96,6 +96,8 @@ common-obj-y += qemu-timer.o qemu-timer-common.o
 
 common-obj-$(CONFIG_SLIRP) += slirp/
 
+common-obj-y += backends/
+
 ######################################################################
 # libseccomp
 ifeq ($(CONFIG_SECCOMP),y)
