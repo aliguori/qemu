@@ -95,7 +95,6 @@ static void bus_add_child(BusState *bus, DeviceState *child)
 void qdev_set_parent_bus(DeviceState *dev, BusState *bus)
 {
     dev->parent_bus = bus;
-    bus_add_child(bus, dev);
 }
 
 /* Create a new device.  This only initializes the device state structure
@@ -150,6 +149,10 @@ int qdev_init(DeviceState *dev)
     int rc;
 
     assert(dev->state == DEV_STATE_CREATED);
+
+    if (dev->parent_bus) {
+        bus_add_child(dev->parent_bus, dev);
+    }
 
     rc = dc->init(dev);
     if (rc < 0) {
@@ -654,6 +657,33 @@ void qdev_property_add_static(DeviceState *dev, Property *prop,
     assert_no_error(local_err);
 }
 
+static bool qdev_prop_get_realized(Object *obj, Error **errp)
+{
+    DeviceState *dev = DEVICE(obj);
+
+    return (dev->state == DEV_STATE_INITIALIZED);
+}
+
+static void qdev_prop_set_realized(Object *obj, bool value, Error **errp)
+{
+    DeviceState *dev = DEVICE(obj);
+    bool realized = (dev->state == DEV_STATE_INITIALIZED);
+
+    if (realized == value) {
+        return;
+    }
+
+    if (realized && !value) {
+        error_set(errp, QERR_PERMISSION_DENIED);
+        return;
+    }
+
+    if (qdev_init(dev) < 0) {
+        error_set(errp, QERR_DEVICE_INIT_FAILED, "");
+        return;
+    }
+}
+
 static void device_initfn(Object *obj)
 {
     DeviceState *dev = DEVICE(obj);
@@ -677,6 +707,10 @@ static void device_initfn(Object *obj)
         class = object_class_get_parent(class);
     } while (class != object_class_by_name(TYPE_DEVICE));
     qdev_prop_set_globals(dev);
+
+    object_property_add_bool(obj, "realized",
+                             qdev_prop_get_realized, qdev_prop_set_realized,
+                             NULL);
 
     object_property_add_link(OBJECT(dev), "parent_bus", TYPE_BUS,
                              (Object **)&dev->parent_bus, NULL);
