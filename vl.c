@@ -2375,12 +2375,13 @@ static int object_create(QemuOpts *opts, void *opaque)
     }
 
     obj = object_new(type);
-    if (qemu_opt_foreach(opts, object_set_property, obj, 1) < 0) {
-        return -1;
-    }
 
     object_property_add_child(container_get(object_get_root(), "/objects"),
                               id, obj, NULL);
+
+    if (qemu_opt_foreach(opts, object_set_property, obj, 1) < 0) {
+        return -1;
+    }
 
     return 0;
 }
@@ -3339,6 +3340,9 @@ int main(int argc, char **argv, char **envp)
             case QEMU_OPTION_object:
                 opts = qemu_opts_parse(qemu_find_opts("object"), optarg, 1);
                 break;
+            case QEMU_OPTION_late_object:
+                opts = qemu_opts_parse(qemu_find_opts("late-object"), optarg, 1);
+                break;
             default:
                 os_parse_cmd_args(popt->index, optarg);
             }
@@ -3676,6 +3680,10 @@ int main(int argc, char **argv, char **envp)
     set_numa_modes();
 
     current_machine = machine;
+
+    if (qemu_opts_foreach(qemu_find_opts("late-object"), object_create, NULL, 0) != 0) {
+        exit(1);
+    }
 
     /* init USB devices */
     if (usb_enabled) {
