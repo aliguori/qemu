@@ -596,10 +596,7 @@ DriveInfo *drive_init(QemuOpts *opts, int default_to_scsi)
         bdrv_flags |= BDRV_O_INCOMING;
     }
 
-    if (media == MEDIA_CDROM) {
-        /* CDROM is fine for any interface, don't check.  */
-        ro = 1;
-    } else if (ro == 1) {
+    if (ro == 1) {
         if (type != IF_SCSI && type != IF_VIRTIO && type != IF_FLOPPY &&
             type != IF_NONE && type != IF_PFLASH) {
             error_report("readonly not supported by this bus type");
@@ -610,6 +607,12 @@ DriveInfo *drive_init(QemuOpts *opts, int default_to_scsi)
     bdrv_flags |= ro ? 0 : BDRV_O_RDWR;
 
     ret = bdrv_open(dinfo->bdrv, file, bdrv_flags, drv);
+    if (ret < 0 && media == MEDIA_CDROM) {
+        /* Try again ro=1 */
+        ro = 1;
+        ret = bdrv_open(dinfo->bdrv, file, bdrv_flags & ~BDRV_O_RDWR, drv);
+    }
+
     if (ret < 0) {
         error_report("could not open disk image %s: %s",
                      file, strerror(-ret));
