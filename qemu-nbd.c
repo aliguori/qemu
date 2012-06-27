@@ -64,6 +64,7 @@ static void usage(const char *name)
 "  -e, --shared=NUM     device can be shared by NUM clients (default '1')\n"
 "  -t, --persistent     don't exit on the last connection\n"
 "  -v, --verbose        display extra debugging information\n"
+"  -R, --copy-on-read   enable copy-on-read\n"
 "  -h, --help           display this help and exit\n"
 "  -V, --version        output version information and exit\n"
 "\n"
@@ -281,7 +282,7 @@ int main(int argc, char **argv)
     char *device = NULL;
     int port = NBD_DEFAULT_PORT;
     off_t fd_size;
-    const char *sopt = "hVb:o:p:rsnP:c:dvk:e:t";
+    const char *sopt = "hVb:o:p:rsnP:c:dvk:e:tR";
     struct option lopt[] = {
         { "help", 0, NULL, 'h' },
         { "version", 0, NULL, 'V' },
@@ -298,6 +299,7 @@ int main(int argc, char **argv)
         { "shared", 1, NULL, 'e' },
         { "persistent", 0, NULL, 't' },
         { "verbose", 0, NULL, 'v' },
+        { "copy-on-read", 0, NULL, 'R' },
         { NULL, 0, NULL, 0 }
     };
     int ch;
@@ -326,6 +328,9 @@ int main(int argc, char **argv)
             break;
         case 'n':
             flags |= BDRV_O_NOCACHE | BDRV_O_CACHE_WB;
+            break;
+        case 'R':
+            flags |= BDRV_O_COPY_ON_READ;
             break;
         case 'b':
             bindto = optarg;
@@ -476,6 +481,8 @@ int main(int argc, char **argv)
         sockpath = g_malloc(128);
         snprintf(sockpath, 128, SOCKET_PATH, basename(device));
     }
+
+    init_clocks();
 
     bdrv_init();
     atexit(bdrv_close_all);
