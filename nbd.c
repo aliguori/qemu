@@ -55,12 +55,6 @@
             __FILE__, __FUNCTION__, __LINE__, ## __VA_ARGS__); \
 } while(0)
 
-/* This is all part of the "official" NBD API */
-
-#define NBD_REPLY_SIZE          (4 + 4 + 8)
-#define NBD_REQUEST_MAGIC       0x25609513
-#define NBD_REPLY_MAGIC         0x67446698
-
 #define NBD_SET_SOCK            _IO(0xab, 0)
 #define NBD_SET_BLKSIZE         _IO(0xab, 1)
 #define NBD_SET_SIZE            _IO(0xab, 2)

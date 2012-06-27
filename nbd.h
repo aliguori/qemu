@@ -47,6 +47,11 @@ struct nbd_reply {
 #define NBD_CMD_MASK_COMMAND	0x0000ffff
 #define NBD_CMD_FLAG_FUA	(1 << 16)
 
+/* This is all part of the "official" NBD API */
+#define NBD_REPLY_SIZE          (4 + 4 + 8)
+#define NBD_REQUEST_MAGIC       0x25609513
+#define NBD_REPLY_MAGIC         0x67446698
+
 enum {
     NBD_CMD_READ = 0,
     NBD_CMD_WRITE = 1,
