@@ -25,7 +25,7 @@
 #include "block_int.h"
 #include <curl/curl.h>
 
-// #define DEBUG
+#define DEBUG_CURL
 // #define DEBUG_VERBOSE
 
 #ifdef DEBUG_CURL
@@ -325,42 +325,38 @@ static int curl_open(BlockDriverState *bs, const char *filename, int flags)
     BDRVCURLState *s = bs->opaque;
     CURLState *state = NULL;
     double d;
-
-    #define RA_OPTSTR ":readahead="
     char *file;
-    char *ra;
-    const char *ra_val;
-    int parse_state = 0;
 
     static int inited = 0;
+    gchar **matches;
+    int i;
 
-    file = g_strdup(filename);
+    matches = g_regex_split_simple(":(readahead|size)=([0-9]+):",
+                                   filename, 0, 0);
+    if (matches == NULL) {
+        fprintf(stderr, "curl: poorly formatted URL: %s\n", filename);
+        return -1;
+    }
+
+    g_assert(matches[0] != NULL);
+    file = g_strdup(matches[0]);
+
     s->readahead_size = READ_AHEAD_SIZE;
+    s->len = 0;
 
-    /* Parse a trailing ":readahead=#:" param, if present. */
-    ra = file + strlen(file) - 1;
-    while (ra >= file) {
-        if (parse_state == 0) {
-            if (*ra == ':')
-                parse_state++;
-            else
-                break;
-        } else if (parse_state == 1) {
-            if (*ra > '9' || *ra < '0') {
-                char *opt_start = ra - strlen(RA_OPTSTR) + 1;
-                if (opt_start > file &&
-                    strncmp(opt_start, RA_OPTSTR, strlen(RA_OPTSTR)) == 0) {
-                    ra_val = ra + 1;
-                    ra -= strlen(RA_OPTSTR) - 1;
-                    *ra = '\0';
-                    s->readahead_size = atoi(ra_val);
-                    break;
-                } else {
-                    break;
-                }
-            }
+    for (i = 1; matches[i]; i++) {
+        if (matches[i][0] == 0) {
+            continue;
         }
-        ra--;
+
+        if (strcmp(matches[i], "readahead") == 0) {
+            s->readahead_size = atoi(matches[++i]);
+            DPRINTF("CURL: readhead size of %zd\n", s->readahead_size);
+        } else if (strcmp(matches[i], "size") == 0) {
+            /* we've already validated input via the regex */
+            s->len = strtoul(matches[++i], NULL, 10);
+            DPRINTF("CURL: image size of %zd\n", s->len);
+        }
     }
 
     if ((s->readahead_size & 0x1ff) != 0) {
@@ -376,28 +372,34 @@ static int curl_open(BlockDriverState *bs, const char *filename, int flags)
 
     DPRINTF("CURL: Opening %s\n", file);
     s->url = file;
-    state = curl_init_state(s);
-    if (!state)
-        goto out_noclean;
 
     // Get file size
+    if (s->len == 0) {
+        state = curl_init_state(s);
+        if (!state) {
+            goto out_noclean;
+        }
 
-    curl_easy_setopt(state->curl, CURLOPT_NOBODY, 1);
-    curl_easy_setopt(state->curl, CURLOPT_WRITEFUNCTION, (void *)curl_size_cb);
-    if (curl_easy_perform(state->curl))
-        goto out;
-    curl_easy_getinfo(state->curl, CURLINFO_CONTENT_LENGTH_DOWNLOAD, &d);
-    curl_easy_setopt(state->curl, CURLOPT_WRITEFUNCTION, (void *)curl_read_cb);
-    curl_easy_setopt(state->curl, CURLOPT_NOBODY, 0);
-    if (d)
-        s->len = (size_t)d;
-    else if(!s->len)
-        goto out;
+        curl_easy_setopt(state->curl, CURLOPT_NOBODY, 1);
+        curl_easy_setopt(state->curl, CURLOPT_WRITEFUNCTION, (void *)curl_size_cb);
+        if (curl_easy_perform(state->curl)) {
+            goto out;
+        }
+        curl_easy_getinfo(state->curl, CURLINFO_CONTENT_LENGTH_DOWNLOAD, &d);
+        curl_easy_setopt(state->curl, CURLOPT_WRITEFUNCTION, (void *)curl_read_cb);
+        curl_easy_setopt(state->curl, CURLOPT_NOBODY, 0);
+        if (d) {
+            s->len = (size_t)d;
+        } else if (!s->len) {
+            goto out;
+        }
+
+        curl_clean_state(state);
+        curl_easy_cleanup(state->curl);
+        state->curl = NULL;
+    }
+
     DPRINTF("CURL: Size = %zd\n", s->len);
-
-    curl_clean_state(state);
-    curl_easy_cleanup(state->curl);
-    state->curl = NULL;
 
     // Now we know the file exists and its size, so let's
     // initialize the multi interface!
