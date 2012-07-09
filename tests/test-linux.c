@@ -33,20 +33,27 @@ static int qemu_nbd_open(const char *filename)
     ssize_t len;
     struct sockaddr_un addr;
     char buf[8 + 8 + 8 + 128];
+    char *path;
+
+    path = g_strdup_printf("/tmp/nbd-%d.pid", getpid());
 
     if (fork() == 0) {
-        systemf("./qemu-nbd -v -R -k /tmp/nbd.sock \"%s\"", filename);
+        systemf("./qemu-nbd -v -R -k \"%s\" \"%s\"", path, filename);
         exit(0);
     }
 
     fd = socket(PF_UNIX, SOCK_STREAM, 0);
     g_assert(fd != -1);
 
-    addr.sun_family = AF_UNIX;
-    snprintf(addr.sun_path, sizeof(addr.sun_path), "%s", "/tmp/nbd.sock");
+    do {
+        addr.sun_family = AF_UNIX;
+        snprintf(addr.sun_path, sizeof(addr.sun_path), "%s", path);
 
-    ret = connect(fd, (struct sockaddr *)&addr, sizeof(addr));
-    g_assert(ret != -1);
+        ret = connect(fd, (struct sockaddr *)&addr, sizeof(addr));
+        if (ret == -1) {
+            g_usleep(100000);
+        }
+    } while (ret == -1);
 
     len = read(fd, buf, sizeof(buf));
     if (len == -1) {
@@ -569,6 +576,7 @@ static void test_image(const char *command,
              "Date: Wed, 30 Mar 2011 19:46:35 GMT\r\n"
              "Content-type: text/plain\r\n"
              "Content-length: %ld\r\n"
+             "Connection: close\r\n"
              "\r\n", strlen(config_file));
     ret = write(rfd, buffer, strlen(buffer));
     g_assert_cmpint(ret, ==, strlen(buffer));

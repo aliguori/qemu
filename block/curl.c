@@ -25,7 +25,7 @@
 #include "block_int.h"
 #include <curl/curl.h>
 
-#define DEBUG_CURL
+// #define DEBUG
 // #define DEBUG_VERBOSE
 
 #ifdef DEBUG_CURL
