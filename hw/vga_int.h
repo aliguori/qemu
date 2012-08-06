@@ -209,6 +209,11 @@ int ppm_save(const char *filename, struct DisplaySurface *ds);
 int vga_ioport_invalid(VGACommonState *s, uint32_t addr);
 void vga_init_vbe(VGACommonState *s, MemoryRegion *address_space);
 
+void vbe_ioport_write_data(void *opaque, uint32_t addr, uint32_t val);
+void vbe_ioport_write_index(void *opaque, uint32_t addr, uint32_t val);
+uint32_t vbe_ioport_read_data(void *opaque, uint32_t addr);
+uint32_t vbe_ioport_read_index(void *opaque, uint32_t addr);
+ 
 extern const uint8_t sr_mask[8];
 extern const uint8_t gr_mask[16];
 
