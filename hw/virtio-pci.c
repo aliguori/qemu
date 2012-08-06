@@ -710,8 +710,9 @@ static const VirtIOBindings virtio_pci_bindings = {
     .vmstate_change = virtio_pci_vmstate_change,
 };
 
-static int virtio_init_pci(VirtIOPCIProxy *proxy, VirtIODevice *vdev)
+static int virtio_init_pci(VirtIOPCIProxy *proxy)
 {
+    VirtIODevice *vdev = proxy->vdev;
     uint8_t *config;
     uint32_t size;
 
@@ -769,7 +770,7 @@ static int virtio_pci_init(PCIDevice *pci_dev)
             return err;
         }
     }
-    return virtio_init_pci(proxy, proxy->vdev);
+    return virtio_init_pci(proxy);
 }
 
 static void virtio_pci_exit(PCIDevice *pci_dev)
