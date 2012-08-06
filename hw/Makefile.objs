@@ -157,7 +157,8 @@ common-obj-$(CONFIG_XEN_BACKEND) += xen_console.o xenfb.o xen_disk.o xen_nic.o
 # Per-target files
 # virtio has to be here due to weird dependency between PCI and virtio-net.
 # need to fix this properly
-obj-$(CONFIG_VIRTIO) += virtio.o virtio-blk.o
+obj-$(CONFIG_VIRTIO) += virtio.o
+obj-$(CONFIG_VIRTIO) += virtio-blk.o virtio-blk-pci.o
 obj-$(CONFIG_VIRTIO) += virtio-balloon.o virtio-balloon-pci.o
 obj-$(CONFIG_VIRTIO) += virtio-net.o virtio-net-pci.o
 obj-$(CONFIG_VIRTIO) += virtio-serial-bus.o virtio-serial-pci.o
