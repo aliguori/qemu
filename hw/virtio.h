@@ -119,6 +119,8 @@ typedef struct {
 typedef struct VirtIODeviceClass
 {
     DeviceClass parent_klass;
+
+    int (*init)(VirtIODevice *vdev);
 } VirtIODeviceClass;
 
 struct VirtIODevice

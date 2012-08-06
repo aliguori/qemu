@@ -860,11 +860,17 @@ int virtio_load(VirtIODevice *vdev, QEMUFile *f)
     return 0;
 }
 
-void virtio_cleanup(VirtIODevice *vdev)
+static void virtio_finalize(Object *obj)
 {
+    VirtIODevice *vdev = VIRTIO_DEVICE(obj);
+
     qemu_del_vm_change_state_handler(vdev->vmstate);
     g_free(vdev->config);
     g_free(vdev->vq);
+}
+
+void virtio_cleanup(VirtIODevice *vdev)
+{
     object_finalize(vdev);
     g_free(vdev);
 }
@@ -911,9 +917,14 @@ static void virtio_initfn(Object *obj)
 static int virtio_realize(DeviceState *dev)
 {
     VirtIODevice *vdev = VIRTIO_DEVICE(dev);
+    VirtIODeviceClass *klass = VIRTIO_DEVICE_GET_CLASS(vdev);
 
     if (vdev->config_len) {
         vdev->config = g_malloc0(vdev->config_len);
+    }
+
+    if (klass->init) {
+        return klass->init(vdev);
     }
 
     return 0;
@@ -1076,6 +1087,7 @@ static TypeInfo virtio_info = {
     .parent = TYPE_DEVICE,
     .instance_size = sizeof(VirtIODevice),
     .instance_init = virtio_initfn,
+    .instance_finalize = virtio_finalize,
     .class_init = virtio_class_init,
     .class_size = sizeof(VirtIODeviceClass),
 };
