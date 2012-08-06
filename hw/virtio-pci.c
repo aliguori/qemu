@@ -235,7 +235,7 @@ static void virtio_pci_stop_ioeventfd(VirtIOPCIProxy *proxy)
     proxy->ioeventfd_started = false;
 }
 
-void virtio_pci_reset(DeviceState *d)
+static void virtio_pci_reset(DeviceState *d)
 {
     VirtIOPCIProxy *proxy = container_of(d, VirtIOPCIProxy, pci_dev.qdev);
     virtio_pci_stop_ioeventfd(proxy);
@@ -710,7 +710,7 @@ static const VirtIOBindings virtio_pci_bindings = {
     .vmstate_change = virtio_pci_vmstate_change,
 };
 
-int virtio_init_pci(VirtIOPCIProxy *proxy, VirtIODevice *vdev)
+static int virtio_init_pci(VirtIOPCIProxy *proxy, VirtIODevice *vdev)
 {
     uint8_t *config;
     uint32_t size;

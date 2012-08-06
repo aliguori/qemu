@@ -73,7 +73,6 @@ static void virtio_scsi_class_init(ObjectClass *klass, void *data)
     k->device_id = PCI_DEVICE_ID_VIRTIO_SCSI;
     k->revision = 0x00;
     k->class_id = PCI_CLASS_STORAGE_SCSI;
-    dc->reset = virtio_pci_reset;
     dc->props = virtio_scsi_properties;
 }
 

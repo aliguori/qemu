@@ -60,7 +60,6 @@ static void virtio_balloon_class_init(ObjectClass *klass, void *data)
     k->vendor_id = PCI_VENDOR_ID_REDHAT_QUMRANET;
     k->device_id = PCI_DEVICE_ID_VIRTIO_BALLOON;
     k->class_id = PCI_CLASS_OTHERS;
-    dc->reset = virtio_pci_reset;
     dc->props = virtio_balloon_properties;
 }
 

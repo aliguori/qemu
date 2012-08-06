@@ -75,7 +75,6 @@ static void virtio_serial_class_init(ObjectClass *klass, void *data)
     k->vendor_id = PCI_VENDOR_ID_REDHAT_QUMRANET;
     k->device_id = PCI_DEVICE_ID_VIRTIO_CONSOLE;
     k->class_id = PCI_CLASS_COMMUNICATION_OTHER;
-    dc->reset = virtio_pci_reset;
     dc->props = virtio_serial_properties;
 }
 

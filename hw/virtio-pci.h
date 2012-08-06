@@ -53,16 +53,10 @@ struct VirtIOPCIProxy {
     uint32_t class_code;
     uint32_t nvectors;
     uint32_t host_features;
-#ifdef CONFIG_LINUX
-    V9fsConf fsconf;
-#endif
     bool ioeventfd_disabled;
     bool ioeventfd_started;
     VirtIOIRQFD *vector_irqfd;
 };
-
-int virtio_init_pci(VirtIOPCIProxy *proxy, VirtIODevice *vdev);
-void virtio_pci_reset(DeviceState *d);
 
 /* Virtio ABI version, if we increment this, we break the guest driver. */
 #define VIRTIO_PCI_ABI_VERSION          0

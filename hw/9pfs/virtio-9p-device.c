@@ -141,16 +141,25 @@ VirtIODevice *virtio_9p_init(DeviceState *dev, V9fsConf *conf)
     return &s->vdev;
 }
 
-static int virtio_9p_init_pci(PCIDevice *pci_dev)
+#define TYPE_VIRTIO_9P_PCI "virtio-9p-pci"
+#define VIRTIO_9P_PCI(obj) \
+    OBJECT_CHECK(VirtIO9pPCI, (obj), TYPE_VIRTIO_9P_PCI)
+
+typedef struct VirtIO9pPCI {
+    VirtIOPCIProxy proxy;
+
+    V9fsConf fsconf;
+} VirtIO9pPCI;
+
+static int virtio_9p_init_pci(VirtIOPCIProxy *proxy)
 {
-    VirtIOPCIProxy *proxy = DO_UPCAST(VirtIOPCIProxy, pci_dev, pci_dev);
+    VirtIO9pPCI *pdev = VIRTIO_9P_PCI(proxy);
     VirtIODevice *vdev;
 
-    vdev = virtio_9p_init(&pci_dev->qdev, &proxy->fsconf);
+    vdev = virtio_9p_init(&pci_dev->qdev, &pdev->fsconf);
     vdev->nvectors = proxy->nvectors;
-    virtio_init_pci(proxy, vdev);
-    /* make the actual value visible */
-    proxy->nvectors = vdev->nvectors;
+    proxy->vdev = vdev;
+
     return 0;
 }
 
@@ -158,8 +167,8 @@ static Property virtio_9p_properties[] = {
     DEFINE_PROP_BIT("ioeventfd", VirtIOPCIProxy, flags, VIRTIO_PCI_FLAG_USE_IOEVENTFD_BIT, true),
     DEFINE_PROP_UINT32("vectors", VirtIOPCIProxy, nvectors, 2),
     DEFINE_VIRTIO_COMMON_FEATURES(VirtIOPCIProxy, host_features),
-    DEFINE_PROP_STRING("mount_tag", VirtIOPCIProxy, fsconf.tag),
-    DEFINE_PROP_STRING("fsdev", VirtIOPCIProxy, fsconf.fsdev_id),
+    DEFINE_PROP_STRING("mount_tag", VirtIO9pPCI, fsconf.tag),
+    DEFINE_PROP_STRING("fsdev", VirtIO9pPCI, fsconf.fsdev_id),
     DEFINE_PROP_END_OF_LIST(),
 };
 
@@ -167,20 +176,19 @@ static void virtio_9p_class_init(ObjectClass *klass, void *data)
 {
     DeviceClass *dc = DEVICE_CLASS(klass);
     PCIDeviceClass *k = PCI_DEVICE_CLASS(klass);
+    VirtIOPCIProxyClass *p = VIRTIO_PCI_PROXY_CLASS(klass);
 
-    k->init = virtio_9p_init_pci;
+    p->init = virtio_9p_init_pci;
     k->vendor_id = PCI_VENDOR_ID_REDHAT_QUMRANET;
     k->device_id = 0x1009;
-    k->revision = VIRTIO_PCI_ABI_VERSION;
     k->class_id = 0x2;
     dc->props = virtio_9p_properties;
-    dc->reset = virtio_pci_reset;
 }
 
 static TypeInfo virtio_9p_info = {
-    .name          = "virtio-9p-pci",
-    .parent        = TYPE_PCI_DEVICE,
-    .instance_size = sizeof(VirtIOPCIProxy),
+    .name          = TYPE_VIRTIO_9P_PCI,
+    .parent        = TYPE_VIRTIO_PCI,
+    .instance_size = sizeof(VirtIO9pProxy),
     .class_init    = virtio_9p_class_init,
 };
 
