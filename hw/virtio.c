@@ -888,35 +888,65 @@ static void virtio_vmstate_change(void *opaque, int running, RunState state)
     }
 }
 
-VirtIODevice *virtio_common_init(const char *name, uint16_t device_id,
-                                 size_t config_size, size_t struct_size)
+static void virtio_initfn(Object *obj)
 {
-    VirtIODevice *vdev;
+    VirtIODevice *vdev = VIRTIO_DEVICE(obj);
     int i;
 
-    vdev = g_malloc0(struct_size);
-    object_initialize(vdev, TYPE_VIRTIO_DEVICE);
-
-    vdev->device_id = device_id;
     vdev->status = 0;
     vdev->isr = 0;
     vdev->queue_sel = 0;
     vdev->config_vector = VIRTIO_NO_VECTOR;
     vdev->vq = g_malloc0(sizeof(VirtQueue) * VIRTIO_PCI_QUEUE_MAX);
     vdev->vm_running = runstate_is_running();
+
     for(i = 0; i < VIRTIO_PCI_QUEUE_MAX; i++) {
         vdev->vq[i].vector = VIRTIO_NO_VECTOR;
         vdev->vq[i].vdev = vdev;
     }
 
-    vdev->name = name;
-    vdev->config_len = config_size;
-    if (vdev->config_len)
-        vdev->config = g_malloc0(config_size);
-    else
-        vdev->config = NULL;
-
     vdev->vmstate = qemu_add_vm_change_state_handler(virtio_vmstate_change, vdev);
+}
+
+static int virtio_realize(DeviceState *dev)
+{
+    VirtIODevice *vdev = VIRTIO_DEVICE(dev);
+
+    if (vdev->config_len) {
+        vdev->config = g_malloc0(vdev->config_len);
+    }
+
+    return 0;
+}
+
+static Property virtio_properties[] = {
+    DEFINE_PROP_UINT16("device-id", VirtIODevice, device_id, 0),
+    DEFINE_PROP_UINT32("config-size", VirtIODevice, config_len, 0),
+    DEFINE_PROP_STRING("name", VirtIODevice, name),
+    DEFINE_PROP_END_OF_LIST(),
+};
+
+static void virtio_class_init(ObjectClass *klass, void *data)
+{
+    DeviceClass *dc = DEVICE_CLASS(klass);
+
+    dc->init = virtio_realize;
+    dc->props = virtio_properties;
+}
+
+VirtIODevice *virtio_common_init(const char *name, uint16_t device_id,
+                                 size_t config_size, size_t struct_size)
+{
+    VirtIODevice *vdev;
+
+    vdev = g_malloc0(struct_size);
+    object_initialize(vdev, TYPE_VIRTIO_DEVICE);
+
+    qdev_prop_set_string(DEVICE(vdev), "name", name);
+    qdev_prop_set_uint16(DEVICE(vdev), "device-id", device_id);
+    qdev_prop_set_uint32(DEVICE(vdev), "config-size", config_size);
+
+    qdev_init_nofail(DEVICE(vdev));
 
     return vdev;
 }
@@ -1045,6 +1075,8 @@ static TypeInfo virtio_info = {
     .name = TYPE_VIRTIO_DEVICE,
     .parent = TYPE_DEVICE,
     .instance_size = sizeof(VirtIODevice),
+    .instance_init = virtio_initfn,
+    .class_init = virtio_class_init,
     .class_size = sizeof(VirtIODeviceClass),
 };
 

@@ -125,12 +125,12 @@ struct VirtIODevice
 {
     DeviceState parent_obj;
 
-    const char *name;
+    char *name;
     uint8_t status;
     uint8_t isr;
     uint16_t queue_sel;
     uint32_t guest_features;
-    size_t config_len;
+    uint32_t config_len;
     void *config;
     uint16_t config_vector;
     int nvectors;
