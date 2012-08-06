@@ -783,6 +783,8 @@ static void virtio_pci_exit(PCIDevice *pci_dev)
     VirtIOPCIProxy *proxy = VIRTIO_PCI(pci_dev);
     VirtIOPCIProxyClass *klass = VIRTIO_PCI_GET_CLASS(proxy);
 
+    virtio_pci_stop_ioeventfd(proxy);
+
     if (klass->exit) {
         klass->exit(proxy);
     }
@@ -828,7 +830,6 @@ static int virtio_blk_init_pci(VirtIOPCIProxy *proxy)
 
 static void virtio_blk_exit_pci(VirtIOPCIProxy *proxy)
 {
-    virtio_pci_stop_ioeventfd(proxy);
     virtio_blk_exit(proxy->vdev);
 }
 
@@ -854,7 +855,6 @@ static int virtio_serial_init_pci(VirtIOPCIProxy *proxy)
 
 static void virtio_serial_exit_pci(VirtIOPCIProxy *proxy)
 {
-    virtio_pci_stop_ioeventfd(proxy);
     virtio_serial_exit(proxy->vdev);
 }
 
@@ -871,7 +871,6 @@ static int virtio_net_init_pci(VirtIOPCIProxy *proxy)
 
 static void virtio_net_exit_pci(VirtIOPCIProxy *proxy)
 {
-    virtio_pci_stop_ioeventfd(proxy);
     virtio_net_exit(proxy->vdev);
 }
 
