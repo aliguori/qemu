@@ -20,8 +20,6 @@
 #include "virtio.h"
 #include "virtio-blk.h"
 #include "virtio-net.h"
-#include "virtio-serial.h"
-#include "virtio-scsi.h"
 #include "pci.h"
 #include "qemu-error.h"
 #include "msi.h"
@@ -833,31 +831,6 @@ static void virtio_blk_exit_pci(VirtIOPCIProxy *proxy)
     virtio_blk_exit(proxy->vdev);
 }
 
-static int virtio_serial_init_pci(VirtIOPCIProxy *proxy)
-{
-    VirtIODevice *vdev;
-
-    if (proxy->class_code != PCI_CLASS_COMMUNICATION_OTHER &&
-        proxy->class_code != PCI_CLASS_DISPLAY_OTHER && /* qemu 0.10 */
-        proxy->class_code != PCI_CLASS_OTHERS)          /* qemu-kvm  */
-        proxy->class_code = PCI_CLASS_COMMUNICATION_OTHER;
-
-    vdev = virtio_serial_init(DEVICE(proxy), &proxy->serial);
-    if (!vdev) {
-        return -1;
-    }
-    vdev->nvectors = proxy->nvectors == DEV_NVECTORS_UNSPECIFIED
-                                        ? proxy->serial.max_virtserial_ports + 1
-                                        : proxy->nvectors;
-    proxy->vdev = vdev;
-    return 0;
-}
-
-static void virtio_serial_exit_pci(VirtIOPCIProxy *proxy)
-{
-    virtio_serial_exit(proxy->vdev);
-}
-
 static int virtio_net_init_pci(VirtIOPCIProxy *proxy)
 {
     VirtIODevice *vdev;
@@ -943,43 +916,11 @@ static TypeInfo virtio_net_info = {
     .class_init    = virtio_net_class_init,
 };
 
-static Property virtio_serial_properties[] = {
-    DEFINE_PROP_BIT("ioeventfd", VirtIOPCIProxy, flags, VIRTIO_PCI_FLAG_USE_IOEVENTFD_BIT, true),
-    DEFINE_PROP_UINT32("vectors", VirtIOPCIProxy, nvectors, DEV_NVECTORS_UNSPECIFIED),
-    DEFINE_PROP_HEX32("class", VirtIOPCIProxy, class_code, 0),
-    DEFINE_VIRTIO_COMMON_FEATURES(VirtIOPCIProxy, host_features),
-    DEFINE_PROP_UINT32("max_ports", VirtIOPCIProxy, serial.max_virtserial_ports, 31),
-    DEFINE_PROP_END_OF_LIST(),
-};
-
-static void virtio_serial_class_init(ObjectClass *klass, void *data)
-{
-    DeviceClass *dc = DEVICE_CLASS(klass);
-    PCIDeviceClass *k = PCI_DEVICE_CLASS(klass);
-    VirtIOPCIProxyClass *p = VIRTIO_PCI_CLASS(klass);
-
-    p->init = virtio_serial_init_pci;
-    p->exit = virtio_serial_exit_pci;
-    k->vendor_id = PCI_VENDOR_ID_REDHAT_QUMRANET;
-    k->device_id = PCI_DEVICE_ID_VIRTIO_CONSOLE;
-    k->class_id = PCI_CLASS_COMMUNICATION_OTHER;
-    dc->reset = virtio_pci_reset;
-    dc->props = virtio_serial_properties;
-}
-
-static TypeInfo virtio_serial_info = {
-    .name          = "virtio-serial-pci",
-    .parent        = TYPE_VIRTIO_PCI,
-    .instance_size = sizeof(VirtIOPCIProxy),
-    .class_init    = virtio_serial_class_init,
-};
-
 static void virtio_pci_register_types(void)
 {
     type_register_static(&virtio_pci_info);
     type_register_static(&virtio_blk_info);
     type_register_static(&virtio_net_info);
-    type_register_static(&virtio_serial_info);
 }
 
 type_init(virtio_pci_register_types)

@@ -17,7 +17,6 @@
 
 #include "virtio-blk.h"
 #include "virtio-net.h"
-#include "virtio-serial.h"
 #include "virtio-scsi.h"
 
 /* Performance improves when virtqueue kick processing is decoupled from the
@@ -60,7 +59,6 @@ struct VirtIOPCIProxy {
 #ifdef CONFIG_LINUX
     V9fsConf fsconf;
 #endif
-    virtio_serial_conf serial;
     virtio_net_conf net;
     bool ioeventfd_disabled;
     bool ioeventfd_started;
