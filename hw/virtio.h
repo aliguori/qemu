@@ -108,8 +108,23 @@ typedef struct {
 
 #define VIRTIO_NO_VECTOR 0xffff
 
+#define TYPE_VIRTIO_DEVICE "virtio-device"
+#define VIRTIO_DEVICE(obj) \
+    OBJECT_CHECK(VirtIODevice, (obj), TYPE_VIRTIO_DEVICE)
+#define VIRTIO_DEVICE_CLASS(klass) \
+    OBJECT_CLASS_CHECK(VirtIODeviceClass, (klass), TYPE_VIRTIO_DEVICE)
+#define VIRTIO_DEVICE_GET_CLASS(obj) \
+    OBJECT_GET_CLASS(VirtIODeviceClass, (obj), TYPE_VIRTIO_DEVICE)
+
+typedef struct VirtIODeviceClass
+{
+    DeviceClass parent_klass;
+} VirtIODeviceClass;
+
 struct VirtIODevice
 {
+    DeviceState parent_obj;
+
     const char *name;
     uint8_t status;
     uint8_t isr;

@@ -865,6 +865,7 @@ void virtio_cleanup(VirtIODevice *vdev)
     qemu_del_vm_change_state_handler(vdev->vmstate);
     g_free(vdev->config);
     g_free(vdev->vq);
+    object_finalize(vdev);
     g_free(vdev);
 }
 
@@ -894,6 +895,7 @@ VirtIODevice *virtio_common_init(const char *name, uint16_t device_id,
     int i;
 
     vdev = g_malloc0(struct_size);
+    object_initialize(vdev, TYPE_VIRTIO_DEVICE);
 
     vdev->device_id = device_id;
     vdev->status = 0;
@@ -1038,3 +1040,17 @@ EventNotifier *virtio_queue_get_host_notifier(VirtQueue *vq)
 {
     return &vq->host_notifier;
 }
+
+static TypeInfo virtio_info = {
+    .name = TYPE_VIRTIO_DEVICE,
+    .parent = TYPE_DEVICE,
+    .instance_size = sizeof(VirtIODevice),
+    .class_size = sizeof(VirtIODeviceClass),
+};
+
+static void register_types(void)
+{
+    type_register_static(&virtio_info);
+}
+
+type_init(register_types)
