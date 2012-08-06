@@ -19,12 +19,10 @@
 
 #include "virtio.h"
 #include "virtio-blk.h"
-#include "virtio-net.h"
 #include "pci.h"
 #include "qemu-error.h"
 #include "msi.h"
 #include "msix.h"
-#include "net.h"
 #include "loader.h"
 #include "kvm.h"
 #include "blockdev.h"
@@ -831,22 +829,6 @@ static void virtio_blk_exit_pci(VirtIOPCIProxy *proxy)
     virtio_blk_exit(proxy->vdev);
 }
 
-static int virtio_net_init_pci(VirtIOPCIProxy *proxy)
-{
-    VirtIODevice *vdev;
-
-    vdev = virtio_net_init(DEVICE(proxy), &proxy->nic, &proxy->net);
-
-    vdev->nvectors = proxy->nvectors;
-    proxy->vdev = vdev;
-    return 0;
-}
-
-static void virtio_net_exit_pci(VirtIOPCIProxy *proxy)
-{
-    virtio_net_exit(proxy->vdev);
-}
-
 static Property virtio_blk_properties[] = {
     DEFINE_PROP_HEX32("class", VirtIOPCIProxy, class_code, 0),
     DEFINE_BLOCK_PROPERTIES(VirtIOPCIProxy, blk.conf),
@@ -882,14 +864,44 @@ static TypeInfo virtio_blk_info = {
     .class_init    = virtio_blk_class_init,
 };
 
+#include "virtio-net.h"
+#include "net.h"
+
+#define TYPE_VIRTIO_NET_PCI "virtio-net-pci"
+#define VIRTIO_NET_PCI(obj) \
+    OBJECT_CHECK(VirtIONetPCI, (obj), TYPE_VIRTIO_NET_PCI)
+
+typedef struct VirtIONetPCI {
+    VirtIOPCIProxy parent_obj;
+
+    NICConf nic;
+    virtio_net_conf net;
+} VirtIONetPCI;
+
+static int virtio_net_init_pci(VirtIOPCIProxy *proxy)
+{
+    VirtIONetPCI *ndev = VIRTIO_NET_PCI(proxy);
+    VirtIODevice *vdev;
+
+    vdev = virtio_net_init(DEVICE(proxy), &ndev->nic, &ndev->net);
+    vdev->nvectors = proxy->nvectors;
+    proxy->vdev = vdev;
+    return 0;
+}
+
+static void virtio_net_exit_pci(VirtIOPCIProxy *proxy)
+{
+    virtio_net_exit(proxy->vdev);
+}
+
 static Property virtio_net_properties[] = {
     DEFINE_PROP_BIT("ioeventfd", VirtIOPCIProxy, flags, VIRTIO_PCI_FLAG_USE_IOEVENTFD_BIT, false),
     DEFINE_PROP_UINT32("vectors", VirtIOPCIProxy, nvectors, 3),
     DEFINE_VIRTIO_NET_FEATURES(VirtIOPCIProxy, host_features),
-    DEFINE_NIC_PROPERTIES(VirtIOPCIProxy, nic),
-    DEFINE_PROP_UINT32("x-txtimer", VirtIOPCIProxy, net.txtimer, TX_TIMER_INTERVAL),
-    DEFINE_PROP_INT32("x-txburst", VirtIOPCIProxy, net.txburst, TX_BURST),
-    DEFINE_PROP_STRING("tx", VirtIOPCIProxy, net.tx),
+    DEFINE_NIC_PROPERTIES(VirtIONetPCI, nic),
+    DEFINE_PROP_UINT32("x-txtimer", VirtIONetPCI, net.txtimer, TX_TIMER_INTERVAL),
+    DEFINE_PROP_INT32("x-txburst", VirtIONetPCI, net.txburst, TX_BURST),
+    DEFINE_PROP_STRING("tx", VirtIONetPCI, net.tx),
     DEFINE_PROP_END_OF_LIST(),
 };
 
@@ -910,7 +922,7 @@ static void virtio_net_class_init(ObjectClass *klass, void *data)
 }
 
 static TypeInfo virtio_net_info = {
-    .name          = "virtio-net-pci",
+    .name          = TYPE_VIRTIO_NET_PCI,
     .parent        = TYPE_VIRTIO_PCI,
     .instance_size = sizeof(VirtIOPCIProxy),
     .class_init    = virtio_net_class_init,

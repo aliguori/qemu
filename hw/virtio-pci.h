@@ -15,9 +15,9 @@
 #ifndef QEMU_VIRTIO_PCI_H
 #define QEMU_VIRTIO_PCI_H
 
+#include "virtio.h"
+#include "pci.h"
 #include "virtio-blk.h"
-#include "virtio-net.h"
-#include "virtio-scsi.h"
 
 /* Performance improves when virtqueue kick processing is decoupled from the
  * vcpu thread using ioeventfd for some devices. */
@@ -54,12 +54,10 @@ struct VirtIOPCIProxy {
     uint32_t class_code;
     uint32_t nvectors;
     VirtIOBlkConf blk;
-    NICConf nic;
     uint32_t host_features;
 #ifdef CONFIG_LINUX
     V9fsConf fsconf;
 #endif
-    virtio_net_conf net;
     bool ioeventfd_disabled;
     bool ioeventfd_started;
     VirtIOIRQFD *vector_irqfd;
