@@ -65,7 +65,6 @@ struct VirtIOPCIProxy {
     bool ioeventfd_disabled;
     bool ioeventfd_started;
     VirtIOIRQFD *vector_irqfd;
-    VirtIOSCSIConf scsi;
 };
 
 void virtio_init_pci(VirtIOPCIProxy *proxy, VirtIODevice *vdev);

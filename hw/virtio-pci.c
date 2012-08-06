@@ -1028,17 +1028,30 @@ static TypeInfo virtio_balloon_info = {
     .class_init    = virtio_balloon_class_init,
 };
 
+#define TYPE_VIRTIO_SCSI_PCI "virtio-scsi-pci"
+#define VIRTIO_SCSI_PCI(obj) \
+    OBJECT_CHECK(VirtIOSCSIPCI, (obj), TYPE_VIRTIO_SCSI_PCI)
+
+typedef struct VirtIOSCSIPCI {
+    VirtIOPCIProxy parent_obj;
+
+    /*< private >*/
+    VirtIOBlkConf blk;
+    VirtIOSCSIConf scsi;
+} VirtIOSCSIPCI;
+
 static int virtio_scsi_init_pci(VirtIOPCIProxy *proxy)
 {
+    VirtIOSCSIPCI *vscsi = VIRTIO_SCSI_PCI(proxy);
     VirtIODevice *vdev;
 
-    vdev = virtio_scsi_init(DEVICE(proxy), &proxy->scsi);
+    vdev = virtio_scsi_init(DEVICE(proxy), &vscsi->scsi);
     if (!vdev) {
         return -EINVAL;
     }
 
     vdev->nvectors = proxy->nvectors == DEV_NVECTORS_UNSPECIFIED
-                                        ? proxy->scsi.num_queues + 3
+                                        ? vscsi->scsi.num_queues + 3
                                         : proxy->nvectors;
     virtio_init_pci(proxy, vdev);
 
@@ -1055,7 +1068,7 @@ static void virtio_scsi_exit_pci(VirtIOPCIProxy *proxy)
 static Property virtio_scsi_properties[] = {
     DEFINE_PROP_BIT("ioeventfd", VirtIOPCIProxy, flags, VIRTIO_PCI_FLAG_USE_IOEVENTFD_BIT, true),
     DEFINE_PROP_UINT32("vectors", VirtIOPCIProxy, nvectors, DEV_NVECTORS_UNSPECIFIED),
-    DEFINE_VIRTIO_SCSI_PROPERTIES(VirtIOPCIProxy, host_features, scsi),
+    DEFINE_VIRTIO_SCSI_PROPERTIES(VirtIOSCSIPCI, parent_obj.host_features, scsi),
     DEFINE_PROP_END_OF_LIST(),
 };
 
