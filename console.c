@@ -1660,8 +1660,6 @@ PixelFormat qemu_default_pixelformat(int bpp)
 
     memset(&pf, 0x00, sizeof(PixelFormat));
 
-    pf.bits_per_pixel = bpp;
-    pf.bytes_per_pixel = bpp / 8;
     pf.depth = bpp == 32 ? 24 : bpp;
 
     switch (bpp) {
@@ -1680,6 +1678,8 @@ PixelFormat qemu_default_pixelformat(int bpp)
             pf.rbits = 5;
             pf.gbits = 5;
             pf.bbits = 5;
+            pf.bytes_per_pixel = 2;
+            pf.bits_per_pixel = 16;
             break;
         case 16:
             pf.rmask = 0x0000F800;
@@ -1694,6 +1694,8 @@ PixelFormat qemu_default_pixelformat(int bpp)
             pf.rbits = 5;
             pf.gbits = 6;
             pf.bbits = 5;
+            pf.bytes_per_pixel = 2;
+            pf.bits_per_pixel = 16;
             break;
         case 24:
             pf.rmask = 0x00FF0000;
@@ -1708,6 +1710,8 @@ PixelFormat qemu_default_pixelformat(int bpp)
             pf.rbits = 8;
             pf.gbits = 8;
             pf.bbits = 8;
+            pf.bytes_per_pixel = 4;
+            pf.bits_per_pixel = 24;
             break;
         case 32:
             pf.rmask = 0x00FF0000;
@@ -1725,6 +1729,8 @@ PixelFormat qemu_default_pixelformat(int bpp)
             pf.gbits = 8;
             pf.bbits = 8;
             pf.abits = 8;
+            pf.bytes_per_pixel = 4;
+            pf.bits_per_pixel = 32;
             break;
         default:
             break;
