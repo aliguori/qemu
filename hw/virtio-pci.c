@@ -768,7 +768,12 @@ static int virtio_pci_init(PCIDevice *pci_dev)
     VirtIOPCIProxyClass *klass = VIRTIO_PCI_GET_CLASS(proxy);
 
     if (klass->init) {
-        return klass->init(proxy);
+        int err;
+
+        err = klass->init(proxy);
+        if (err) {
+            return err;
+        }
     }
     return virtio_init_pci(proxy, proxy->vdev);
 }
