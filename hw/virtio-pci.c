@@ -716,12 +716,10 @@ static const VirtIOBindings virtio_pci_bindings = {
     .vmstate_change = virtio_pci_vmstate_change,
 };
 
-void virtio_init_pci(VirtIOPCIProxy *proxy, VirtIODevice *vdev)
+int virtio_init_pci(VirtIOPCIProxy *proxy, VirtIODevice *vdev)
 {
     uint8_t *config;
     uint32_t size;
-
-    proxy->vdev = vdev;
 
     config = proxy->pci_dev.config;
 
@@ -757,6 +755,11 @@ void virtio_init_pci(VirtIOPCIProxy *proxy, VirtIODevice *vdev)
     proxy->host_features |= 0x1 << VIRTIO_F_NOTIFY_ON_EMPTY;
     proxy->host_features |= 0x1 << VIRTIO_F_BAD_FEATURE;
     proxy->host_features = vdev->get_features(vdev, proxy->host_features);
+
+    /* make the actual value visible */
+    proxy->nvectors = vdev->nvectors;
+
+    return 0;
 }
 
 static int virtio_pci_init(PCIDevice *pci_dev)
@@ -767,8 +770,7 @@ static int virtio_pci_init(PCIDevice *pci_dev)
     if (klass->init) {
         return klass->init(proxy);
     }
-
-    return 0;
+    return virtio_init_pci(proxy, proxy->vdev);
 }
 
 static void virtio_pci_exit(PCIDevice *pci_dev)
@@ -815,9 +817,7 @@ static int virtio_blk_init_pci(VirtIOPCIProxy *proxy)
         return -1;
     }
     vdev->nvectors = proxy->nvectors;
-    virtio_init_pci(proxy, vdev);
-    /* make the actual value visible */
-    proxy->nvectors = vdev->nvectors;
+    proxy->vdev = vdev;
     return 0;
 }
 
@@ -843,8 +843,7 @@ static int virtio_serial_init_pci(VirtIOPCIProxy *proxy)
     vdev->nvectors = proxy->nvectors == DEV_NVECTORS_UNSPECIFIED
                                         ? proxy->serial.max_virtserial_ports + 1
                                         : proxy->nvectors;
-    virtio_init_pci(proxy, vdev);
-    proxy->nvectors = vdev->nvectors;
+    proxy->vdev = vdev;
     return 0;
 }
 
@@ -861,10 +860,7 @@ static int virtio_net_init_pci(VirtIOPCIProxy *proxy)
     vdev = virtio_net_init(DEVICE(proxy), &proxy->nic, &proxy->net);
 
     vdev->nvectors = proxy->nvectors;
-    virtio_init_pci(proxy, vdev);
-
-    /* make the actual value visible */
-    proxy->nvectors = vdev->nvectors;
+    proxy->vdev = vdev;
     return 0;
 }
 
@@ -887,7 +883,8 @@ static int virtio_balloon_init_pci(VirtIOPCIProxy *proxy)
     if (!vdev) {
         return -1;
     }
-    virtio_init_pci(proxy, vdev);
+
+    proxy->vdev = vdev;
     return 0;
 }
 
@@ -1053,10 +1050,8 @@ static int virtio_scsi_init_pci(VirtIOPCIProxy *proxy)
     vdev->nvectors = proxy->nvectors == DEV_NVECTORS_UNSPECIFIED
                                         ? vscsi->scsi.num_queues + 3
                                         : proxy->nvectors;
-    virtio_init_pci(proxy, vdev);
 
-    /* make the actual value visible */
-    proxy->nvectors = vdev->nvectors;
+    proxy->vdev = vdev;
     return 0;
 }
 

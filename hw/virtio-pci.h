@@ -67,7 +67,7 @@ struct VirtIOPCIProxy {
     VirtIOIRQFD *vector_irqfd;
 };
 
-void virtio_init_pci(VirtIOPCIProxy *proxy, VirtIODevice *vdev);
+int virtio_init_pci(VirtIOPCIProxy *proxy, VirtIODevice *vdev);
 void virtio_pci_reset(DeviceState *d);
 
 /* Virtio ABI version, if we increment this, we break the guest driver. */
