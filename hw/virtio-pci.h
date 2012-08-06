@@ -25,12 +25,29 @@
 #define VIRTIO_PCI_FLAG_USE_IOEVENTFD_BIT 1
 #define VIRTIO_PCI_FLAG_USE_IOEVENTFD   (1 << VIRTIO_PCI_FLAG_USE_IOEVENTFD_BIT)
 
+#define TYPE_VIRTIO_PCI "virtio-pci"
+#define VIRTIO_PCI(obj) \
+    OBJECT_CHECK(VirtIOPCIProxy, (obj), TYPE_VIRTIO_PCI)
+#define VIRTIO_PCI_CLASS(klass) \
+    OBJECT_CLASS_CHECK(VirtIOPCIProxyClass, (klass), TYPE_VIRTIO_PCI)
+#define VIRTIO_PCI_GET_CLASS(obj) \
+    OBJECT_GET_CLASS(VirtIOPCIProxyClass, (obj), TYPE_VIRTIO_PCI)
+
+typedef struct VirtIOPCIProxy VirtIOPCIProxy;
+typedef struct VirtIOPCIProxyClass VirtIOPCIProxyClass;
+
 typedef struct {
     int virq;
     unsigned int users;
 } VirtIOIRQFD;
 
-typedef struct {
+struct VirtIOPCIProxyClass {
+    PCIDeviceClass *parent_class;
+    int (*init)(VirtIOPCIProxy *dev);
+    void (*exit)(VirtIOPCIProxy *dev);
+};
+
+struct VirtIOPCIProxy {
     PCIDevice pci_dev;
     VirtIODevice *vdev;
     MemoryRegion bar;
@@ -45,11 +62,11 @@ typedef struct {
 #endif
     virtio_serial_conf serial;
     virtio_net_conf net;
-    VirtIOSCSIConf scsi;
     bool ioeventfd_disabled;
     bool ioeventfd_started;
     VirtIOIRQFD *vector_irqfd;
-} VirtIOPCIProxy;
+    VirtIOSCSIConf scsi;
+};
 
 void virtio_init_pci(VirtIOPCIProxy *proxy, VirtIODevice *vdev);
 void virtio_pci_reset(DeviceState *d);
