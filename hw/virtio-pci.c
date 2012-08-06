@@ -710,12 +710,24 @@ static const VirtIOBindings virtio_pci_bindings = {
     .vmstate_change = virtio_pci_vmstate_change,
 };
 
-static int virtio_init_pci(VirtIOPCIProxy *proxy)
+static int virtio_pci_init(PCIDevice *pci_dev)
 {
-    VirtIODevice *vdev = proxy->vdev;
+    VirtIOPCIProxy *proxy = VIRTIO_PCI(pci_dev);
+    VirtIOPCIProxyClass *klass = VIRTIO_PCI_GET_CLASS(proxy);
+    VirtIODevice *vdev;
     uint8_t *config;
     uint32_t size;
 
+    if (klass->init) {
+        int err;
+
+        err = klass->init(proxy);
+        if (err) {
+            return err;
+        }
+    }
+
+    vdev = proxy->vdev;
     config = proxy->pci_dev.config;
 
     if (proxy->class_code) {
@@ -755,22 +767,6 @@ static int virtio_init_pci(VirtIOPCIProxy *proxy)
     proxy->nvectors = vdev->nvectors;
 
     return 0;
-}
-
-static int virtio_pci_init(PCIDevice *pci_dev)
-{
-    VirtIOPCIProxy *proxy = VIRTIO_PCI(pci_dev);
-    VirtIOPCIProxyClass *klass = VIRTIO_PCI_GET_CLASS(proxy);
-
-    if (klass->init) {
-        int err;
-
-        err = klass->init(proxy);
-        if (err) {
-            return err;
-        }
-    }
-    return virtio_init_pci(proxy);
 }
 
 static void virtio_pci_exit(PCIDevice *pci_dev)
