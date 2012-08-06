@@ -17,6 +17,7 @@
 
 #include "virtio-pci.h"
 #include "virtio-scsi.h"
+#include "virtio-blk.h"
 
 #define TYPE_VIRTIO_SCSI_PCI "virtio-scsi-pci"
 #define VIRTIO_SCSI_PCI(obj) \

@@ -17,7 +17,6 @@
 
 #include "virtio.h"
 #include "pci.h"
-#include "virtio-blk.h"
 
 /* Performance improves when virtqueue kick processing is decoupled from the
  * vcpu thread using ioeventfd for some devices. */
@@ -53,7 +52,6 @@ struct VirtIOPCIProxy {
     uint32_t flags;
     uint32_t class_code;
     uint32_t nvectors;
-    VirtIOBlkConf blk;
     uint32_t host_features;
 #ifdef CONFIG_LINUX
     V9fsConf fsconf;

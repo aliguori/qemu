@@ -807,15 +807,27 @@ static TypeInfo virtio_pci_info = {
     .class_init    = virtio_pci_class_init,
 };
 
+#define TYPE_VIRTIO_BLK_PCI "virtio-blk-pci"
+#define VIRTIO_BLK_PCI(obj) \
+    OBJECT_CHECK(VirtIOBlkPCI, (obj), TYPE_VIRTIO_BLK_PCI)
+
+typedef struct VirtIOBlkPCI {
+    VirtIOPCIProxy proxy;
+
+    VirtIOBlkConf blk;
+} VirtIOBlkPCI;
+
 static int virtio_blk_init_pci(VirtIOPCIProxy *proxy)
 {
+    VirtIOBlkPCI *bdev = VIRTIO_BLK_PCI(proxy);
     VirtIODevice *vdev;
 
     if (proxy->class_code != PCI_CLASS_STORAGE_SCSI &&
-        proxy->class_code != PCI_CLASS_STORAGE_OTHER)
+        proxy->class_code != PCI_CLASS_STORAGE_OTHER) {
         proxy->class_code = PCI_CLASS_STORAGE_SCSI;
+    }
 
-    vdev = virtio_blk_init(DEVICE(proxy), &proxy->blk);
+    vdev = virtio_blk_init(DEVICE(proxy), &bdev->blk);
     if (!vdev) {
         return -1;
     }
@@ -831,11 +843,11 @@ static void virtio_blk_exit_pci(VirtIOPCIProxy *proxy)
 
 static Property virtio_blk_properties[] = {
     DEFINE_PROP_HEX32("class", VirtIOPCIProxy, class_code, 0),
-    DEFINE_BLOCK_PROPERTIES(VirtIOPCIProxy, blk.conf),
-    DEFINE_BLOCK_CHS_PROPERTIES(VirtIOPCIProxy, blk.conf),
-    DEFINE_PROP_STRING("serial", VirtIOPCIProxy, blk.serial),
+    DEFINE_BLOCK_PROPERTIES(VirtIOBlkPCI, blk.conf),
+    DEFINE_BLOCK_CHS_PROPERTIES(VirtIOBlkPCI, blk.conf),
+    DEFINE_PROP_STRING("serial", VirtIOBlkPCI, blk.serial),
 #ifdef __linux__
-    DEFINE_PROP_BIT("scsi", VirtIOPCIProxy, blk.scsi, 0, true),
+    DEFINE_PROP_BIT("scsi", VirtIOBlkPCI, blk.scsi, 0, true),
 #endif
     DEFINE_PROP_BIT("ioeventfd", VirtIOPCIProxy, flags, VIRTIO_PCI_FLAG_USE_IOEVENTFD_BIT, true),
     DEFINE_PROP_UINT32("vectors", VirtIOPCIProxy, nvectors, 2),
@@ -860,7 +872,7 @@ static void virtio_blk_class_init(ObjectClass *klass, void *data)
 static TypeInfo virtio_blk_info = {
     .name          = "virtio-blk-pci",
     .parent        = TYPE_VIRTIO_PCI,
-    .instance_size = sizeof(VirtIOPCIProxy),
+    .instance_size = sizeof(VirtIOBlkPCI),
     .class_init    = virtio_blk_class_init,
 };
 
