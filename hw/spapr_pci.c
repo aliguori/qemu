@@ -514,7 +514,8 @@ static DMAContext *spapr_pci_dma_context_fn(PCIBus *bus, void *opaque,
 
 static int spapr_phb_init(SysBusDevice *s)
 {
-    sPAPRPHBState *phb = DO_UPCAST(sPAPRPHBState, host_state.busdev, s);
+    sPAPRPHBState *phb = SPAPR_PCI_HOST_BRIDGE(s);
+    PCIHostState *host_state = FROM_SYSBUS(PCIHostState, s);
     char *namebuf;
     int i;
     PCIBus *bus;
@@ -562,12 +563,12 @@ static int spapr_phb_init(SysBusDevice *s)
                                     &phb->msiwindow);
     }
 
-    bus = pci_register_bus(&phb->host_state.busdev.qdev,
+    bus = pci_register_bus(DEVICE(s),
                            phb->busname ? phb->busname : phb->dtbusname,
                            pci_spapr_set_irq, pci_spapr_map_irq, phb,
                            &phb->memspace, &phb->iospace,
                            PCI_DEVFN(0, 0), PCI_NUM_PINS);
-    phb->host_state.bus = bus;
+    host_state->bus = bus;
 
     phb->dma_liobn = SPAPR_PCI_BASE_LIOBN | (pci_find_domain(bus) << 16);
     phb->dma_window_start = 0;
@@ -613,7 +614,7 @@ static void spapr_phb_class_init(ObjectClass *klass, void *data)
 }
 
 static const TypeInfo spapr_phb_info = {
-    .name          = "spapr-pci-host-bridge",
+    .name          = TYPE_SPAPR_PCI_HOST_BRIDGE,
     .parent        = TYPE_SYS_BUS_DEVICE,
     .instance_size = sizeof(sPAPRPHBState),
     .class_init    = spapr_phb_class_init,
@@ -626,7 +627,7 @@ void spapr_create_phb(sPAPREnvironment *spapr,
 {
     DeviceState *dev;
 
-    dev = qdev_create(NULL, spapr_phb_info.name);
+    dev = qdev_create(NULL, TYPE_SPAPR_PCI_HOST_BRIDGE);
 
     if (busname) {
         qdev_prop_set_string(dev, "busname", g_strdup(busname));
@@ -750,8 +751,9 @@ void spapr_pci_rtas_init(void)
     }
 }
 
-static void register_types(void)
+static void spapr_pci_register_types(void)
 {
     type_register_static(&spapr_phb_info);
 }
-type_init(register_types)
+
+type_init(spapr_pci_register_types)
