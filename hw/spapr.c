@@ -761,7 +761,7 @@ static void ppc_spapr_init(ram_addr_t ram_size,
     }
 
     /* Graphics */
-    if (spapr_vga_init(QLIST_FIRST(&spapr->phbs)->host_state.bus)) {
+    if (spapr_vga_init(PCI_HOST_BRIDGE(QLIST_FIRST(&spapr->phbs))->bus)) {
         spapr->has_graphics = true;
     }
 
