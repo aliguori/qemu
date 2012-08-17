@@ -39,6 +39,9 @@ struct QPCIDevice
     int devfn;
 };
 
+void qpci_device_foreach(QPCIBus *bus, int vendor_id, int device_id,
+                         void (*func)(QPCIDevice *dev, int devfn, void *data),
+                         void *data);
 QPCIDevice *qpci_device_find(QPCIBus *bus, int devfn);
 
 void qpci_device_enable(QPCIDevice *dev);
