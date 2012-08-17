@@ -1,5 +1,10 @@
 #include "libqos/pci.h"
 
+#include "hw/pci_regs.h"
+#include <glib.h>
+
+#include <stdio.h>
+
 QPCIDevice *qpci_device_find(QPCIBus *bus, int devfn)
 {
     QPCIDevice *dev;
@@ -9,6 +14,7 @@ QPCIDevice *qpci_device_find(QPCIBus *bus, int devfn)
     dev->devfn = devfn;
 
     if (qpci_config_readw(dev, PCI_VENDOR_ID) == 0xFFFF) {
+        printf("vendor id is %x\n", qpci_config_readw(dev, PCI_VENDOR_ID));
         g_free(dev);
         return NULL;
     }

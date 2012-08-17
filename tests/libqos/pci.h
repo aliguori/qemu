@@ -3,6 +3,8 @@
 
 #include <stdint.h>
 
+#define QPCI_DEVFN(dev, fn) (((dev) << 3) | (fn))
+
 typedef struct QPCIDevice QPCIDevice;
 typedef struct QPCIBus QPCIBus;
 
@@ -37,9 +39,9 @@ struct QPCIDevice
     int devfn;
 };
 
-QPCIDevice *pci_device_find(QPCIBus *bus, int devfn);
+QPCIDevice *qpci_device_find(QPCIBus *bus, int devfn);
 
-void pci_device_enable(QPCIDevice *dev);
+void qpci_device_enable(QPCIDevice *dev);
 
 uint8_t qpci_config_readb(QPCIDevice *dev, uint8_t offset);
 uint16_t qpci_config_readw(QPCIDevice *dev, uint8_t offset);
