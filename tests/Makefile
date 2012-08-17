@@ -23,6 +23,7 @@ check-block-$(CONFIG_POSIX) += tests/qemu-iotests-quick.sh
 check-qtest-i386-y = tests/fdc-test$(EXESUF)
 check-qtest-i386-y += tests/hd-geo-test$(EXESUF)
 check-qtest-i386-y += tests/rtc-test$(EXESUF)
+check-qtest-i386-y += tests/i440fx-test$(EXESUF)
 check-qtest-x86_64-y = $(check-qtest-i386-y)
 check-qtest-sparc-y = tests/m48t59-test$(EXESUF)
 check-qtest-sparc64-y = tests/m48t59-test$(EXESUF)
@@ -70,10 +71,13 @@ tests/test-qmp-input-strict$(EXESUF): tests/test-qmp-input-strict.o $(test-qapi-
 tests/test-qmp-commands$(EXESUF): tests/test-qmp-commands.o tests/test-qmp-marshal.o $(test-qapi-obj-y)
 tests/test-visitor-serialization$(EXESUF): tests/test-visitor-serialization.o $(test-qapi-obj-y)
 
+QEMU_CFLAGS += -I$(SRC_PATH)/tests
+
 tests/rtc-test$(EXESUF): tests/rtc-test.o $(trace-obj-y)
 tests/m48t59-test$(EXESUF): tests/m48t59-test.o $(trace-obj-y)
 tests/fdc-test$(EXESUF): tests/fdc-test.o tests/libqtest.o $(trace-obj-y)
 tests/hd-geo-test$(EXESUF): tests/hd-geo-test.o tests/libqtest.o $(trace-obj-y)
+tests/i440fx-test$(EXESUF): tests/i440fx-test.o tests/libqos/pci.o tests/libqos/pci-pc.o $(trace-obj-y)
 
 # QTest rules
 
