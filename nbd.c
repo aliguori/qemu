@@ -39,7 +39,7 @@
 #include "qemu_socket.h"
 #include "qemu-queue.h"
 
-//#define DEBUG_NBD
+#define DEBUG_NBD
 
 #ifdef DEBUG_NBD
 #define TRACE(msg, ...) do { \

@@ -37,7 +37,7 @@
 
 #define EN_OPTSTR ":exportname="
 
-/* #define DEBUG_NBD */
+#define DEBUG_NBD
 
 #if defined(DEBUG_NBD)
 #define logout(fmt, ...) \

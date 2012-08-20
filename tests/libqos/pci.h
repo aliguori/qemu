@@ -45,6 +45,7 @@ void qpci_device_foreach(QPCIBus *bus, int vendor_id, int device_id,
 QPCIDevice *qpci_device_find(QPCIBus *bus, int devfn);
 
 void qpci_device_enable(QPCIDevice *dev);
+void qpci_device_disable(QPCIDevice *dev);
 
 uint8_t qpci_config_readb(QPCIDevice *dev, uint8_t offset);
 uint16_t qpci_config_readw(QPCIDevice *dev, uint8_t offset);
