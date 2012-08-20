@@ -14,8 +14,12 @@
 #ifndef _QEMU_VIRTIO_BLK_H
 #define _QEMU_VIRTIO_BLK_H
 
+#ifndef NO_QEMU_PROTOS
 #include "virtio.h"
 #include "hw/block-common.h"
+#else
+#include "compiler.h"
+#endif
 
 /* from Linux's linux/virtio_blk.h */
 
@@ -99,6 +103,7 @@ struct virtio_scsi_inhdr
     uint32_t residual;
 };
 
+#ifndef NO_QEMU_PROTOS
 struct VirtIOBlkConf
 {
     BlockConf conf;
@@ -110,5 +115,7 @@ struct VirtIOBlkConf
 #define DEFINE_VIRTIO_BLK_FEATURES(_state, _field) \
         DEFINE_VIRTIO_COMMON_FEATURES(_state, _field), \
         DEFINE_PROP_BIT("config-wce", _state, _field, VIRTIO_BLK_F_CONFIG_WCE, true)
+
+#endif
 
 #endif
