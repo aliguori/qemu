@@ -2,37 +2,10 @@
 
 #include "libqtest.h"
 #include "hw/fw_cfg.h"
-#include "libqos/fw_cfg.h"
+#include "libqos/fw_cfg-pc.h"
 
 #include <string.h>
 #include <glib.h>
-
-/* PC specific */
-
-static void pc_fw_cfg_select(QFWCFG *fw_cfg, uint16_t key)
-{
-    outw(0x510, key);
-}
-
-static void pc_fw_cfg_read(QFWCFG *fw_cfg, void *data, size_t len)
-{
-    uint8_t *ptr = data;
-    int i;
-
-    for (i = 0; i < len; i++) {
-        ptr[i] = inb(0x511);
-    }
-}
-
-static QFWCFG *pc_fw_cfg_init(void)
-{
-    QFWCFG *fw_cfg = g_malloc0(sizeof(*fw_cfg));
-
-    fw_cfg->select = pc_fw_cfg_select;
-    fw_cfg->read = pc_fw_cfg_read;
-
-    return fw_cfg;
-}
 
 static uint64_t ram_size = 128 << 20;
 static uint16_t nb_cpus = 1;

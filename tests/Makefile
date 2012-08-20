@@ -75,7 +75,7 @@ tests/test-visitor-serialization$(EXESUF): tests/test-visitor-serialization.o $(
 QEMU_CFLAGS += -I$(SRC_PATH)/tests
 
 libqos-obj-y = tests/libqos/pci.o tests/libqos/fw_cfg.o $(trace-obj-y)
-libqos-pc-obj-y = $(libqos-obj-y) tests/libqos/pci-pc.o
+libqos-pc-obj-y = $(libqos-obj-y) tests/libqos/pci-pc.o tests/libqos/fw_cfg-pc.o
 
 tests/rtc-test$(EXESUF): tests/rtc-test.o $(trace-obj-y)
 tests/m48t59-test$(EXESUF): tests/m48t59-test.o $(trace-obj-y)
