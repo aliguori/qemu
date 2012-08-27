@@ -933,15 +933,10 @@ static void gd_connect_signals(GtkDisplayState *s)
                      G_CALLBACK(gd_leave_event), s);
 }
 
-static void gd_create_menus(GtkDisplayState *s)
+static void gd_create_file_menu(GtkDisplayState *s, GtkAccelGroup *accel_group)
 {
     GtkStockItem item;
-    GtkAccelGroup *accel_group;
-    GSList *group = NULL;
-    GtkWidget *separator;
-    int i;
 
-    accel_group = gtk_accel_group_new();
     s->file_menu = gtk_menu_new();
     gtk_menu_set_accel_group(GTK_MENU(s->file_menu), accel_group);
     s->file_menu_item = gtk_menu_item_new_with_mnemonic(_("_File"));
@@ -951,6 +946,17 @@ static void gd_create_menus(GtkDisplayState *s)
     gtk_menu_item_set_accel_path(GTK_MENU_ITEM(s->quit_item),
                                  "<QEMU>/File/Quit");
     gtk_accel_map_add_entry("<QEMU>/File/Quit", item.keyval, item.modifier);
+
+    gtk_menu_append(GTK_MENU(s->file_menu), s->quit_item);
+
+    gtk_menu_item_set_submenu(GTK_MENU_ITEM(s->file_menu_item), s->file_menu);
+}
+
+static void gd_create_view_menu(GtkDisplayState *s, GtkAccelGroup *accel_group)
+{
+    GtkWidget *separator;
+    GSList *group = NULL;
+    int i;
 
     s->view_menu = gtk_menu_new();
     gtk_menu_set_accel_group(GTK_MENU(s->view_menu), accel_group);
@@ -1021,14 +1027,23 @@ static void gd_create_menus(GtkDisplayState *s)
     s->show_tabs_item = gtk_check_menu_item_new_with_mnemonic(_("Show _Tabs"));
     gtk_menu_append(GTK_MENU(s->view_menu), s->show_tabs_item);
 
+    gtk_menu_item_set_submenu(GTK_MENU_ITEM(s->view_menu_item), s->view_menu);
+}
+
+static void gd_create_menus(GtkDisplayState *s)
+{
+    GtkAccelGroup *accel_group;
+
+    accel_group = gtk_accel_group_new();
+
+    gd_create_file_menu(s, accel_group);
+    gd_create_view_menu(s, accel_group);
+
+    /* Create top level menu bar */
     g_object_set_data(G_OBJECT(s->window), "accel_group", accel_group);
     gtk_window_add_accel_group(GTK_WINDOW(s->window), accel_group);
 
-    gtk_menu_append(GTK_MENU(s->file_menu), s->quit_item);
-    gtk_menu_item_set_submenu(GTK_MENU_ITEM(s->file_menu_item), s->file_menu);
     gtk_menu_shell_append(GTK_MENU_SHELL(s->menu_bar), s->file_menu_item);
-
-    gtk_menu_item_set_submenu(GTK_MENU_ITEM(s->view_menu_item), s->view_menu);
     gtk_menu_shell_append(GTK_MENU_SHELL(s->menu_bar), s->view_menu_item);
 }
 
