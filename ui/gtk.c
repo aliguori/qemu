@@ -92,6 +92,11 @@ typedef struct GtkDisplayState
     GtkWidget *grab_on_hover_item;
     GtkWidget *vga_item;
 
+    GtkWidget *devices_menu_item;
+    GtkWidget *devices_menu;
+
+    GSList *block_menu;
+
     int nb_vcs;
     VirtualConsole vc[MAX_VCS];
 
@@ -114,7 +119,23 @@ typedef struct GtkDisplayState
     GdkCursor *null_cursor;
     Notifier mouse_mode_notifier;
     gboolean free_scale;
+
+    QEMUTimer *menu_update;
 } GtkDisplayState;
+
+typedef struct BlockMenuEntry
+{
+    GtkWidget *item;
+    GtkWidget *submenu;
+    GtkWidget *choose_new_file;
+    GtkWidget *eject;
+
+    char *name;
+
+    bool last_inserted;
+
+    bool present;
+} BlockMenuEntry;
 
 static GtkDisplayState *global_state;
 
@@ -1030,6 +1051,112 @@ static void gd_create_view_menu(GtkDisplayState *s, GtkAccelGroup *accel_group)
     gtk_menu_item_set_submenu(GTK_MENU_ITEM(s->view_menu_item), s->view_menu);
 }
 
+static void gd_update_devices_menu(GtkDisplayState *s)
+{
+    BlockInfoList *block_list, *i;
+    GSList *j;
+
+    block_list = qmp_query_block(NULL);
+
+    /* Clear all marks from the block menu */
+    for (j = s->block_menu; j; j = j->next) {
+        BlockMenuEntry *entry = j->data;
+
+        entry->present = false;
+    }
+
+    /* Walk each reported block device */
+    for (i = block_list; i; i = i->next) {
+        BlockInfo *info = i->value;
+        BlockMenuEntry *entry;
+
+#if 0
+        /* Ignore non-removable devices */
+        if (!info->removable) {
+            continue;
+        }
+#endif
+
+        for (j = s->block_menu; j; j = j->next) {
+            entry = j->data;
+
+            if (strcmp(entry->name, info->device) == 0) {
+                break;
+            }
+        }
+
+        if (j) {
+            entry = j->data;
+        } else {
+            /* Add a new entry if necessary */
+            entry = g_malloc0(sizeof(*entry));
+
+            entry->name = g_strdup(info->device);
+            entry->item = gtk_menu_item_new_with_label(info->device);
+            entry->submenu = gtk_menu_new();
+            entry->choose_new_file = gtk_menu_item_new_with_mnemonic(_("_Choose new file..."));
+            entry->eject = gtk_menu_item_new_with_mnemonic(_("Eject"));
+            entry->last_inserted = true;
+
+            s->block_menu = g_slist_append(s->block_menu, entry);
+
+            gtk_menu_append(GTK_MENU(entry->submenu), entry->choose_new_file);
+            gtk_menu_append(GTK_MENU(entry->submenu), entry->eject);
+
+            gtk_menu_item_set_submenu(GTK_MENU_ITEM(entry->item), entry->submenu);
+
+            gtk_menu_append(GTK_MENU(s->devices_menu), entry->item);
+        }
+
+        /* Update widget state */
+        if (entry->last_inserted != info->has_inserted) {
+            gtk_widget_set_sensitive(entry->eject, info->has_inserted);
+        }
+        
+        entry->last_inserted = info->has_inserted;
+
+        /* Mark menu item as present */
+        entry->present = true;
+    }
+
+    /* Sweep all entries and remove any that aren't marked */
+    j = s->block_menu;
+    while (j) {
+        BlockMenuEntry *entry = j->data;
+
+        j = j->next;
+
+        if (!entry->present) {
+            s->block_menu = g_slist_delete_link(s->block_menu, j);
+
+            gtk_widget_destroy(entry->item);
+            g_free(entry);
+        }
+    }
+
+    qapi_free_BlockInfoList(block_list);
+}
+
+static void gd_update_menus(void *opaque)
+{
+    GtkDisplayState *s = opaque;
+
+    gd_update_devices_menu(s);
+
+    qemu_mod_timer(s->menu_update, qemu_get_clock_ms(vm_clock) + 1000);
+}
+
+static void gd_create_devices_menu(GtkDisplayState *s, GtkAccelGroup *accel_group)
+{
+    s->devices_menu = gtk_menu_new();
+    gtk_menu_set_accel_group(GTK_MENU(s->devices_menu), accel_group);
+    s->devices_menu_item = gtk_menu_item_new_with_mnemonic(_("_Devices"));
+
+    gd_update_devices_menu(s);
+
+    gtk_menu_item_set_submenu(GTK_MENU_ITEM(s->devices_menu_item), s->devices_menu);
+}
+
 static void gd_create_menus(GtkDisplayState *s)
 {
     GtkAccelGroup *accel_group;
@@ -1038,6 +1165,7 @@ static void gd_create_menus(GtkDisplayState *s)
 
     gd_create_file_menu(s, accel_group);
     gd_create_view_menu(s, accel_group);
+    gd_create_devices_menu(s, accel_group);
 
     /* Create top level menu bar */
     g_object_set_data(G_OBJECT(s->window), "accel_group", accel_group);
@@ -1045,6 +1173,7 @@ static void gd_create_menus(GtkDisplayState *s)
 
     gtk_menu_shell_append(GTK_MENU_SHELL(s->menu_bar), s->file_menu_item);
     gtk_menu_shell_append(GTK_MENU_SHELL(s->menu_bar), s->view_menu_item);
+    gtk_menu_shell_append(GTK_MENU_SHELL(s->menu_bar), s->devices_menu_item);
 }
 
 void gtk_display_init(DisplayState *ds)
@@ -1069,6 +1198,9 @@ void gtk_display_init(DisplayState *ds)
     s->scale_x = 1.0;
     s->scale_y = 1.0;
     s->free_scale = FALSE;
+
+    s->menu_update = qemu_new_timer_ms(vm_clock, gd_update_menus, s);
+    qemu_mod_timer(s->menu_update, qemu_get_clock_ms(vm_clock) + 1000);
 
     setlocale(LC_ALL, "");
     bindtextdomain("qemu", CONFIG_QEMU_LOCALEDIR);
