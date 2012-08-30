@@ -1,0 +1,231 @@
+#!/bin/sh
+
+if test -z "$1" -o -z "$2"; then
+    echo "Usage: $0 QEMU TEST1 [TEST2 ...]"
+    exit 1
+fi
+
+qemu=$1
+shift
+
+FREEZE_THRESHOLD=10
+QMP_TIMEOUT=30
+
+target_arch=$(basename $qemu | cut -f3- -d-)
+
+if test $target_arch = i386; then
+    target_arch=i586
+fi
+
+if test $target_arch = x86_64; then
+    machine=pc
+elif test $target_arch = i586; then
+    machine=pc
+fi
+
+kernel=/usr/local/share/qemu-jeos/kernel-$target_arch-$machine
+initrd=/usr/local/share/qemu-jeos/initramfs-$target_arch-$machine.img.gz
+#kernel=bin/vmlinuz-3.0
+#initrd=bin/initramfs-1.9.2.img.gz
+
+if test -z $QEMU_SRC; then
+    QEMU_SRC=~/git/qemu
+fi
+
+if ! which qmp >/dev/null 2>/dev/null; then
+    qmp="${QEMU_SRC}/QMP/qmp"
+
+    if ! test -x "${qmp}"; then
+	echo "Please set QEMU_SRC to set to a recent qemu.git tree"
+	exit 1
+    fi
+else
+    qmp=`which qmp | head -1`
+fi
+
+tmpdir=.tmp-$$
+tmpinitrd=$tmpdir/initramfs-$$.img.gz
+tmplog=$tmpdir/logfile-$$.log
+tmppid=$tmpdir/pidfile-$$.pid
+tmpqmp=$tmpdir/qmpsock-$$.sock
+tmprc=$tmpdir/rc.out
+
+if test "$QEMU_TEST_SEED"; then
+    seed=$QEMU_TEST_SEED
+else
+    seed=`(dd if=/dev/urandom bs=2 count=1 | hexdump -e '/2 "%u\n"') 2>/dev/null`
+fi
+
+RANDOM=$seed
+
+echo "Using RANDOM seed $seed"
+
+mkdir -p $tmpdir
+util/mktest-initramfs.sh $initrd "$@" > $tmpinitrd
+
+checkpid() {
+    kill -0 $1 2>/dev/null
+}
+
+get_file_size() {
+    ls -al $1 | cut -f5 -d' ' 2>/dev/null
+    if test $? != 0; then
+	echo 0
+    fi
+}
+
+qmp() {
+    $qmp --path=$tmpqmp "$@" &
+    qmp_pid=$!
+    count=0
+    while checkpid $qmp_pid; do
+	sleep 1
+	count=$(($count + 1))
+	if test $count -gt $QMP_TIMEOUT; then
+	    echo $count, $QMP_TIMEOUT
+	    kill -9 $qmp_pid
+	    return 1
+	fi
+    done
+    return 0
+}
+
+hmp() {
+    qmp human-monitor-command --command-line="$*" | sed -e 's:\r::g'
+}
+
+e() {
+    echo "$@"
+    "$@"
+    rc=$?
+    echo $rc > $tmprc
+    return $rc
+}
+
+choose() {
+    local count=0
+    local target=0
+
+    target=$(($RANDOM % $#))
+    count=0
+    for i in "$@"; do
+	if test $count = $target; then
+	    echo $i
+	    return 0
+	fi
+	count=$(($count + 1))
+    done
+
+    # not supposed to happen...
+    echo $1
+}
+
+choose_bool() {
+    if test `choose yes no` = "yes"; then
+	return 0
+    fi
+    return 1
+}
+
+named_choose() {
+    option="$QEMU_TEST_NAME"
+    if test "$QEMU_TEST_PROFILE"; then
+	option="$option.$QEMU_TEST_PROFILE"
+    fi
+    option="$option.$1"
+    shift
+
+    choices=`git config -f ~/.qemu-testrc $option`
+    if test "$choices"; then
+	# FIXME compute intersection of $choices and $@
+	choose $choices
+    else
+	choose "$@"
+    fi
+}
+
+named_choose_bool() {
+    if test `named_choose "$1" "yes" "no"` = "yes"; then
+	return 0
+    fi
+
+    return 1
+}
+
+
+start_qemu() {
+    e $qemu -kernel $kernel -initrd $tmpinitrd \
+            -append "console=ttyS0 seed=$seed" "$@" \
+            -pidfile $tmppid -qmp unix:$tmpqmp,server,nowait | tee $tmplog &
+    pid=$!
+
+    last_log_size=`get_file_size $tmplog`
+    freeze_count=0
+}
+
+qemu_is_okay() {
+    # it's stopped, that's not necessarly bad
+    if ! checkpid $pid; then
+	return 1
+    fi
+ 
+    log_size=`get_file_size $tmplog`
+    if test $last_log_size = $log_size; then
+	freeze_count=$(($freeze_count + 1))
+    else
+	freeze_count=0
+	last_log_size=$log_size
+    fi
+    if test $freeze_count -gt $FREEZE_THRESHOLD && checkpid $pid; then
+	qemu_pid=`cat $tmppid`
+	kill -9 $qemu_pid
+	echo "Guest ($qemu_pid) has not had output in $FREEZE_THRESHOLD seconds!"
+	return 2
+    fi
+
+    if ! qmp query-status >/dev/null 2>/dev/null && checkpid $pid; then
+	qemu_pid=`cat $tmppid`
+	
+	kill -9 $qemu_pid
+	echo "QEMU is hung!"
+	return 3
+    fi
+
+    # it's stopped, that's not necessarly bad
+    if ! checkpid $pid; then
+	return 1
+    fi
+}
+
+get_qemu_status() {
+    wait $pid
+    rc=`cat $tmprc`
+    if test $(($rc & 1)) = 1; then
+	rc=$(($rc / 2))
+    fi
+    return $rc
+}
+
+qemu() {
+    start_qemu "$@"
+
+    while qemu_is_okay; do
+	sleep 1
+    done
+
+    get_qemu_status
+}
+
+QEMU_TEST=1
+
+QEMU_TEST_NAME=$(basename $1 .sh)
+
+. "$1"
+rc=$?
+
+if test $rc = 0; then
+    rm -f $tmplog $tmppid $tmpqmp $tmpinitrd
+    rm -rf $tmpdir $tmprc
+fi
+
+exit $rc
