@@ -29,7 +29,7 @@ initrd=/usr/local/share/qemu-jeos/initramfs-$target_arch-$machine.img.gz
 #initrd=bin/initramfs-1.9.2.img.gz
 
 if test -z $QEMU_SRC; then
-    QEMU_SRC=~/git/qemu
+    QEMU_SRC=../../
 fi
 
 if ! which qmp >/dev/null 2>/dev/null; then
