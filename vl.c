@@ -2564,7 +2564,7 @@ int main(int argc, char **argv, char **envp)
                     exit(1);
                 }
                 if (strcmp(optarg, "node") == 0) {
-                    qemu_opts_create(qemu_find_opts("numa"), NULL, 0);
+                    qemu_opts_create(qemu_find_opts("numa"), NULL, 0, NULL);
                 } else if (memcmp(optarg, "node,", 5) == 0) {
                     qemu_opts_parse(qemu_find_opts("numa"), optarg + 5, 0);
                 } else {
@@ -3085,7 +3085,8 @@ int main(int argc, char **argv, char **envp)
             case QEMU_OPTION_uuid: {
                 QemuOpts *smbios;
 
-                smbios = qemu_opts_create(qemu_find_opts("smbios"), NULL, 0);
+                smbios = qemu_opts_create(qemu_find_opts("smbios"), NULL, 0,
+                                          NULL);
                 qemu_opt_set(smbios, "type", "1");
                 qemu_opt_set(smbios, "uuid", optarg);
                 break;
