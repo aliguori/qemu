@@ -63,7 +63,7 @@ void qemu_system_powerdown_request(void);
 void qemu_system_debug_request(void);
 void qemu_system_vmstop_request(RunState reason);
 int qemu_shutdown_requested_get(void);
-int qemu_shutdown_requested(void);
+ShutdownAction qemu_shutdown_requested(void);
 int qemu_powerdown_requested(void);
 void qemu_system_killed(int signal, pid_t pid);
 void qemu_kill_report(void);
