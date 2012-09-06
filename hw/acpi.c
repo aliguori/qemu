@@ -67,7 +67,7 @@ int acpi_table_add(QemuOpts *opts, void *opaque)
     char *buf, *f;
     uint64_t val;
     size_t len, start, allen;
-    bool has_header;
+    bool has_header = false;
     int changed;
     int r;
     struct acpi_table_header hdr;
