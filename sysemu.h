@@ -21,6 +21,7 @@ typedef enum ShutdownAction {
 } ShutdownAction;
 
 extern const char *bios_name;
+extern ShutdownAction on_shutdown;
 
 extern const char *qemu_name;
 extern uint8_t qemu_uuid[];
