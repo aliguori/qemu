@@ -152,8 +152,11 @@ static QemuOptDesc smbios_type_0_desc[] = {
 static int smbios_build_type_0_fields(QemuOpts *opts)
 {
     const char *buf;
+    Error *local_err = NULL;
 
-    if (qemu_opts_validate(opts, smbios_type_0_desc) == -1) {
+    qemu_opts_validate(opts, smbios_type_0_desc, &local_err);
+    if (local_err) {
+        error_free(local_err);
         return -1;
     }
 
@@ -223,9 +226,12 @@ static QemuOptDesc smbios_type_1_desc[] = {
 
 static int smbios_build_type_1_fields(QemuOpts *opts)
 {
+    Error *local_err = NULL;
     const char *buf;
 
-    if (qemu_opts_validate(opts, smbios_type_1_desc) == -1) {
+    qemu_opts_validate(opts, smbios_type_1_desc, &local_err);
+    if (local_err) {
+        error_free(local_err);
         return -1;
     }
 
@@ -286,9 +292,11 @@ int smbios_entry_add(QemuOpts *opts, void *opaque)
     if (buf) {
         struct smbios_structure_header *header;
         struct smbios_table *table;
+        Error *local_err = NULL;
         int size;
 
-        if (qemu_opts_validate(opts, smbios_file_desc) == -1) {
+        qemu_opts_validate(opts, smbios_file_desc, &local_err);
+        if (local_err) {
             return -1;
         }
 
