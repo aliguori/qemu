@@ -203,7 +203,7 @@ static void parse_option_size(const char *name, const char *value,
     if (value != NULL) {
         size = strtosz_suffix(value, &postfix, default_suffix);
         if (size >= 0 && !*postfix) {
-            *ret = (uint64_t) sizef;
+            *ret = (uint64_t) size;
             return;
 	}
     }
