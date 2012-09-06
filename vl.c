@@ -1890,11 +1890,6 @@ char *qemu_find_file(int type, const char *name)
     return buf;
 }
 
-static int device_help_func(QemuOpts *opts, void *opaque)
-{
-    return qdev_device_help(opts);
-}
-
 static int device_init_func(QemuOpts *opts, void *opaque)
 {
     DeviceState *dev;
