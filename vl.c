@@ -1932,6 +1932,8 @@ static int mon_init_func(QemuOpts *opts, void *opaque)
     const char *mode;
     int flags;
 
+    default_monitor = 0;
+
     mode = qemu_opt_get(opts, "mode");
     if (mode == NULL) {
         mode = "readline";
@@ -2325,6 +2327,88 @@ static void free_and_trace(gpointer mem)
     free(mem);
 }
 
+static const struct {
+    int index;
+    const char *section;
+    int abbrev;
+    const char *optval;
+} qemu_opt_parse_options[] = {
+#ifdef CONFIG_LIBISCSI
+    { QEMU_OPTION_iscsi, "iscsi", 0 },
+#endif
+    { QEMU_OPTION_mon, "mon", 1 },
+    { QEMU_OPTION_chardev, "chardev", 1 },
+    { QEMU_OPTION_fsdev, "fsdev", 1 },
+    { QEMU_OPTION_acpitable, "acpitable", 0 },
+    { QEMU_OPTION_smbios, "smbios", 0 },
+    { QEMU_OPTION_machine, "machine", 1 },
+    { QEMU_OPTION_device, "device", 1 },
+    { QEMU_OPTION_smp, "smp", 1 },
+    { QEMU_OPTION_spice, "spice", 0 },
+    { QEMU_OPTION_sandbox, "sandbox", 1 },
+    { QEMU_OPTION_localtime, "rtc", 0, "base=localtime" },
+    { QEMU_OPTION_enable_kvm, "machine", 0, "accel=kvm" },
+    { },
+};
+
+static const struct {
+    int index;
+    const char *section;
+    const char *optname;
+    const char *optval;
+} qemu_opt_set_options[] = {
+    { QEMU_OPTION_M, "machine", "type" },
+    { QEMU_OPTION_kernel, "machine", "kernel" },
+    { QEMU_OPTION_initrd, "machine", "initrd" },
+    { QEMU_OPTION_append, "machine", "append" },
+    { QEMU_OPTION_dtb, "machine", "dtb" },
+    { QEMU_OPTION_m, "machine", "ram_size" },
+    { QEMU_OPTION_bios, "machine", "bios" },
+    { QEMU_OPTION_S, "machine", "autostart", "off" },
+    { QEMU_OPTION_nodefaults, "machine", "default_devices", "off" },
+    { },
+};
+
+static bool try_qemu_opts_parse(int opt, const char *optarg)
+{
+    int i;
+
+    for (i = 0; qemu_opt_parse_options[i].section; i++) {
+        if (qemu_opt_parse_options[i].index == opt) {
+            QemuOpts *opts;
+            opts = qemu_opts_parse(qemu_find_opts("iscsi"),
+                                   qemu_opt_parse_options[i].optval ?: optarg,
+                                   qemu_opt_parse_options[i].abbrev);
+            if (!opts) {
+                exit(1);
+            }
+
+            return true;
+        }
+    }
+
+    return false;
+}
+
+static bool try_qemu_opts_set(int opt, const char *optarg)
+{
+    int i;
+
+    for (i = 0; qemu_opt_set_options[i].section; i++) {
+        if (qemu_opt_set_options[i].index == opt) {
+            if (qemu_opts_set(qemu_find_opts(qemu_opt_set_options[i].section),
+                              0, qemu_opt_set_options[i].optname,
+                              qemu_opt_set_options[i].optval ?: optarg)) {
+                exit(1);
+            }
+
+            return true;
+        }
+    }
+
+    return false;
+}
+
 int qemu_init_main_loop(void)
 {
     return main_loop_init();
@@ -2454,10 +2538,16 @@ int main(int argc, char **argv, char **envp)
                 printf("Option %s not supported for this target\n", popt->name);
                 exit(1);
             }
+
+            if (try_qemu_opts_parse(popt->index, optarg)) {
+                continue;
+            }
+
+            if (try_qemu_opts_set(popt->index, optarg)) {
+                continue;
+            }
+
             switch(popt->index) {
-            case QEMU_OPTION_M:
-                qemu_opts_set(qemu_find_opts("machine"), 0, "type", optarg);
-                break;
             case QEMU_OPTION_cpu:
                 /* hw initialization will check this */
                 cpu_model = optarg;
@@ -2597,18 +2687,6 @@ int main(int argc, char **argv, char **envp)
                     exit(1);
                 }
                 break;
-            case QEMU_OPTION_kernel:
-                qemu_opts_set(qemu_find_opts("machine"), 0, "kernel", optarg);
-                break;
-            case QEMU_OPTION_initrd:
-                qemu_opts_set(qemu_find_opts("machine"), 0, "initrd", optarg);
-                break;
-            case QEMU_OPTION_append:
-                qemu_opts_set(qemu_find_opts("machine"), 0, "append", optarg);
-                break;
-            case QEMU_OPTION_dtb:
-                qemu_opts_set(qemu_find_opts("machine"), 0, "dtb", optarg);
-                break;
             case QEMU_OPTION_cdrom:
                 drive_add(IF_DEFAULT, 2, optarg, CDROM_OPTS);
                 break;
@@ -2682,14 +2760,6 @@ int main(int argc, char **argv, char **envp)
                     exit(1);
                 }
                 break;
-#ifdef CONFIG_LIBISCSI
-            case QEMU_OPTION_iscsi:
-                opts = qemu_opts_parse(qemu_find_opts("iscsi"), optarg, 0);
-                if (!opts) {
-                    exit(1);
-                }
-                break;
-#endif
 #ifdef CONFIG_SLIRP
             case QEMU_OPTION_tftp:
                 legacy_tftp_prefix = optarg;
@@ -2727,10 +2797,6 @@ int main(int argc, char **argv, char **envp)
                 version();
                 exit(0);
                 break;
-            case QEMU_OPTION_m: {
-                qemu_opts_set(qemu_find_opts("machine"), 0, "ram_size", optarg);
-                break;
-            }
             case QEMU_OPTION_mempath:
                 mem_path = optarg;
                 break;
@@ -2754,21 +2820,12 @@ int main(int argc, char **argv, char **envp)
             case QEMU_OPTION_L:
                 data_dir = optarg;
                 break;
-            case QEMU_OPTION_bios:
-                qemu_opts_set(qemu_find_opts("machine"), 0, "bios", optarg);
-                break;
             case QEMU_OPTION_singlestep:
                 singlestep = 1;
-                break;
-            case QEMU_OPTION_S:
-                qemu_opts_set(qemu_find_opts("machine"), 0, "autostart", "off");
                 break;
 	    case QEMU_OPTION_k:
 		keyboard_layout = optarg;
 		break;
-            case QEMU_OPTION_localtime:
-                qemu_opts_parse(qemu_find_opts("rtc"), "base=localtime", 0);
-                break;
             case QEMU_OPTION_vga:
                 vga_model = optarg;
                 default_vga = 0;
@@ -2822,31 +2879,6 @@ int main(int argc, char **argv, char **envp)
             case QEMU_OPTION_qmp:
                 monitor_parse(optarg, "control");
                 default_monitor = 0;
-                break;
-            case QEMU_OPTION_mon:
-                opts = qemu_opts_parse(qemu_find_opts("mon"), optarg, 1);
-                if (!opts) {
-                    exit(1);
-                }
-                default_monitor = 0;
-                break;
-            case QEMU_OPTION_chardev:
-                opts = qemu_opts_parse(qemu_find_opts("chardev"), optarg, 1);
-                if (!opts) {
-                    exit(1);
-                }
-                break;
-            case QEMU_OPTION_fsdev:
-                olist = qemu_find_opts("fsdev");
-                if (!olist) {
-                    fprintf(stderr, "fsdev is not supported by this qemu build.\n");
-                    exit(1);
-                }
-                opts = qemu_opts_parse(olist, optarg, 1);
-                if (!opts) {
-                    fprintf(stderr, "parse error: %s\n", optarg);
-                    exit(1);
-                }
                 break;
             case QEMU_OPTION_virtfs: {
                 QemuOpts *fsdev;
@@ -3019,38 +3051,12 @@ int main(int argc, char **argv, char **envp)
                 qdev_prop_register_global_list(slew_lost_ticks);
                 break;
             }
-            case QEMU_OPTION_acpitable:
-                qemu_opts_parse(qemu_find_opts("acpitable"), optarg, 0);
-                break;
-            case QEMU_OPTION_smbios:
-                qemu_opts_parse(qemu_find_opts("smbios"), optarg, 0);
-                break;
-            case QEMU_OPTION_enable_kvm:
-                olist = qemu_find_opts("machine");
-                qemu_opts_parse(olist, "accel=kvm", 0);
-                break;
-            case QEMU_OPTION_machine:
-                olist = qemu_find_opts("machine");
-                opts = qemu_opts_parse(olist, optarg, 1);
-                if (!opts) {
-                    fprintf(stderr, "parse error: %s\n", optarg);
-                    exit(1);
-                }
-                break;
             case QEMU_OPTION_usb:
                 usb_enabled = 1;
                 break;
             case QEMU_OPTION_usbdevice:
                 usb_enabled = 1;
                 add_device_config(DEV_USB, optarg);
-                break;
-            case QEMU_OPTION_device:
-                if (!qemu_opts_parse(qemu_find_opts("device"), optarg, 1)) {
-                    exit(1);
-                }
-                break;
-            case QEMU_OPTION_smp:
-                qemu_opts_parse(qemu_find_opts("smp"), optarg, 1);
                 break;
 	    case QEMU_OPTION_vnc:
 #ifdef CONFIG_VNC
@@ -3161,9 +3167,6 @@ int main(int argc, char **argv, char **envp)
                 incoming = optarg;
                 runstate_set(RUN_STATE_INMIGRATE);
                 break;
-            case QEMU_OPTION_nodefaults:
-                qemu_opts_set(qemu_find_opts("machine"), 0, "default_devices", "off");
-                break;
             case QEMU_OPTION_xen_domid:
                 if (!(xen_available())) {
                     printf("Option %s not supported for this target\n", popt->name);
@@ -3205,18 +3208,6 @@ int main(int argc, char **argv, char **envp)
                     }
                     break;
                 }
-            case QEMU_OPTION_spice:
-                olist = qemu_find_opts("spice");
-                if (!olist) {
-                    fprintf(stderr, "spice is not supported by this qemu build.\n");
-                    exit(1);
-                }
-                opts = qemu_opts_parse(olist, optarg, 0);
-                if (!opts) {
-                    fprintf(stderr, "parse error: %s\n", optarg);
-                    exit(1);
-                }
-                break;
             case QEMU_OPTION_writeconfig:
                 {
                     FILE *fp;
@@ -3238,12 +3229,6 @@ int main(int argc, char **argv, char **envp)
                 break;
             case QEMU_OPTION_qtest_log:
                 qtest_log = optarg;
-                break;
-            case QEMU_OPTION_sandbox:
-                opts = qemu_opts_parse(qemu_find_opts("sandbox"), optarg, 1);
-                if (!opts) {
-                    exit(0);
-                }
                 break;
             default:
                 os_parse_cmd_args(popt->index, optarg);
