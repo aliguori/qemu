@@ -119,8 +119,8 @@ QTestState *qtest_init(const char *extra_args)
                                   extra_args ?: "");
 
         ret = system(command);
-        exit(ret);
         g_free(command);
+        exit(ret);
     }
 
     s->fd = socket_accept(sock);
@@ -163,6 +163,7 @@ void qtest_quit(QTestState *s)
     g_free(s->pid_file);
     g_free(s->socket_path);
     g_free(s->qmp_socket_path);
+    g_free(s);
 }
 
 static void socket_sendf(int fd, const char *fmt, va_list ap)
@@ -187,6 +188,8 @@ static void socket_sendf(int fd, const char *fmt, va_list ap)
 
         offset += len;
     }
+
+    g_free(str);
 }
 
 static void GCC_FMT_ATTR(2, 3) qtest_sendf(QTestState *s, const char *fmt, ...)
