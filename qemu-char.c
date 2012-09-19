@@ -2269,6 +2269,9 @@ return_err:
 /* TCP Net console */
 
 typedef struct {
+
+    GIOChannel *chan, *listen_chan;
+    guint tag, listen_tag;
     int fd, listen_fd;
     int connected;
     int max_size;
@@ -2278,13 +2281,13 @@ typedef struct {
     int msgfd;
 } TCPCharDriver;
 
-static void tcp_chr_accept(void *opaque);
+static gboolean tcp_chr_accept(GIOChannel *chan, GIOCondition cond, void *opaque);
 
 static int tcp_chr_write(CharDriverState *chr, const uint8_t *buf, int len)
 {
     TCPCharDriver *s = chr->opaque;
     if (s->connected) {
-        return send_all(s->fd, buf, len);
+        return io_channel_send_all(s->chan, buf, len);
     } else {
         /* XXX: indicate an error ? */
         return len;
@@ -2424,15 +2427,16 @@ static ssize_t tcp_chr_recv(CharDriverState *chr, char *buf, size_t len)
 }
 #endif
 
-static void tcp_chr_read(void *opaque)
+static gboolean tcp_chr_read(GIOChannel *chan, GIOCondition cond, void *opaque)
 {
     CharDriverState *chr = opaque;
     TCPCharDriver *s = chr->opaque;
     uint8_t buf[READ_BUF_LEN];
     int len, size;
 
-    if (!s->connected || s->max_size <= 0)
-        return;
+    if (!s->connected || s->max_size <= 0) {
+        return TRUE;
+    }
     len = sizeof(buf);
     if (len > s->max_size)
         len = s->max_size;
@@ -2440,10 +2444,13 @@ static void tcp_chr_read(void *opaque)
     if (size == 0) {
         /* connection closed */
         s->connected = 0;
-        if (s->listen_fd >= 0) {
-            qemu_set_fd_handler2(s->listen_fd, NULL, tcp_chr_accept, NULL, chr);
+        if (s->listen_chan) {
+            s->listen_tag = g_io_add_watch(s->listen_chan, G_IO_IN, tcp_chr_accept, chr);
         }
-        qemu_set_fd_handler2(s->fd, NULL, NULL, NULL, NULL);
+        g_source_remove(s->tag);
+        s->tag = 0;
+        g_io_channel_unref(s->chan);
+        s->chan = NULL;
         closesocket(s->fd);
         s->fd = -1;
         qemu_chr_be_event(chr, CHR_EVENT_CLOSED);
@@ -2453,6 +2460,8 @@ static void tcp_chr_read(void *opaque)
         if (size > 0)
             qemu_chr_be_write(chr, buf, size);
     }
+
+    return TRUE;
 }
 
 #ifndef _WIN32
@@ -2468,9 +2477,8 @@ static void tcp_chr_connect(void *opaque)
     TCPCharDriver *s = chr->opaque;
 
     s->connected = 1;
-    if (s->fd >= 0) {
-        qemu_set_fd_handler2(s->fd, tcp_chr_read_poll,
-                             tcp_chr_read, NULL, chr);
+    if (s->chan) {
+        s->tag = io_add_watch_poll(s->chan, tcp_chr_read_poll, tcp_chr_read, chr);
     }
     qemu_chr_generic_open(chr);
 }
@@ -2506,13 +2514,15 @@ static int tcp_chr_add_client(CharDriverState *chr, int fd)
     if (s->do_nodelay)
         socket_set_nodelay(fd);
     s->fd = fd;
-    qemu_set_fd_handler2(s->listen_fd, NULL, NULL, NULL, NULL);
+    s->chan = io_channel_from_socket(fd);
+    g_source_remove(s->listen_tag);
+    s->listen_tag = 0;
     tcp_chr_connect(chr);
 
     return 0;
 }
 
-static void tcp_chr_accept(void *opaque)
+static gboolean tcp_chr_accept(GIOChannel *channel, GIOCondition cond, void *opaque)
 {
     CharDriverState *chr = opaque;
     TCPCharDriver *s = chr->opaque;
@@ -2537,7 +2547,7 @@ static void tcp_chr_accept(void *opaque)
 	}
         fd = qemu_accept(s->listen_fd, addr, &len);
         if (fd < 0 && errno != EINTR) {
-            return;
+            return FALSE;
         } else if (fd >= 0) {
             if (s->do_telnetopt)
                 tcp_chr_telnet_init(fd);
@@ -2546,17 +2556,29 @@ static void tcp_chr_accept(void *opaque)
     }
     if (tcp_chr_add_client(chr, fd) < 0)
 	close(fd);
+
+    return TRUE;
 }
 
 static void tcp_chr_close(CharDriverState *chr)
 {
     TCPCharDriver *s = chr->opaque;
     if (s->fd >= 0) {
-        qemu_set_fd_handler2(s->fd, NULL, NULL, NULL, NULL);
+        if (s->tag) {
+            g_source_remove(s->tag);
+        }
+        if (s->chan) {
+            g_io_channel_unref(s->chan);
+        }
         closesocket(s->fd);
     }
     if (s->listen_fd >= 0) {
-        qemu_set_fd_handler2(s->listen_fd, NULL, NULL, NULL, NULL);
+        if (s->listen_tag) {
+            g_source_remove(s->listen_tag);
+        }
+        if (s->listen_chan) {
+            g_io_channel_unref(s->listen_chan);
+        }
         closesocket(s->listen_fd);
     }
     g_free(s);
@@ -2620,7 +2642,8 @@ static CharDriverState *qemu_chr_open_socket(QemuOpts *opts)
 
     if (is_listen) {
         s->listen_fd = fd;
-        qemu_set_fd_handler2(s->listen_fd, NULL, tcp_chr_accept, NULL, chr);
+        s->listen_chan = io_channel_from_socket(s->listen_fd);
+        s->listen_tag = g_io_add_watch(s->listen_chan, G_IO_IN, tcp_chr_accept, chr);
         if (is_telnet)
             s->do_telnetopt = 1;
 
@@ -2650,7 +2673,7 @@ static CharDriverState *qemu_chr_open_socket(QemuOpts *opts)
     if (is_listen && is_waitconnect) {
         printf("QEMU waiting for connection on: %s\n",
                chr->filename);
-        tcp_chr_accept(chr);
+        tcp_chr_accept(s->listen_chan, G_IO_IN, chr);
         socket_set_nonblock(s->listen_fd);
     }
     return chr;
