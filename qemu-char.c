@@ -491,7 +491,6 @@ static CharDriverState *qemu_chr_open_mux(CharDriverState *drv)
     return chr;
 }
 
-
 #ifdef _WIN32
 int send_all(int fd, const void *buf, int len1)
 {
@@ -541,16 +540,186 @@ int send_all(int fd, const void *_buf, int len1)
 
 #ifndef _WIN32
 
-typedef struct {
-    int fd_in, fd_out;
+typedef struct IOWatchPoll
+{
+    GSource *src;
     int max_size;
-} FDCharDriver;
 
+    IOCanReadHandler *fd_can_read;
+    void *opaque;
+
+    QTAILQ_ENTRY(IOWatchPoll) node;
+} IOWatchPoll;
+
+static QTAILQ_HEAD(, IOWatchPoll) io_watch_poll_list =
+    QTAILQ_HEAD_INITIALIZER(io_watch_poll_list);
+
+static IOWatchPoll *io_watch_poll_from_source(GSource *source)
+{
+    IOWatchPoll *i;
+
+    QTAILQ_FOREACH(i, &io_watch_poll_list, node) {
+        if (i->src == source) {
+            return i;
+        }
+    }
+
+    return NULL;
+}
+
+static gboolean io_watch_poll_prepare(GSource *source, gint *timeout_)
+{
+    IOWatchPoll *iwp = io_watch_poll_from_source(source);
+
+    iwp->max_size = iwp->fd_can_read(iwp->opaque);
+    if (iwp->max_size == 0) {
+        return TRUE;
+    }
+
+    return g_io_watch_funcs.prepare(source, timeout_);
+}
+
+static gboolean io_watch_poll_check(GSource *source)
+{
+    IOWatchPoll *iwp = io_watch_poll_from_source(source);
+
+    if (iwp->max_size == 0) {
+        return FALSE;
+    }
+
+    return g_io_watch_funcs.check(source);
+}
+
+static gboolean io_watch_poll_dispatch(GSource *source, GSourceFunc callback, gpointer user_data)
+{
+    return g_io_watch_funcs.dispatch(source, callback, user_data);
+}
+
+static void io_watch_poll_finalize(GSource *source)
+{
+    IOWatchPoll *iwp = io_watch_poll_from_source(source);
+    QTAILQ_REMOVE(&io_watch_poll_list, iwp, node);
+    g_io_watch_funcs.finalize(source);
+}
+
+static GSourceFuncs io_watch_poll_funcs = {
+    .prepare = io_watch_poll_prepare,
+    .check = io_watch_poll_check,
+    .dispatch = io_watch_poll_dispatch,
+    .finalize = io_watch_poll_finalize,
+};
+
+/* Can only be used for read */
+static guint io_add_watch_poll(GIOChannel *channel,
+                               IOCanReadHandler *fd_can_read,
+                               GIOFunc fd_read,
+                               gpointer user_data)
+{
+    IOWatchPoll *iwp;
+    GSource *src;
+    guint tag;
+
+    src = g_io_create_watch(channel, G_IO_IN | G_IO_ERR | G_IO_HUP);
+    g_source_set_funcs(src, &io_watch_poll_funcs);
+    g_source_set_callback(src, (GSourceFunc)fd_read, user_data, NULL);
+    tag = g_source_attach(src, NULL);
+    g_source_unref(src);
+
+    iwp = g_malloc0(sizeof(*iwp));
+    iwp->src = src;
+    iwp->max_size = 0;
+    iwp->fd_can_read = fd_can_read;
+    iwp->opaque = user_data;
+
+    QTAILQ_INSERT_HEAD(&io_watch_poll_list, iwp, node);
+
+    return tag;
+}
+
+static GIOChannel *io_channel_from_fd(int fd)
+{
+    GIOChannel *chan;
+
+    if (fd == -1) {
+        return NULL;
+    }
+
+    chan = g_io_channel_unix_new(fd);
+
+    g_io_channel_set_encoding(chan, NULL, NULL);
+    g_io_channel_set_buffered(chan, FALSE);
+
+    return chan;
+}
+
+static int io_channel_send_all(GIOChannel *fd, const void *_buf, int len1)
+{
+    GIOStatus status;
+    gsize bytes_written;
+    int len;
+    const uint8_t *buf = _buf;
+
+    len = len1;
+    while (len > 0) {
+        status = g_io_channel_write_chars(fd, (const gchar *)buf, len,
+                                          &bytes_written, NULL);
+        if (status != G_IO_STATUS_NORMAL) {
+            if (status != G_IO_STATUS_AGAIN) {
+                return -1;
+            }
+        } else if (status == G_IO_STATUS_EOF) {
+            break;
+        } else {
+            buf += bytes_written;
+            len -= bytes_written;
+        }
+    }
+    return len1 - len;
+}
+
+typedef struct FDCharDriver {
+    CharDriverState *chr;
+    GIOChannel *fd_in, *fd_out;
+    guint fd_in_tag;
+    int max_size;
+    QTAILQ_ENTRY(FDCharDriver) node;
+} FDCharDriver;
 
 static int fd_chr_write(CharDriverState *chr, const uint8_t *buf, int len)
 {
     FDCharDriver *s = chr->opaque;
-    return send_all(s->fd_out, buf, len);
+    
+    return io_channel_send_all(s->fd_out, buf, len);
+}
+
+static gboolean fd_chr_read(GIOChannel *chan, GIOCondition cond, void *opaque)
+{
+    CharDriverState *chr = opaque;
+    FDCharDriver *s = chr->opaque;
+    int len;
+    uint8_t buf[READ_BUF_LEN];
+    GIOStatus status;
+    gsize bytes_read;
+
+    len = sizeof(buf);
+    if (len > s->max_size) {
+        len = s->max_size;
+    }
+    if (len == 0) {
+        return FALSE;
+    }
+
+    status = g_io_channel_read_chars(chan, (gchar *)buf,
+                                     len, &bytes_read, NULL);
+    if (status == G_IO_STATUS_EOF) {
+        qemu_chr_be_event(chr, CHR_EVENT_CLOSED);
+        return FALSE;
+    }
+    if (status == G_IO_STATUS_NORMAL) {
+        qemu_chr_be_write(chr, buf, bytes_read);
+    }
+
+    return TRUE;
 }
 
 static int fd_chr_read_poll(void *opaque)
@@ -562,37 +731,16 @@ static int fd_chr_read_poll(void *opaque)
     return s->max_size;
 }
 
-static void fd_chr_read(void *opaque)
-{
-    CharDriverState *chr = opaque;
-    FDCharDriver *s = chr->opaque;
-    int size, len;
-    uint8_t buf[READ_BUF_LEN];
-
-    len = sizeof(buf);
-    if (len > s->max_size)
-        len = s->max_size;
-    if (len == 0)
-        return;
-    size = read(s->fd_in, buf, len);
-    if (size == 0) {
-        /* FD has been closed. Remove it from the active list.  */
-        qemu_set_fd_handler2(s->fd_in, NULL, NULL, NULL, NULL);
-        qemu_chr_be_event(chr, CHR_EVENT_CLOSED);
-        return;
-    }
-    if (size > 0) {
-        qemu_chr_be_write(chr, buf, size);
-    }
-}
-
 static void fd_chr_update_read_handler(CharDriverState *chr)
 {
     FDCharDriver *s = chr->opaque;
 
-    if (s->fd_in >= 0) {
-        qemu_set_fd_handler2(s->fd_in, fd_chr_read_poll,
-                             fd_chr_read, NULL, chr);
+    if (s->fd_in_tag) {
+        g_source_remove(s->fd_in_tag);
+    }
+
+    if (s->fd_in) {
+        s->fd_in_tag = io_add_watch_poll(s->fd_in, fd_chr_read_poll, fd_chr_read, chr);
     }
 }
 
@@ -600,8 +748,16 @@ static void fd_chr_close(struct CharDriverState *chr)
 {
     FDCharDriver *s = chr->opaque;
 
-    if (s->fd_in >= 0) {
-        qemu_set_fd_handler2(s->fd_in, NULL, NULL, NULL, NULL);
+    if (s->fd_in_tag) {
+        g_source_remove(s->fd_in_tag);
+        s->fd_in_tag = 0;
+    }
+
+    if (s->fd_in) {
+        g_io_channel_unref(s->fd_in);
+    }
+    if (s->fd_out) {
+        g_io_channel_unref(s->fd_out);
     }
 
     g_free(s);
@@ -616,8 +772,9 @@ static CharDriverState *qemu_chr_open_fd(int fd_in, int fd_out)
 
     chr = g_malloc0(sizeof(CharDriverState));
     s = g_malloc0(sizeof(FDCharDriver));
-    s->fd_in = fd_in;
-    s->fd_out = fd_out;
+    s->fd_in = io_channel_from_fd(fd_in);
+    s->fd_out = io_channel_from_fd(fd_out);
+    s->chr = chr;
     chr->opaque = s;
     chr->chr_write = fd_chr_write;
     chr->chr_update_read_handler = fd_chr_update_read_handler;
@@ -1077,22 +1234,24 @@ static int tty_serial_ioctl(CharDriverState *chr, int cmd, void *arg)
     case CHR_IOCTL_SERIAL_SET_PARAMS:
         {
             QEMUSerialSetParams *ssp = arg;
-            tty_serial_init(s->fd_in, ssp->speed, ssp->parity,
+            tty_serial_init(g_io_channel_unix_get_fd(s->fd_in),
+                            ssp->speed, ssp->parity,
                             ssp->data_bits, ssp->stop_bits);
         }
         break;
     case CHR_IOCTL_SERIAL_SET_BREAK:
         {
             int enable = *(int *)arg;
-            if (enable)
-                tcsendbreak(s->fd_in, 1);
+            if (enable) {
+                tcsendbreak(g_io_channel_unix_get_fd(s->fd_in), 1);
+            }
         }
         break;
     case CHR_IOCTL_SERIAL_GET_TIOCM:
         {
             int sarg = 0;
             int *targ = (int *)arg;
-            ioctl(s->fd_in, TIOCMGET, &sarg);
+            ioctl(g_io_channel_unix_get_fd(s->fd_in), TIOCMGET, &sarg);
             *targ = 0;
             if (sarg & TIOCM_CTS)
                 *targ |= CHR_TIOCM_CTS;
@@ -1112,7 +1271,7 @@ static int tty_serial_ioctl(CharDriverState *chr, int cmd, void *arg)
         {
             int sarg = *(int *)arg;
             int targ = 0;
-            ioctl(s->fd_in, TIOCMGET, &targ);
+            ioctl(g_io_channel_unix_get_fd(s->fd_in), TIOCMGET, &targ);
             targ &= ~(CHR_TIOCM_CTS | CHR_TIOCM_CAR | CHR_TIOCM_DSR
                      | CHR_TIOCM_RI | CHR_TIOCM_DTR | CHR_TIOCM_RTS);
             if (sarg & CHR_TIOCM_CTS)
@@ -1127,7 +1286,7 @@ static int tty_serial_ioctl(CharDriverState *chr, int cmd, void *arg)
                 targ |= TIOCM_DTR;
             if (sarg & CHR_TIOCM_RTS)
                 targ |= TIOCM_RTS;
-            ioctl(s->fd_in, TIOCMSET, &targ);
+            ioctl(g_io_channel_unix_get_fd(s->fd_in), TIOCMSET, &targ);
         }
         break;
     default:
@@ -1142,7 +1301,7 @@ static void qemu_chr_close_tty(CharDriverState *chr)
     int fd = -1;
 
     if (s) {
-        fd = s->fd_in;
+        fd = g_io_channel_unix_get_fd(s->fd_in);
     }
 
     fd_chr_close(chr);
