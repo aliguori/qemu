@@ -307,3 +307,11 @@ void qemu_spice_register_ports(void)
     }
 }
 #endif
+
+static void register_types(void)
+{
+    register_char_driver("spicevmc", qemu_chr_open_spice);
+    // FIXME
+}
+
+type_init(register_types);
