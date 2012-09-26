@@ -1532,7 +1532,7 @@ static void text_console_do_init(CharDriverState *chr, DisplayState *ds)
         chr->init(chr);
 }
 
-CharDriverState *text_console_init(QemuOpts *opts)
+static CharDriverState *text_console_init(QemuOpts *opts)
 {
     CharDriverState *chr;
     QemuConsole *s;
@@ -1722,3 +1722,10 @@ PixelFormat qemu_default_pixelformat(int bpp)
     }
     return pf;
 }
+
+static void register_types(void)
+{
+    register_char_driver("vc", text_console_init);
+}
+
+type_init(register_types);
