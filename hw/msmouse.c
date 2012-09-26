@@ -64,7 +64,7 @@ static void msmouse_chr_close (struct CharDriverState *chr)
     g_free (chr);
 }
 
-CharDriverState *qemu_chr_open_msmouse(QemuOpts *opts)
+static CharDriverState *qemu_chr_open_msmouse(QemuOpts *opts)
 {
     CharDriverState *chr;
 
@@ -76,3 +76,10 @@ CharDriverState *qemu_chr_open_msmouse(QemuOpts *opts)
 
     return chr;
 }
+
+static void register_types(void)
+{
+    register_char_driver("msmouse", qemu_chr_open_msmouse);
+}
+
+type_init(register_types);

@@ -28,7 +28,6 @@
 #include "qemu/timer.h"
 #include "char/char.h"
 #include "hw/usb.h"
-#include "hw/msmouse.h"
 #include "qmp-commands.h"
 
 #include <unistd.h>
@@ -3643,7 +3642,6 @@ static void register_types(void)
     register_char_driver("null", qemu_chr_open_null);
     register_char_driver("socket", qemu_chr_open_socket);
     register_char_driver("udp", qemu_chr_open_udp);
-    register_char_driver("msmouse", qemu_chr_open_msmouse);
     register_char_driver("vc", text_console_init);
     register_char_driver("memory", qemu_chr_open_ringbuf);
 #ifdef _WIN32
