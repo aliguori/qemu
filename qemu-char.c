@@ -3681,12 +3681,6 @@ static void register_types(void)
     || defined(__FreeBSD_kernel__)
     register_char_driver("parport", qemu_chr_open_pp);
 #endif
-#ifdef CONFIG_SPICE
-    register_char_driver("spicevmc", qemu_chr_open_spice);
-#if SPICE_SERVER_VERSION >= 0x000c02
-    register_char_driver("spiceport", qemu_chr_open_spice_port);
-#endif
-#endif
 }
 
 type_init(register_types);
