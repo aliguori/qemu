@@ -100,6 +100,7 @@ enum VMStateFlags {
     VMS_MULTIPLY         = 0x200,  /* multiply "size" field by field_size */
     VMS_VARRAY_UINT8     = 0x400,  /* Array with size in uint8_t field*/
     VMS_VARRAY_UINT32    = 0x800,  /* Array with size in uint32_t field*/
+    VMS_DIVIDE           = 0x1000, /* divide "size" field by field_size */
 };
 
 typedef struct {
@@ -418,6 +419,18 @@ extern const VMStateInfo vmstate_info_bitmap;
     .size         = (_multiply),                                      \
     .info         = &vmstate_info_buffer,                            \
     .flags        = VMS_VBUFFER|VMS_POINTER|VMS_MULTIPLY,            \
+    .offset       = offsetof(_state, _field),                        \
+    .start        = (_start),                                        \
+}
+
+#define VMSTATE_VBUFFER_DIVIDE(_field, _state, _version, _test, _start, _field_size, _divide) { \
+    .name         = (stringify(_field)),                             \
+    .version_id   = (_version),                                      \
+    .field_exists = (_test),                                         \
+    .size_offset  = vmstate_offset_value(_state, _field_size, uint32_t),\
+    .size         = (_divide),                                       \
+    .info         = &vmstate_info_buffer,                            \
+    .flags        = VMS_VBUFFER|VMS_POINTER|VMS_DIVIDE,              \
     .offset       = offsetof(_state, _field),                        \
     .start        = (_start),                                        \
 }
