@@ -1700,6 +1700,10 @@ int vmstate_load_state(QEMUFile *f, const VMStateDescription *vmsd,
                 if (field->flags & VMS_MULTIPLY) {
                     size *= field->size;
                 }
+                if (field->flags & VMS_DIVIDE) {
+                    assert((size % field->size) == 0);
+                    size /= field->size;
+                }
             }
             if (field->flags & VMS_ARRAY) {
                 n_elems = field->num;
@@ -1763,6 +1767,10 @@ void vmstate_save_state(QEMUFile *f, const VMStateDescription *vmsd,
                 size = *(int32_t *)(opaque+field->size_offset);
                 if (field->flags & VMS_MULTIPLY) {
                     size *= field->size;
+                }
+                if (field->flags & VMS_DIVIDE) {
+                    assert((size % field->size) == 0);
+                    size /= field->size;
                 }
             }
             if (field->flags & VMS_ARRAY) {
