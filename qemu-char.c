@@ -540,9 +540,14 @@ static int stdio_nb_clients;
 
 #ifndef _WIN32
 
+#define TYPE_CHARDEV_FILE "chardev-file"
+#define CHARDEV_FILE(obj) OBJECT_CHECK(FDCharDriver, (obj), TYPE_CHARDEV_FILE)
+
 typedef struct {
+    CharDriverState parent_obj;
     int fd_in, fd_out;
     int max_size;
+    char *path;
 } FDCharDriver;
 
 
@@ -609,19 +614,20 @@ static void fd_chr_close(struct CharDriverState *chr)
         }
     }
 
-    g_free(s);
+    g_free(s->path);
+    if ((void *)s != (void *)chr) {
+        g_free(s);
+    }
     qemu_chr_be_event(chr, CHR_EVENT_CLOSED);
 }
 
 /* open a character device to a unix fd */
-static void qemu_chr_open_fd(CharDriverState *chr, int fd_in, int fd_out)
+static void qemu_chr_init_fd(CharDriverState *chr, int fd_in, int fd_out)
 {
-    FDCharDriver *s;
+    FDCharDriver *s = chr->opaque;
 
-    s = g_malloc0(sizeof(FDCharDriver));
     s->fd_in = fd_in;
     s->fd_out = fd_out;
-    chr->opaque = s;
     chr->chr_write = fd_chr_write;
     chr->chr_update_read_handler = fd_chr_update_read_handler;
     chr->chr_close = fd_chr_close;
@@ -629,17 +635,67 @@ static void qemu_chr_open_fd(CharDriverState *chr, int fd_in, int fd_out)
     qemu_chr_generic_open(chr);
 }
 
-static void qemu_chr_open_file_out(CharDriverState *chr, QemuOpts *opts, Error **errp)
+static void qemu_chr_open_fd(CharDriverState *chr, int fd_in, int fd_out)
 {
+    FDCharDriver *s;
+
+    s = g_malloc0(sizeof(FDCharDriver));
+    chr->opaque = s;
+    qemu_chr_init_fd(chr, fd_in, fd_out);
+}
+
+static void qemu_chr_open_file_out(CharDriverState *chr, Error **errp)
+{
+    FDCharDriver *s = chr->opaque;
     int fd_out;
 
-    TFR(fd_out = qemu_open(qemu_opt_get(opts, "path"),
-                      O_WRONLY | O_TRUNC | O_CREAT | O_BINARY, 0666));
+    if (s->path == NULL || s->path[0] == 0) {
+        error_setg(errp, "'path' property must be set");
+        return;
+    }
+
+    TFR(fd_out = qemu_open(s->path, O_WRONLY | O_TRUNC | O_CREAT | O_BINARY, 0666));
     if (fd_out < 0) {
-        error_setg(errp, "Failed to open file `%s'", qemu_opt_get(opts, "path"));
+        error_setg(errp, "Failed to open file `%s'", s->path);
+        return;
     } else {
         qemu_chr_open_fd(chr, -1, fd_out);
     }
+}
+
+static char *chardev_file_get_path(Object *obj, Error **errp)
+{
+    CharDriverState *chr = CHARDEV(obj);
+    FDCharDriver *s = chr->opaque;
+
+    return s->path ? g_strdup(s->path) : g_strdup("");
+}
+
+static void chardev_file_set_path(Object *obj, const char *value, Error **errp)
+{
+    CharDriverState *chr = CHARDEV(obj);
+    FDCharDriver *s = chr->opaque;
+
+    if (chr->realized) {
+        error_set(errp, QERR_PERMISSION_DENIED);
+        return;
+    }
+
+    if (s->path) {
+        g_free(s->path);
+    }
+
+    s->path = g_strdup(value);
+}
+
+static void chardev_file_initfn(Object *obj)
+{
+    CharDriverState *chr = CHARDEV(obj);
+
+    object_property_add_str(obj, "path", chardev_file_get_path, chardev_file_set_path, NULL);
+#ifndef _WIN32
+    chr->opaque = CHARDEV_FILE(obj);
+#endif
 }
 
 static void qemu_chr_open_pipe(CharDriverState *chr, QemuOpts *opts, Error **errp)
@@ -2816,9 +2872,6 @@ static const TypeInfo chardev_pty_info = {
 };
 #endif
 
-#define TYPE_CHARDEV_file "chardev-file"
-#define CHARDEV_file OBJECT_CHECK(CharDriverState, (obj), TYPE_CHARDEV_file)
-
 static void chardev_file_class_init(ObjectClass *klass, void *data)
 {
     CharDriverClass *cdc = CHARDEV_CLASS(klass);
@@ -2826,14 +2879,18 @@ static void chardev_file_class_init(ObjectClass *klass, void *data)
 #ifdef _WIN32
     cdc->open = qemu_chr_open_win_file_out;
 #else
-    cdc->open = qemu_chr_open_file_out;
+    cdc->realize = qemu_chr_open_file_out;
 #endif
 }
 
 static const TypeInfo chardev_file_info = {
-    .name = TYPE_CHARDEV_file,
+    .name = TYPE_CHARDEV_FILE,
     .parent = TYPE_CHARDEV,
     .class_init = chardev_file_class_init,
+    .instance_init = chardev_file_initfn,
+#ifndef _WIN32
+    .instance_size = sizeof(FDCharDriver),
+#endif
 };
 
 #define TYPE_CHARDEV_pipe "chardev-pipe"
@@ -2984,6 +3041,10 @@ CharDriverState *qemu_chr_new_from_opts(QemuOpts *opts,
     if (cdc->open) {
         cdc->open(chr, opts, &err);
     } else {
+        if (strcmp(class_name, TYPE_CHARDEV_FILE) == 0) {
+            object_property_set_str(OBJECT(chr), qemu_opt_get(opts, "path"), "path", &err);
+        }
+
         if (!err) {
             object_property_set_bool(OBJECT(chr), true, "realized", &err);
         }
