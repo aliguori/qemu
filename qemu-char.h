@@ -53,8 +53,21 @@ typedef struct {
 
 #define TYPE_CHARDEV "chardev"
 #define CHARDEV(obj) OBJECT_CHECK(CharDriverState, (obj), TYPE_CHARDEV)
+#define CHARDEV_CLASS(klass) \
+    OBJECT_CLASS_CHECK(CharDriverClass, (klass), TYPE_CHARDEV)
+#define CHARDEV_GET_CLASS(obj) \
+    OBJECT_GET_CLASS(CharDriverClass, (obj), TYPE_CHARDEV)
 
 typedef void IOEventHandler(void *opaque, int event);
+
+typedef struct CharDriverClass CharDriverClass;
+
+struct CharDriverClass
+{
+    ObjectClass parent_class;
+
+    void (*open)(struct CharDriverState *chr, QemuOpts *opts, Error **errp);
+};
 
 struct CharDriverState {
     Object parent_obj;

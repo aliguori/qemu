@@ -1540,14 +1540,11 @@ static void text_console_do_init(CharDriverState *chr, DisplayState *ds)
         chr->init(chr);
 }
 
-CharDriverState *text_console_init(QemuOpts *opts)
+void text_console_init(CharDriverState *chr, QemuOpts *opts, Error **errp)
 {
-    CharDriverState *chr;
     TextConsole *s;
     unsigned width;
     unsigned height;
-
-    chr = CHARDEV(object_new(TYPE_CHARDEV));
 
     width = qemu_opt_get_number(opts, "width", 0);
     if (width == 0)
@@ -1564,8 +1561,8 @@ CharDriverState *text_console_init(QemuOpts *opts)
     }
 
     if (!s) {
-        object_delete(OBJECT(chr));
-        return NULL;
+        error_setg(errp, "failed to initialize console");
+        return;
     }
 
     s->chr = chr;
@@ -1573,7 +1570,6 @@ CharDriverState *text_console_init(QemuOpts *opts)
     s->g_height = height;
     chr->opaque = s;
     chr->chr_set_echo = text_console_set_echo;
-    return chr;
 }
 
 void text_consoles_set_display(DisplayState *ds)

@@ -171,26 +171,26 @@ static void spice_chr_guest_close(struct CharDriverState *chr)
     vmc_unregister_interface(s);
 }
 
-static void print_allowed_subtypes(void)
+static char *get_allowed_subtypes(void)
 {
+    char *ret = NULL;
     const char** psubtype;
     int i;
 
-    fprintf(stderr, "allowed names: ");
     for(i=0, psubtype = spice_server_char_device_recognized_subtypes();
         *psubtype != NULL; ++psubtype, ++i) {
         if (i == 0) {
-            fprintf(stderr, "%s", *psubtype);
+            ret = g_strdup(*psubtype);
         } else {
-            fprintf(stderr, ", %s", *psubtype);
+            char *old = ret;
+            ret = g_strdup("%s, %s", ret, *psubtype);
+            g_free(old);
         }
     }
-    fprintf(stderr, "\n");
 }
 
-CharDriverState *qemu_chr_open_spice(QemuOpts *opts)
+void qemu_chr_open_spice(CharDriverState *chr, QemuOpts *opts, Error **errp)
 {
-    CharDriverState *chr;
     SpiceCharDriver *s;
     const char* name = qemu_opt_get(opts, "name");
     uint32_t debug = qemu_opt_get_number(opts, "debug", 0);
@@ -198,9 +198,10 @@ CharDriverState *qemu_chr_open_spice(QemuOpts *opts)
     const char *subtype = NULL;
 
     if (name == NULL) {
-        fprintf(stderr, "spice-qemu-char: missing name parameter\n");
-        print_allowed_subtypes();
-        return NULL;
+        char *names = get_allowed_subtypes();
+        error_setg(errp, "spice-qemu-char: missing name parameter, allowed names: %s", names);
+        g_free(names);
+        return;
     }
     for(;*psubtype != NULL; ++psubtype) {
         if (strcmp(name, *psubtype) == 0) {
@@ -209,12 +210,12 @@ CharDriverState *qemu_chr_open_spice(QemuOpts *opts)
         }
     }
     if (subtype == NULL) {
-        fprintf(stderr, "spice-qemu-char: unsupported name: %s\n", name);
-        print_allowed_subtypes();
-        return NULL;
+        char *names = get_allowed_subtypes();
+        error_setg(errp, "spice-qemu-char: unsupported, allowed names: %s", names);
+        g_free(names);
+        return;
     }
 
-    chr = CHARDEV(object_new(TYPE_CHARDEV));
     s = g_malloc0(sizeof(SpiceCharDriver));
     s->chr = chr;
     s->debug = debug;
@@ -232,6 +233,4 @@ CharDriverState *qemu_chr_open_spice(QemuOpts *opts)
         qemu_chr_generic_open(chr);
     }
 #endif
-
-    return chr;
 }

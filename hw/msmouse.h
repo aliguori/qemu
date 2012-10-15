@@ -1,2 +1,2 @@
 /* msmouse.c */
-CharDriverState *qemu_chr_open_msmouse(QemuOpts *opts);
+void qemu_chr_open_msmouse(CharDriverState *chr, QemuOpts *opts, Error **errp);
