@@ -66,7 +66,9 @@ struct CharDriverClass
 {
     ObjectClass parent_class;
 
+    /* Objects should implement only one of these two methods */
     void (*open)(struct CharDriverState *chr, QemuOpts *opts, Error **errp);
+    void (*realize)(struct CharDriverState *chr, QemuOpts *opts, Error **errp);
 };
 
 struct CharDriverState {
@@ -94,6 +96,7 @@ struct CharDriverState {
     int opened;
     int avail_connections;
     QTAILQ_ENTRY(CharDriverState) next;
+    bool realized;
 };
 
 /**

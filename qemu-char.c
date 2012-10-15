@@ -2981,9 +2981,13 @@ CharDriverState *qemu_chr_new_from_opts(QemuOpts *opts,
     chr = CHARDEV(object_new(class_name));
 
     cdc = CHARDEV_GET_CLASS(chr);
-    g_assert(cdc->open != NULL);
-
-    cdc->open(chr, opts, &err);
+    if (cdc->open) {
+        cdc->open(chr, opts, &err);
+    } else {
+        if (!err) {
+            object_property_set_bool(OBJECT(chr), true, "realized", &err);
+        }
+    }
 
     g_free(class_name);
 
@@ -3107,11 +3111,49 @@ CharDriverState *qemu_char_get_next_serial(void)
     return serial_hds[next_serial++];
 }
 
+static bool chardev_get_realized(Object *obj, Error **errp)
+{
+    CharDriverState *chr = CHARDEV(obj);
+
+    return chr->realized;
+}
+
+static void chardev_set_realized(Object *obj, bool value, Error **errp)
+{
+    CharDriverState *chr = CHARDEV(obj);
+    CharDriverClass *cdc = CHARDEV_GET_CLASS(chr);
+
+    if (chr->realized == value) {
+        return;
+    }
+
+    if (!value && chr->realized) {
+        error_set(errp, QERR_PERMISSION_DENIED);
+    } else {
+        Error *local_err = NULL;
+
+        g_assert(cdc->realize);
+        cdc->realize(chr, &local_err);
+        if (local_err) {
+            error_propagate(errp, local_err);
+        } else {
+            chr->realized = true;
+        }
+    }
+}
+
+static void chardev_initfn(Object *obj)
+{
+    object_property_add_bool(obj, "realized", chardev_get_realized,
+                             chardev_set_realized, NULL);
+}
+
 static const TypeInfo chardev_info = {
     .name = TYPE_CHARDEV,
     .parent = TYPE_OBJECT,
     .instance_size = sizeof(CharDriverState),
     .class_size = sizeof(CharDriverClass),
+    .instance_init = chardev_initfn,
 };
 
 static void register_types(void)
