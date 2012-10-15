@@ -221,7 +221,7 @@ static int null_chr_write(CharDriverState *chr, const uint8_t *buf, int len)
     return len;
 }
 
-static void qemu_chr_open_null(CharDriverState *chr, QemuOpts *opts, Error **errp)
+static void qemu_chr_open_null(CharDriverState *chr, Error **errp)
 {
     chr->chr_write = null_chr_write;
 }
@@ -1763,7 +1763,7 @@ static void qemu_chr_open_win_file(CharDriverState *chr, HANDLE fd_out)
     qemu_chr_generic_open(chr);
 }
 
-static void qemu_chr_open_win_con(CharDriverState *chr, QemuOpts *opts, Error **errp)
+static void qemu_chr_open_win_con(CharDriverState *chr, Error **errp)
 {
     qemu_chr_open_win_file(chr, GetStdHandle(STD_OUTPUT_HANDLE));
 }
@@ -1920,7 +1920,7 @@ static void win_stdio_close(CharDriverState *chr)
     stdio_nb_clients--;
 }
 
-static void qemu_chr_open_win_stdio(CharDriverState *chr, QemuOpts *opts, Error **errp)
+static void qemu_chr_open_win_stdio(CharDriverState *chr, Error **errp)
 {
     WinStdioCharState *stdio;
     DWORD              dwMode;
@@ -2693,7 +2693,7 @@ static void chardev_null_class_init(ObjectClass *klass, void *data)
 {
     CharDriverClass *cdc = CHARDEV_CLASS(klass);
 
-    cdc->open = qemu_chr_open_null;
+    cdc->realize = qemu_chr_open_null;
 }
 
 static const TypeInfo chardev_null_info = {
@@ -2774,7 +2774,7 @@ static void chardev_console_class_init(ObjectClass *klass, void *data)
 {
     CharDriverClass *cdc = CHARDEV_CLASS(klass);
 
-    cdc->open = qemu_chr_open_win_con;
+    cdc->realize = qemu_chr_open_win_con;
 }
 
 static const TypeInfo chardev_console_info = {
@@ -2864,7 +2864,7 @@ static void chardev_stdio_class_init(ObjectClass *klass, void *data)
     CharDriverClass *cdc = CHARDEV_CLASS(klass);
 
 #ifdef _WIN32
-    cdc->open = qemu_chr_open_win_stdio;
+    cdc->realize = qemu_chr_open_win_stdio;
 #else
     cdc->open = qemu_chr_open_stdio;
 #endif

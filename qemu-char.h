@@ -68,7 +68,7 @@ struct CharDriverClass
 
     /* Objects should implement only one of these two methods */
     void (*open)(struct CharDriverState *chr, QemuOpts *opts, Error **errp);
-    void (*realize)(struct CharDriverState *chr, QemuOpts *opts, Error **errp);
+    void (*realize)(struct CharDriverState *chr, Error **errp);
 };
 
 struct CharDriverState {
