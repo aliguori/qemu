@@ -214,7 +214,7 @@ CharDriverState *qemu_chr_open_spice(QemuOpts *opts)
         return NULL;
     }
 
-    chr = g_malloc0(sizeof(CharDriverState));
+    chr = CHARDEV(object_new(TYPE_CHARDEV));
     s = g_malloc0(sizeof(SpiceCharDriver));
     s->chr = chr;
     s->debug = debug;

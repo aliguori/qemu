@@ -1547,7 +1547,7 @@ CharDriverState *text_console_init(QemuOpts *opts)
     unsigned width;
     unsigned height;
 
-    chr = g_malloc0(sizeof(CharDriverState));
+    chr = CHARDEV(object_new(TYPE_CHARDEV));
 
     width = qemu_opt_get_number(opts, "width", 0);
     if (width == 0)
@@ -1564,7 +1564,7 @@ CharDriverState *text_console_init(QemuOpts *opts)
     }
 
     if (!s) {
-        g_free(chr);
+        object_delete(OBJECT(chr));
         return NULL;
     }
 

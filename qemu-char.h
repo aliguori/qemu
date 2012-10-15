@@ -1,6 +1,7 @@
 #ifndef QEMU_CHAR_H
 #define QEMU_CHAR_H
 
+#include "qemu/object.h"
 #include "qemu-common.h"
 #include "qemu-queue.h"
 #include "qemu-option.h"
@@ -50,9 +51,14 @@ typedef struct {
 #define CHR_TIOCM_DTR	0x002
 #define CHR_TIOCM_RTS	0x004
 
+#define TYPE_CHARDEV "chardev"
+#define CHARDEV(obj) OBJECT_CHECK(CharDriverState, (obj), TYPE_CHARDEV)
+
 typedef void IOEventHandler(void *opaque, int event);
 
 struct CharDriverState {
+    Object parent_obj;
+
     void (*init)(struct CharDriverState *s);
     int (*chr_write)(struct CharDriverState *s, const uint8_t *buf, int len);
     void (*chr_update_read_handler)(struct CharDriverState *s);
