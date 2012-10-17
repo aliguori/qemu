@@ -3062,7 +3062,6 @@ CharDriverState *qemu_chr_new_from_opts(QemuOpts *opts,
     if (!chr->filename)
         chr->filename = g_strdup(qemu_opt_get(opts, "backend"));
     chr->init = init;
-    QTAILQ_INSERT_TAIL(&chardevs, chr, next);
 
     if (qemu_opt_get_bool(opts, "mux", 0)) {
         CharDriverState *base = chr;
@@ -3224,10 +3223,14 @@ static void chardev_set_label(Object *obj, const char *value, Error **errp)
 
 static void chardev_initfn(Object *obj)
 {
+    CharDriverState *chr = CHARDEV(obj);
+
     object_property_add_bool(obj, "realized", chardev_get_realized,
                              chardev_set_realized, NULL);
     object_property_add_str(obj, "label", chardev_get_label,
                             chardev_set_label, NULL);
+
+    QTAILQ_INSERT_TAIL(&chardevs, chr, next);
 }
 
 static const TypeInfo chardev_info = {
