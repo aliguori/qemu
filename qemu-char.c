@@ -3203,10 +3203,31 @@ static void chardev_set_realized(Object *obj, bool value, Error **errp)
     }
 }
 
+static char *chardev_get_label(Object *obj, Error **errp)
+{
+    CharDriverState *chr = CHARDEV(obj);
+
+    return chr->label ? g_strdup(chr->label) : g_strdup("");
+}
+
+static void chardev_set_label(Object *obj, const char *value, Error **errp)
+{
+    CharDriverState *chr = CHARDEV(obj);
+
+    if (chr->realized) {
+        error_set(errp, QERR_PERMISSION_DENIED);
+    } else {
+        g_free(chr->label);
+        chr->label = g_strdup(value);
+    }
+}
+
 static void chardev_initfn(Object *obj)
 {
     object_property_add_bool(obj, "realized", chardev_get_realized,
                              chardev_set_realized, NULL);
+    object_property_add_str(obj, "label", chardev_get_label,
+                            chardev_set_label, NULL);
 }
 
 static const TypeInfo chardev_info = {
