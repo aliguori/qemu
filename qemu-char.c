@@ -3072,8 +3072,6 @@ CharDriverState *qemu_chr_new_from_opts(QemuOpts *opts,
         chr->filename = base->filename;
         chr->avail_connections = MAX_MUX;
         QTAILQ_INSERT_TAIL(&chardevs, chr, next);
-    } else {
-        chr->avail_connections = 1;
     }
     chr->label = g_strdup(qemu_opts_id(opts));
     return chr;
@@ -3231,6 +3229,7 @@ static void chardev_initfn(Object *obj)
                             chardev_set_label, NULL);
 
     QTAILQ_INSERT_TAIL(&chardevs, chr, next);
+    chr->avail_connections = 1;
 }
 
 static const TypeInfo chardev_info = {
