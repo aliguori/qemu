@@ -1,5 +1,7 @@
 #!/bin/sh
 
+srcdir=$1
+shift
 src=$1
 shift
 
@@ -11,7 +13,7 @@ mkdir $tmpdir
 
 mkdir -p $tmpdir/tests
 for i in "$@"; do
-    cp $i $tmpdir/tests/
+    cp $srcdir/$i $tmpdir/tests/
 done
 
 cd $tmpdir

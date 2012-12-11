@@ -60,8 +60,10 @@ RANDOM=$seed
 
 echo "Using RANDOM seed $seed"
 
+srcdir=`dirname $0`
+
 mkdir -p $tmpdir
-util/mktest-initramfs.sh $initrd "$@" > $tmpinitrd
+$srcdir/util/mktest-initramfs.sh $srcdir $initrd "$@" > $tmpinitrd
 
 checkpid() {
     kill -0 $1 2>/dev/null
@@ -220,7 +222,8 @@ QEMU_TEST=1
 
 QEMU_TEST_NAME=$(basename $1 .sh)
 
-. "$1"
+export QEMU_TEST_SRCDIR="$srcdir"
+. "$srcdir/$1"
 rc=$?
 
 if test $rc = 0; then

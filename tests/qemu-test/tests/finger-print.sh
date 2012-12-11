@@ -24,7 +24,7 @@ in_host() {
 	tar xf $tmpdisk
 	if test -e fingerprint.txt -a \
 	    "$QEMU_TEST_GEN_FINGERPRINT" != "yes"; then
-	    grep -v bios_date fingerprints/$machine.x86_64 > a
+	    grep -v bios_date $QEMU_TEST_SRCDIR/fingerprints/$machine.x86_64 > a
 	    grep -v bios_date fingerprint.txt > b
 	    diff -u a b
 	    rc=$?

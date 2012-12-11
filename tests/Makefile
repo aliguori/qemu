@@ -29,6 +29,10 @@ check-qtest-x86_64-y = $(check-qtest-i386-y)
 check-qtest-sparc-y = tests/m48t59-test$(EXESUF)
 check-qtest-sparc64-y = tests/m48t59-test$(EXESUF)
 
+check-qemu-test-x86_64-y =  device-add.sh device-del.sh finger-print.sh
+check-qemu-test-x86_64-y += no-disks.sh no-vga-pci-allocation.sh simple-ping.sh
+check-qemu-test-x86_64-y += virtio-blk-drive-serial.sh virtio-serial.sh
+
 GENERATED_HEADERS += tests/test-qapi-types.h tests/test-qapi-visit.h tests/test-qmp-commands.h
 
 test-obj-y = tests/check-qint.o tests/check-qstring.o tests/check-qdict.o \
@@ -85,6 +89,10 @@ TARGETS=$(patsubst %-softmmu,%, $(filter %-softmmu,$(TARGET_DIRS)))
 QTEST_TARGETS=$(foreach TARGET,$(TARGETS), $(if $(check-qtest-$(TARGET)-y), $(TARGET),))
 check-qtest-$(CONFIG_POSIX)=$(foreach TARGET,$(TARGETS), $(check-qtest-$(TARGET)-y))
 
+QEMU_TEST_TARGETS=$(foreach TARGET,$(TARGETS), $(if $(check-qemu-test-$(TARGET)-y), $(TARGET),))
+
+check-qemu-test-$(CONFIG_POSIX)=$(foreach TARGET,$(TARGETS), $(check-qemu-test-$(TARGET)-y))
+
 qtest-obj-y = tests/libqtest.o $(oslib-obj-y) libqemustub.a
 $(check-qtest-y): $(qtest-obj-y)
 
@@ -92,11 +100,12 @@ $(check-qtest-y): $(qtest-obj-y)
 check-help:
 	@echo "Regression testing targets:"
 	@echo
-	@echo " make check                Run all tests"
-	@echo " make check-qtest-TARGET   Run qtest tests for given target"
-	@echo " make check-qtest          Run qtest tests"
-	@echo " make check-unit           Run qobject tests"
-	@echo " make check-block          Run block tests"
+	@echo " make check                    Run all tests"
+	@echo " make check-qtest-TARGET       Run qtest tests for given target"
+	@echo " make check-qtest              Run qtest tests"
+	@echo " make check-unit               Run qobject tests"
+	@echo " make check-block              Run block tests"
+	@echo " make check-qemu-test-TARGET   Run qemu-test for given target"
 	@echo " make check-report.html    Generates an HTML test report"
 	@echo
 	@echo "Please note that HTML reports do not regenerate if the unit tests"
@@ -115,6 +124,10 @@ GTESTER_OPTIONS = -k $(if $(V),--verbose,-q)
 $(patsubst %, check-qtest-%, $(QTEST_TARGETS)): check-qtest-%: $(check-qtest-y)
 	$(call quiet-command,QTEST_QEMU_BINARY=$*-softmmu/qemu-system-$* \
 		gtester $(GTESTER_OPTIONS) -m=$(SPEED) $(check-qtest-$*-y),"GTESTER $@")
+
+.PHONY: $(patsubst %, check-qemu-test-%, $(QTEST_TARGETS))
+$(patsubst %, check-qemu-test-%, $(QEMU_TEST_TARGETS)): check-qemu-test-%: $(patsubst %, tests/qemu-test/tests/%, $(check-qemu-test-y))
+	$(call quiet-command,for i in $(patsubst %, tests/%, $(check-qemu-test-$*-y)); do $(SRC_PATH)/tests/qemu-test/qemu-test $*-softmmu/qemu-system-$* $$i; done,"QEMU_TEST $@")
 
 .PHONY: $(patsubst %, check-%, $(check-unit-y))
 $(patsubst %, check-%, $(check-unit-y)): check-%: %
