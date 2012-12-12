@@ -347,6 +347,26 @@ static QEMUMachine pc_machine_v1_2 = {
     },
 };
 
+#define QEMUKVMPC_COMPAT_1_2 \
+        {\
+            .driver   = "cirrus-vga",\
+            .property = "vgamem_mb",\
+            .value    = "16",\
+        }
+
+static QEMUMachine qemukvmpc_machine_v1_2 = {
+    .name = "qemukvm-pc-1.2",
+    .alias = "pc",
+    .desc = "Standard PC",
+    .init = pc_init_pci,
+    .max_cpus = 255,
+    .compat_props = (GlobalProperty[]) {
+        QEMUKVMPC_COMPAT_1_2,
+        PC_COMPAT_1_2,
+        { /* end of list */ }
+    },
+};
+
 #define PC_COMPAT_1_1 \
         PC_COMPAT_1_2,\
         {\
@@ -645,6 +665,7 @@ static QEMUMachine xenfv_machine = {
 
 static void pc_machine_init(void)
 {
+    qemu_register_machine(&qemukvmpc_machine_v1_2);
     qemu_register_machine(&pc_machine_v1_4);
     qemu_register_machine(&pc_machine_v1_3);
     qemu_register_machine(&pc_machine_v1_2);
