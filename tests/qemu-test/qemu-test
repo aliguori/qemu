@@ -157,6 +157,7 @@ named_choose_bool() {
 
 start_qemu() {
     e $qemu -kernel $kernel -initrd $tmpinitrd \
+	    -device isa-debug-exit \
             -append "console=ttyS0 seed=$seed" "$@" \
             -pidfile $tmppid -qmp unix:$tmpqmp,server,nowait | tee $tmplog &
     pid=$!
