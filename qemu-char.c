@@ -2176,6 +2176,12 @@ static CharDriverState *qemu_chr_open_win_stdio(QemuOpts *opts)
 }
 #endif /* !_WIN32 */
 
+
+static CharDriverState *qemu_chr_open_pp(QemuOpts *opts)
+{
+    return NULL;
+}
+
 /***********************************************************/
 /* UDP Net console */
 

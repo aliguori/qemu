@@ -25,7 +25,6 @@
 #include "qemu-common.h"
 #include "char/char.h"
 #include "ui/console.h"
-#include "msmouse.h"
 
 #define MSMOUSE_LO6(n) ((n) & 0x3f)
 #define MSMOUSE_HI2(n) (((n) & 0xc0) >> 6)
