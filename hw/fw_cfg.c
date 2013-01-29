@@ -205,7 +205,7 @@ static void fw_cfg_write(FWCfgState *s, uint8_t value)
     int arch = !!(s->cur_entry & FW_CFG_ARCH_LOCAL);
     FWCfgEntry *e = &s->entries[arch][s->cur_entry & FW_CFG_ENTRY_MASK];
 
-    trace_fw_cfg_write(s, value);
+    //    trace_fw_cfg_write(s, value);
 
     if (s->cur_entry & FW_CFG_WRITE_CHANNEL && e->callback &&
         s->cur_offset < e->len) {
@@ -230,7 +230,7 @@ static int fw_cfg_select(FWCfgState *s, uint16_t key)
         ret = 1;
     }
 
-    trace_fw_cfg_select(s, key, ret);
+    //    trace_fw_cfg_select(s, key, ret);
     return ret;
 }
 
@@ -245,7 +245,7 @@ static uint8_t fw_cfg_read(FWCfgState *s)
     else
         ret = e->data[s->cur_offset++];
 
-    trace_fw_cfg_read(s, ret);
+    //    trace_fw_cfg_read(s, ret);
     return ret;
 }
 
@@ -458,14 +458,14 @@ void fw_cfg_add_file(FWCfgState *s,  const char *filename,
             filename);
     for (i = 0; i < index; i++) {
         if (strcmp(s->files->f[index].name, s->files->f[i].name) == 0) {
-            trace_fw_cfg_add_file_dupe(s, s->files->f[index].name);
+	  //            trace_fw_cfg_add_file_dupe(s, s->files->f[index].name);
             return;
         }
     }
 
     s->files->f[index].size   = cpu_to_be32(len);
     s->files->f[index].select = cpu_to_be16(FW_CFG_FILE_FIRST + index);
-    trace_fw_cfg_add_file(s, index, s->files->f[index].name, len);
+    //    trace_fw_cfg_add_file(s, index, s->files->f[index].name, len);
 
     s->files->count = cpu_to_be32(index+1);
 }

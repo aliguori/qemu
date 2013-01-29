@@ -89,7 +89,7 @@ static void vmc_event(SpiceCharDeviceInstance *sin, uint8_t event)
     }
 
     dprintf(scd, 2, "%s: %d\n", __func__, event);
-    trace_spice_vmc_event(chr_event);
+    //    trace_spice_vmc_event(chr_event);
     qemu_chr_be_event(scd->chr, chr_event);
 }
 #endif
