@@ -73,6 +73,7 @@ typedef struct VirtIONet
     int multiqueue;
     uint16_t max_queues;
     uint16_t curr_queues;
+    int config_size;
 } VirtIONet;
 
 static VirtIONetQueue *virtio_net_get_subqueue(NetClientState *nc)
@@ -99,20 +100,20 @@ static VirtIONet *to_virtio_net(VirtIODevice *vdev)
 static void virtio_net_get_config(VirtIODevice *vdev, uint8_t *config)
 {
     VirtIONet *n = to_virtio_net(vdev);
-    struct virtio_net_config netcfg;
+    struct virtio_net_config netcfg = {};
 
     stw_p(&netcfg.status, n->status);
     stw_p(&netcfg.max_virtqueue_pairs, n->max_queues);
     memcpy(netcfg.mac, n->mac, ETH_ALEN);
-    memcpy(config, &netcfg, sizeof(netcfg));
+    memcpy(config, &netcfg, n->config_size);
 }
 
 static void virtio_net_set_config(VirtIODevice *vdev, const uint8_t *config)
 {
     VirtIONet *n = to_virtio_net(vdev);
-    struct virtio_net_config netcfg;
+    struct virtio_net_config netcfg = {};
 
-    memcpy(&netcfg, config, sizeof(netcfg));
+    memcpy(&netcfg, config, n->config_size);
 
     if (!(n->vdev.guest_features >> VIRTIO_NET_F_CTRL_MAC_ADDR & 1) &&
         memcmp(netcfg.mac, n->mac, ETH_ALEN)) {
@@ -1283,10 +1284,17 @@ VirtIODevice *virtio_net_init(DeviceState *dev, NICConf *conf,
 {
     VirtIONet *n;
     int i;
+    int config_size;
 
+    if (host_features & VIRTIO_NET_F_MQ) {
+        config_size = sizeof(struct virtio_net_config);
+    } else {
+        config_size = 8;
+    }
     n = (VirtIONet *)virtio_common_init("virtio-net", VIRTIO_ID_NET,
-                                        sizeof(struct virtio_net_config),
+                                        config_size,
                                         sizeof(VirtIONet));
+    n->config_size = config_size;
 
     n->vdev.get_config = virtio_net_get_config;
     n->vdev.set_config = virtio_net_set_config;
