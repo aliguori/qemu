@@ -997,6 +997,10 @@ static int virtio_net_init_pci(PCIDevice *pci_dev)
     VirtIOPCIProxy *proxy = DO_UPCAST(VirtIOPCIProxy, pci_dev, pci_dev);
     VirtIODevice *vdev;
 
+    if (proxy->nic.queues == 1) {
+        proxy->host_features &= ~VIRTIO_NET_F_MQ;
+    }
+
     vdev = virtio_net_init(&pci_dev->qdev, &proxy->nic, &proxy->net,
                            proxy->host_features);
 
