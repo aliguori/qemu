@@ -1067,7 +1067,7 @@ static gboolean pty_chr_read(GIOChannel *chan, GIOCondition cond, void *opaque)
     if (len > s->read_bytes)
         len = s->read_bytes;
     if (len == 0)
-        return TRUE;
+        return FALSE;
     status = g_io_channel_read_chars(s->fd, (gchar *)buf, len, &size, NULL);
     if (status != G_IO_STATUS_NORMAL) {
         pty_chr_state(chr, 0);
@@ -2237,7 +2237,7 @@ static gboolean udp_chr_read(GIOChannel *chan, GIOCondition cond, void *opaque)
     GIOStatus status;
 
     if (s->max_size == 0)
-        return TRUE;
+        return FALSE;
     status = g_io_channel_read_chars(s->chan, (gchar *)s->buf, sizeof(s->buf),
                                      &bytes_read, NULL);
     s->bufcnt = bytes_read;
@@ -2492,7 +2492,7 @@ static gboolean tcp_chr_read(GIOChannel *chan, GIOCondition cond, void *opaque)
     int len, size;
 
     if (!s->connected || s->max_size <= 0) {
-        return TRUE;
+        return FALSE;
     }
     len = sizeof(buf);
     if (len > s->max_size)
