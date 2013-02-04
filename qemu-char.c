@@ -569,7 +569,7 @@ static gboolean io_watch_poll_prepare(GSource *source, gint *timeout_)
 
     iwp->max_size = iwp->fd_can_read(iwp->opaque);
     if (iwp->max_size == 0) {
-        return TRUE;
+        return FALSE;
     }
 
     return g_io_watch_funcs.prepare(source, timeout_);
