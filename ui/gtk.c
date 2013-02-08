@@ -42,8 +42,9 @@
 #include <math.h>
 
 #include "qemu-common.h"
-#include "console.h"
-#include "sysemu.h"
+#include "ui/console.h"
+#include "sysemu/sysemu.h"
+#include "char/char.h"
 #include "qmp-commands.h"
 #include "x_keymap.h"
 #include "keymaps.h"
@@ -191,7 +192,7 @@ static void gd_resize(DisplayState *ds)
     int stride;
 
     dprintf("resize(width=%d, height=%d)\n",
-            ds->surface->width, ds->surface->height);
+            ds_get_width(ds), ds_get_height(ds));
 
     if (s->surface) {
         cairo_surface_destroy(s->surface);
@@ -212,18 +213,18 @@ static void gd_resize(DisplayState *ds)
         break;
     }
 
-    stride = cairo_format_stride_for_width(kind, ds->surface->width);
-    g_assert_cmpint(ds->surface->linesize, ==, stride);
+    stride = cairo_format_stride_for_width(kind, ds_get_width(ds));
+    g_assert_cmpint(ds_get_linesize(ds), ==, stride);
 
-    s->surface = cairo_image_surface_create_for_data(ds->surface->data,
+    s->surface = cairo_image_surface_create_for_data(ds_get_data(ds),
                                                      kind,
-                                                     ds->surface->width,
-                                                     ds->surface->height,
-                                                     ds->surface->linesize);
+                                                     ds_get_width(ds),
+                                                     ds_get_height(ds),
+                                                     ds_get_linesize(ds));
 
     gtk_widget_set_size_request(s->drawing_area,
-                                ds->surface->width * s->scale_x,
-                                ds->surface->height * s->scale_y);
+                                ds_get_width(ds) * s->scale_x,
+                                ds_get_height(ds) * s->scale_y);
 }
 
 /** QEMU Events **/
@@ -260,8 +261,8 @@ static gboolean gd_draw_event(GtkWidget *widget, cairo_t *cr, void *opaque)
     int ww, wh;
     int fbw, fbh;
 
-    fbw = s->ds->surface->width;
-    fbh = s->ds->surface->height;
+    fbw = ds_get_width(s->ds);
+    fbh = ds_get_height(s->ds);
 
     gdk_drawable_get_size(gtk_widget_get_window(widget), &ww, &wh);
 
@@ -314,8 +315,8 @@ static gboolean gd_motion_event(GtkWidget *widget, GdkEventMotion *motion,
     y = motion->y / s->scale_y;
 
     if (kbd_mouse_is_absolute()) {
-        dx = x * 0x7FFF / (s->ds->surface->width - 1);
-        dy = y * 0x7FFF / (s->ds->surface->height - 1);
+        dx = x * 0x7FFF / (ds_get_width(s->ds) - 1);
+        dy = y * 0x7FFF / (ds_get_height(s->ds) - 1);
     } else if (s->last_x == -1 || s->last_y == -1) {
         dx = 0;
         dy = 0;
@@ -392,8 +393,8 @@ static gboolean gd_button_event(GtkWidget *widget, GdkEventButton *button,
     }
 
     if (kbd_mouse_is_absolute()) {
-        dx = s->last_x * 0x7FFF / (s->ds->surface->width - 1);
-        dy = s->last_y * 0x7FFF / (s->ds->surface->height - 1);
+        dx = s->last_x * 0x7FFF / (ds_get_width(s->ds) - 1);
+        dy = s->last_y * 0x7FFF / (ds_get_height(s->ds) - 1);
     } else {
         dx = 0;
         dy = 0;
@@ -816,8 +817,8 @@ void gtk_display_init(DisplayState *ds)
 
     ds->opaque = s;
     s->ds = ds;
-    s->dcl.dpy_update = gd_update;
-    s->dcl.dpy_resize = gd_resize;
+    s->dcl.dpy_gfx_update = gd_update;
+    s->dcl.dpy_gfx_resize = gd_resize;
     s->dcl.dpy_refresh = gd_refresh;
     register_displaychangelistener(ds, &s->dcl);
 
