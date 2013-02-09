@@ -2265,6 +2265,9 @@ char *qemu_find_file(int type, const char *name)
     case QEMU_FILE_TYPE_KEYMAP:
         subdir = "keymaps/";
         break;
+    case QEMU_FILE_TYPE_ICONS:
+        subdir = "icons/";
+        break;
     default:
         abort();
     }

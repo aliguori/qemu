@@ -37,6 +37,7 @@
 #include <gtk/gtk.h>
 #include <gdk/gdkkeysyms.h>
 #include <glib/gi18n.h>
+#include <gdk-pixbuf/gdk-pixbuf.h>
 #include <vte/vte.h>
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -52,6 +53,7 @@
 #include "x_keymap.h"
 #include "keymaps.h"
 #include "char/char.h"
+#include "qemu/authors.h"
 
 //#define DEBUG_GTK
 
@@ -95,6 +97,10 @@ typedef struct GtkDisplayState
     GtkWidget *grab_on_hover_item;
     GtkWidget *vga_item;
 
+    GtkWidget *help_menu_item;
+    GtkWidget *help_menu;
+    GtkWidget *about_item;
+
     int nb_vcs;
     VirtualConsole vc[MAX_VCS];
 
@@ -117,6 +123,8 @@ typedef struct GtkDisplayState
     GdkCursor *null_cursor;
     Notifier mouse_mode_notifier;
     gboolean free_scale;
+
+    GdkPixbuf *logo;
 } GtkDisplayState;
 
 static GtkDisplayState *global_state;
@@ -311,7 +319,9 @@ static gboolean gd_window_key_event(GtkWidget *widget, GdkEventKey *key, void *o
     if (n_entries) {
         const char *quark = g_quark_to_string(entries[0].accel_path_quark);
 
-        if (gd_is_grab_active(s) && strstart(quark, "<QEMU>/File/", NULL)) {
+        if (gd_is_grab_active(s) &&
+            (strstart(quark, "<QEMU>/File/", NULL) ||
+             strstart(quark, "<QEMU>/Help/", NULL))) {
             propagate_accel = FALSE;
         }
     }
@@ -742,6 +752,36 @@ static void gd_menu_grab_input(GtkMenuItem *item, void *opaque)
     gd_update_cursor(s, FALSE);
 }
 
+static void gd_menu_about(GtkMenuItem *item, void *opaque)
+{
+    GtkDisplayState *s = opaque;
+
+    gtk_show_about_dialog(GTK_WINDOW(s->window),
+                          "authors", qemu_authors,
+                          "program-name", "QEMU",
+                          "logo", s->logo,
+                          "copyright",
+                          "Copyright (C) 2003-2013  QEMU Development Team",
+                          "license",
+"1) QEMU as a whole is released under the GNU General Public License\n"
+"\n"
+"2) Parts of QEMU have specific licenses which are compatible with the "
+"GNU General Public License. Hence each source file contains its own "
+"licensing information.\n"
+"\n"
+"Many hardware device emulation sources are released under the BSD license.\n"
+"\n"
+"3) The Tiny Code Generator (TCG) is released under the BSD license "
+"(see license headers in files).\n"
+"\n"
+"4) QEMU is a trademark of Fabrice Bellard.\n",
+                          "wrap-license", TRUE,
+                          "comments", "A generic and open source machine emulator and virtualizer.",
+                          "website", "http://www.qemu.org/",
+                          "version", QEMU_VERSION QEMU_PKGVERSION,
+                          NULL);
+}
+
 static void gd_change_page(GtkNotebook *nb, gpointer arg1, guint arg2,
                            gpointer data)
 {
@@ -971,6 +1011,10 @@ static void gd_connect_signals(GtkDisplayState *s)
                      G_CALLBACK(gd_menu_switch_vc), s);
     g_signal_connect(s->grab_item, "activate",
                      G_CALLBACK(gd_menu_grab_input), s);
+
+    g_signal_connect(s->about_item, "activate",
+                     G_CALLBACK(gd_menu_about), s);
+
     g_signal_connect(s->notebook, "switch-page",
                      G_CALLBACK(gd_change_page), s);
     g_signal_connect(s->drawing_area, "enter-notify-event",
@@ -1067,6 +1111,15 @@ static void gd_create_menus(GtkDisplayState *s)
     s->show_tabs_item = gtk_check_menu_item_new_with_mnemonic(_("Show _Tabs"));
     gtk_menu_append(GTK_MENU(s->view_menu), s->show_tabs_item);
 
+    s->help_menu = gtk_menu_new();
+    gtk_menu_set_accel_group(GTK_MENU(s->help_menu), accel_group);
+    s->help_menu_item = gtk_menu_item_new_with_mnemonic(_("_Help"));
+
+    s->about_item = gtk_image_menu_item_new_from_stock(GTK_STOCK_ABOUT, NULL);
+    gtk_menu_item_set_accel_path(GTK_MENU_ITEM(s->about_item),
+                                 "<QEMU>/Help/About");
+    gtk_menu_append(GTK_MENU(s->help_menu), s->about_item);
+
     g_object_set_data(G_OBJECT(s->window), "accel_group", accel_group);
     gtk_window_add_accel_group(GTK_WINDOW(s->window), accel_group);
     s->accel_group = accel_group;
@@ -1077,6 +1130,9 @@ static void gd_create_menus(GtkDisplayState *s)
 
     gtk_menu_item_set_submenu(GTK_MENU_ITEM(s->view_menu_item), s->view_menu);
     gtk_menu_shell_append(GTK_MENU_SHELL(s->menu_bar), s->view_menu_item);
+
+    gtk_menu_item_set_submenu(GTK_MENU_ITEM(s->help_menu_item), s->help_menu);
+    gtk_menu_shell_append(GTK_MENU_SHELL(s->menu_bar), s->help_menu_item);
 }
 
 void gtk_display_init(DisplayState *ds)
@@ -1142,6 +1198,8 @@ void gtk_display_init(DisplayState *ds)
     gtk_widget_show_all(s->window);
 
     register_displaychangelistener(ds, &s->dcl);
+
+    s->logo = gdk_pixbuf_new_from_file_at_scale(qemu_find_file(QEMU_FILE_TYPE_ICONS, "qemu_logo_no_text.svg"), 120, 120, TRUE, NULL);
 
     global_state = s;
 }

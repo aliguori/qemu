@@ -321,6 +321,8 @@ endif
 	set -e; for x in $(KEYMAPS); do \
 		$(INSTALL_DATA) $(SRC_PATH)/pc-bios/keymaps/$$x "$(DESTDIR)$(qemu_datadir)/keymaps"; \
 	done
+	$(INSTALL_DIR) "$(DESTDIR)$(qemu_datadir)/icons"
+	$(INSTALL_DATA) $(SRC_PATH)/pc-bios/icons/qemu_logo_no_text.svg "$(DESTDIR)$(qemu_datadir)/icons"
 	for d in $(TARGET_DIRS); do \
 	$(MAKE) -C $$d $@ || exit 1 ; \
         done

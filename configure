@@ -4324,6 +4324,11 @@ for bios_file in \
 do
     FILES="$FILES pc-bios/`basename $bios_file`"
 done
+for icon_file in \
+    $source_path/pc-bios/icons/*.svg
+do
+    FILES="$FILES pc-bios/icons/`basename $icon_file`"
+done
 mkdir -p $DIRS
 for f in $FILES ; do
     if [ -e "$source_path/$f" ] && [ "$source_path" != `pwd` ]; then
