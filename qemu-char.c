@@ -2717,6 +2717,7 @@ static CharDriverState *qemu_chr_open_socket_fd(int fd, bool do_nodelay,
         s->connected = 1;
         s->fd = fd;
         socket_set_nodelay(fd);
+        s->chan = io_channel_from_socket(s->fd);
         tcp_chr_connect(chr);
     }
 
