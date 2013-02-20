@@ -392,6 +392,19 @@ static int os_host_main_loop_wait(uint32_t timeout)
 }
 #endif
 
+static bool do_main_loop_quit;
+
+bool main_loop_should_quit(void)
+{
+    return do_main_loop_quit;
+}
+
+void main_loop_quit(void)
+{
+    do_main_loop_quit = true;
+    qemu_notify_event();
+}
+
 int main_loop_wait(int nonblocking)
 {
     int ret;

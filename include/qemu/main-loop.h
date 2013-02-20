@@ -303,4 +303,7 @@ void qemu_iohandler_poll(fd_set *readfds, fd_set *writefds, fd_set *xfds, int rc
 QEMUBH *qemu_bh_new(QEMUBHFunc *cb, void *opaque);
 void qemu_bh_schedule_idle(QEMUBH *bh);
 
+bool main_loop_should_quit(void);
+void main_loop_quit(void);
+
 #endif

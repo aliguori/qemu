@@ -1942,7 +1942,7 @@ void qemu_system_vmstop_request(RunState state)
     qemu_notify_event();
 }
 
-static bool main_loop_should_exit(void)
+static void main_loop_junk(void)
 {
     RunState r;
     if (qemu_debug_requested()) {
@@ -1957,7 +1957,8 @@ static bool main_loop_should_exit(void)
         if (no_shutdown) {
             vm_stop(RUN_STATE_SHUTDOWN);
         } else {
-            return true;
+            main_loop_quit();
+            return;
         }
     }
     if (qemu_reset_requested()) {
@@ -1983,7 +1984,6 @@ static bool main_loop_should_exit(void)
     if (qemu_vmstop_requested(&r)) {
         vm_stop(r);
     }
-    return false;
 }
 
 static void main_loop(void)
@@ -2002,7 +2002,8 @@ static void main_loop(void)
 #ifdef CONFIG_PROFILER
         dev_time += profile_getclock() - ti;
 #endif
-    } while (!main_loop_should_exit());
+        main_loop_junk();
+    } while (!main_loop_should_quit());
 }
 
 static void version(void)
