@@ -1698,7 +1698,6 @@ static QTAILQ_HEAD(reset_handlers, QEMUResetEntry) reset_handlers =
     QTAILQ_HEAD_INITIALIZER(reset_handlers);
 static int shutdown_signal = -1;
 static pid_t shutdown_pid;
-static int powerdown_requested;
 static NotifierList powerdown_notifiers =
     NOTIFIER_LIST_INITIALIZER(powerdown_notifiers);
 static NotifierList suspend_notifiers =
@@ -1755,13 +1754,6 @@ static gboolean qemu_wakeup(gpointer unused)
     resume_all_vcpus();
     monitor_protocol_event(QEVENT_WAKEUP, NULL);
     return FALSE;
-}
-
-static int qemu_powerdown_requested(void)
-{
-    int r = powerdown_requested;
-    powerdown_requested = 0;
-    return r;
 }
 
 /* We use RUN_STATE_MAX but any invalid value will do */
@@ -1907,16 +1899,16 @@ void qemu_system_shutdown_request(void)
     g_idle_add(qemu_system_shutdown, NULL);
 }
 
-static void qemu_system_powerdown(void)
+static gboolean qemu_system_powerdown(gpointer unused)
 {
     monitor_protocol_event(QEVENT_POWERDOWN, NULL);
     notifier_list_notify(&powerdown_notifiers, NULL);
+    return FALSE;
 }
 
 void qemu_system_powerdown_request(void)
 {
-    powerdown_requested = 1;
-    qemu_notify_event();
+    g_idle_add(qemu_system_powerdown, NULL);
 }
 
 void qemu_register_powerdown_notifier(Notifier *notifier)
@@ -1944,9 +1936,6 @@ void qemu_system_vmstop_request(RunState state)
 static void main_loop_junk(void)
 {
     RunState r;
-    if (qemu_powerdown_requested()) {
-        qemu_system_powerdown();
-    }
     if (qemu_vmstop_requested(&r)) {
         vm_stop(r);
     }
