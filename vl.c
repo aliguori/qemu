@@ -1696,7 +1696,6 @@ typedef struct QEMUResetEntry {
 
 static QTAILQ_HEAD(reset_handlers, QEMUResetEntry) reset_handlers =
     QTAILQ_HEAD_INITIALIZER(reset_handlers);
-static int reset_requested;
 static int shutdown_signal = -1;
 static pid_t shutdown_pid;
 static int powerdown_requested;
@@ -1717,7 +1716,7 @@ int qemu_shutdown_requested_get(void)
 
 int qemu_reset_requested_get(void)
 {
-    return reset_requested;
+    return 0; // FIXME
 }
 
 static void qemu_kill_report(void)
@@ -1736,11 +1735,17 @@ static void qemu_kill_report(void)
     }
 }
 
-static int qemu_reset_requested(void)
+static gboolean qemu_reset(gpointer unused)
 {
-    int r = reset_requested;
-    reset_requested = 0;
-    return r;
+    pause_all_vcpus();
+    cpu_synchronize_all_states();
+    qemu_system_reset(VMRESET_REPORT);
+    resume_all_vcpus();
+    if (runstate_check(RUN_STATE_INTERNAL_ERROR) ||
+        runstate_check(RUN_STATE_SHUTDOWN)) {
+        runstate_set(RUN_STATE_PAUSED);
+    }
+    return FALSE;
 }
 
 static int qemu_wakeup_requested(void)
@@ -1819,9 +1824,8 @@ void qemu_system_reset_request(void)
     if (no_reboot) {
         qemu_system_shutdown_request();
     } else {
-        reset_requested = 1;
         cpu_stop_current();
-        qemu_notify_event();
+        g_idle_add(qemu_reset, NULL);
     }
 }
 
@@ -1939,16 +1943,6 @@ void qemu_system_vmstop_request(RunState state)
 static void main_loop_junk(void)
 {
     RunState r;
-    if (qemu_reset_requested()) {
-        pause_all_vcpus();
-        cpu_synchronize_all_states();
-        qemu_system_reset(VMRESET_REPORT);
-        resume_all_vcpus();
-        if (runstate_check(RUN_STATE_INTERNAL_ERROR) ||
-            runstate_check(RUN_STATE_SHUTDOWN)) {
-            runstate_set(RUN_STATE_PAUSED);
-        }
-    }
     if (qemu_wakeup_requested()) {
         pause_all_vcpus();
         cpu_synchronize_all_states();
