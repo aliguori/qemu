@@ -1824,12 +1824,12 @@ void qemu_system_reset(bool report)
 void qemu_system_reset_request(void)
 {
     if (no_reboot) {
-        shutdown_requested = 1;
+        qemu_system_shutdown_request();
     } else {
         reset_requested = 1;
+        cpu_stop_current();
+        qemu_notify_event();
     }
-    cpu_stop_current();
-    qemu_notify_event();
 }
 
 static gboolean qemu_system_suspend(gpointer unused)
@@ -1891,9 +1891,21 @@ void qemu_system_killed(int signal, pid_t pid)
     qemu_system_shutdown_request();
 }
 
+static void qemu_system_shutdown(void)
+{
+    qemu_kill_report();
+    monitor_protocol_event(QEVENT_SHUTDOWN, NULL);
+    if (no_shutdown) {
+        vm_stop(RUN_STATE_SHUTDOWN);
+    } else {
+        main_loop_quit();
+    }
+}
+
 void qemu_system_shutdown_request(void)
 {
     shutdown_requested = 1;
+    cpu_stop_current();
     qemu_notify_event();
 }
 
@@ -1935,14 +1947,7 @@ static void main_loop_junk(void)
 {
     RunState r;
     if (qemu_shutdown_requested()) {
-        qemu_kill_report();
-        monitor_protocol_event(QEVENT_SHUTDOWN, NULL);
-        if (no_shutdown) {
-            vm_stop(RUN_STATE_SHUTDOWN);
-        } else {
-            main_loop_quit();
-            return;
-        }
+        qemu_system_shutdown();
     }
     if (qemu_reset_requested()) {
         pause_all_vcpus();
