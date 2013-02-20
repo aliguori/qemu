@@ -1705,7 +1705,6 @@ static NotifierList suspend_notifiers =
 static NotifierList wakeup_notifiers =
     NOTIFIER_LIST_INITIALIZER(wakeup_notifiers);
 static uint32_t wakeup_reason_mask = ~0;
-static RunState vmstop_requested = RUN_STATE_MAX;
 
 int qemu_shutdown_requested_get(void)
 {
@@ -1754,18 +1753,6 @@ static gboolean qemu_wakeup(gpointer unused)
     resume_all_vcpus();
     monitor_protocol_event(QEVENT_WAKEUP, NULL);
     return FALSE;
-}
-
-/* We use RUN_STATE_MAX but any invalid value will do */
-static bool qemu_vmstop_requested(RunState *r)
-{
-    if (vmstop_requested < RUN_STATE_MAX) {
-        *r = vmstop_requested;
-        vmstop_requested = RUN_STATE_MAX;
-        return true;
-    }
-
-    return false;
 }
 
 void qemu_register_reset(QEMUResetHandler *func, void *opaque)
@@ -1927,18 +1914,16 @@ void qemu_system_debug_request(void)
     g_idle_add(qemu_system_debug, NULL);
 }
 
-void qemu_system_vmstop_request(RunState state)
+static gboolean qemu_system_vmstop(gpointer opaque)
 {
-    vmstop_requested = state;
-    qemu_notify_event();
+    RunState r = (RunState)opaque;
+    vm_stop(r);
+    return FALSE;
 }
 
-static void main_loop_junk(void)
+void qemu_system_vmstop_request(RunState state)
 {
-    RunState r;
-    if (qemu_vmstop_requested(&r)) {
-        vm_stop(r);
-    }
+    g_idle_add(qemu_system_vmstop, (gpointer)state);
 }
 
 static void main_loop(void)
@@ -1957,7 +1942,6 @@ static void main_loop(void)
 #ifdef CONFIG_PROFILER
         dev_time += profile_getclock() - ti;
 #endif
-        main_loop_junk();
     } while (!main_loop_should_quit());
 }
 
