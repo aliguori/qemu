@@ -1700,7 +1700,6 @@ static int reset_requested;
 static int shutdown_requested, shutdown_signal = -1;
 static pid_t shutdown_pid;
 static int powerdown_requested;
-static int debug_requested;
 static int suspend_requested;
 static int wakeup_requested;
 static NotifierList powerdown_notifiers =
@@ -1770,13 +1769,6 @@ static int qemu_powerdown_requested(void)
 {
     int r = powerdown_requested;
     powerdown_requested = 0;
-    return r;
-}
-
-static int qemu_debug_requested(void)
-{
-    int r = debug_requested;
-    debug_requested = 0;
     return r;
 }
 
@@ -1930,10 +1922,15 @@ void qemu_register_powerdown_notifier(Notifier *notifier)
     notifier_list_add(&powerdown_notifiers, notifier);
 }
 
+static gboolean qemu_system_debug(gpointer unused)
+{
+    vm_stop(RUN_STATE_DEBUG);
+    return FALSE;
+}
+
 void qemu_system_debug_request(void)
 {
-    debug_requested = 1;
-    qemu_notify_event();
+    g_idle_add(qemu_system_debug, NULL);
 }
 
 void qemu_system_vmstop_request(RunState state)
@@ -1945,9 +1942,6 @@ void qemu_system_vmstop_request(RunState state)
 static void main_loop_junk(void)
 {
     RunState r;
-    if (qemu_debug_requested()) {
-        vm_stop(RUN_STATE_DEBUG);
-    }
     if (qemu_suspend_requested()) {
         qemu_system_suspend();
     }
