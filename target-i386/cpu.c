@@ -2013,13 +2013,6 @@ bool cpu_is_bsp(X86CPU *cpu)
 {
     return cpu_get_apic_base(cpu->env.apic_state) & MSR_IA32_APICBASE_BSP;
 }
-
-/* TODO: remove me, when reset over QOM tree is implemented */
-static void x86_cpu_machine_reset_cb(void *opaque)
-{
-    X86CPU *cpu = opaque;
-    cpu_reset(CPU(cpu));
-}
 #endif
 
 static void mce_init(X86CPU *cpu)
@@ -2130,8 +2123,6 @@ static void x86_cpu_realizefn(DeviceState *dev, Error **errp)
     }
 
 #ifndef CONFIG_USER_ONLY
-    qemu_register_reset(x86_cpu_machine_reset_cb, cpu);
-
     if (cpu->env.cpuid_features & CPUID_APIC || smp_cpus > 1) {
         x86_cpu_apic_init(cpu, &local_err);
         if (local_err != NULL) {
