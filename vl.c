@@ -1699,7 +1699,6 @@ static QTAILQ_HEAD(reset_handlers, QEMUResetEntry) reset_handlers =
 static int shutdown_signal = -1;
 static pid_t shutdown_pid;
 static int powerdown_requested;
-static int wakeup_requested;
 static NotifierList powerdown_notifiers =
     NOTIFIER_LIST_INITIALIZER(powerdown_notifiers);
 static NotifierList suspend_notifiers =
@@ -1748,11 +1747,14 @@ static gboolean qemu_reset(gpointer unused)
     return FALSE;
 }
 
-static int qemu_wakeup_requested(void)
+static gboolean qemu_wakeup(gpointer unused)
 {
-    int r = wakeup_requested;
-    wakeup_requested = 0;
-    return r;
+    pause_all_vcpus();
+    cpu_synchronize_all_states();
+    qemu_system_reset(VMRESET_SILENT);
+    resume_all_vcpus();
+    monitor_protocol_event(QEVENT_WAKEUP, NULL);
+    return FALSE;
 }
 
 static int qemu_powerdown_requested(void)
@@ -1862,8 +1864,7 @@ void qemu_system_wakeup_request(WakeupReason reason)
     }
     runstate_set(RUN_STATE_RUNNING);
     notifier_list_notify(&wakeup_notifiers, &reason);
-    wakeup_requested = 1;
-    qemu_notify_event();
+    g_idle_add(qemu_wakeup, NULL);
 }
 
 void qemu_system_wakeup_enable(WakeupReason reason, bool enabled)
@@ -1943,13 +1944,6 @@ void qemu_system_vmstop_request(RunState state)
 static void main_loop_junk(void)
 {
     RunState r;
-    if (qemu_wakeup_requested()) {
-        pause_all_vcpus();
-        cpu_synchronize_all_states();
-        qemu_system_reset(VMRESET_SILENT);
-        resume_all_vcpus();
-        monitor_protocol_event(QEVENT_WAKEUP, NULL);
-    }
     if (qemu_powerdown_requested()) {
         qemu_system_powerdown();
     }
