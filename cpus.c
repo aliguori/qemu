@@ -1318,3 +1318,12 @@ void qmp_inject_nmi(Error **errp)
     error_set(errp, QERR_UNSUPPORTED);
 #endif
 }
+
+void cpu_reset_all(void)
+{
+    CPUArchState *env;
+
+    for (env = first_cpu; env != NULL; env = env->next_cpu) {
+        cpu_reset(CPU(env));
+    }
+}
