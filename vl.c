@@ -1732,27 +1732,52 @@ static void qemu_kill_report(void)
     }
 }
 
-static gboolean qemu_reset(gpointer unused)
+typedef struct SystemRequestState
 {
+    QuiescedFunc *request;
+    void *opaque;
+} SystemRequestState;
+
+static gboolean qemu_quiesced_request(gpointer opaque)
+{
+    SystemRequestState *s = opaque;
+
     pause_all_vcpus();
     cpu_synchronize_all_states();
+    if (s->request(s->opaque)) {
+        resume_all_vcpus();
+    }
+
+    g_free(s);
+    return FALSE;
+}
+
+guint qemu_idle_add_quiesced(QuiescedFunc *func, void *opaque)
+{
+    SystemRequestState *s = g_new0(SystemRequestState, 1);
+
+    s->request = func;
+    s->opaque = opaque;
+
+    cpu_stop_current();
+    return g_idle_add(qemu_quiesced_request, s);
+}
+
+static bool qemu_reset(void *unused)
+{
     qemu_system_reset(VMRESET_REPORT);
-    resume_all_vcpus();
     if (runstate_check(RUN_STATE_INTERNAL_ERROR) ||
         runstate_check(RUN_STATE_SHUTDOWN)) {
         runstate_set(RUN_STATE_PAUSED);
     }
-    return FALSE;
+    return true;
 }
 
-static gboolean qemu_wakeup(gpointer unused)
+static bool qemu_wakeup(void *unused)
 {
-    pause_all_vcpus();
-    cpu_synchronize_all_states();
     qemu_system_reset(VMRESET_SILENT);
-    resume_all_vcpus();
     monitor_protocol_event(QEVENT_WAKEUP, NULL);
-    return FALSE;
+    return true;
 }
 
 void qemu_register_reset(QEMUResetHandler *func, void *opaque)
@@ -1805,18 +1830,16 @@ void qemu_system_reset_request(void)
     if (no_reboot) {
         qemu_system_shutdown_request();
     } else {
-        cpu_stop_current();
-        g_idle_add(qemu_reset, NULL);
+        qemu_idle_add_quiesced(qemu_reset, NULL);
     }
 }
 
-static gboolean qemu_system_suspend(gpointer unused)
+static bool qemu_system_suspend(void *unused)
 {
-    pause_all_vcpus();
     notifier_list_notify(&suspend_notifiers, NULL);
     runstate_set(RUN_STATE_SUSPENDED);
     monitor_protocol_event(QEVENT_SUSPEND, NULL);
-    return FALSE;
+    return false;
 }
 
 void qemu_system_suspend_request(void)
@@ -1824,8 +1847,7 @@ void qemu_system_suspend_request(void)
     if (runstate_check(RUN_STATE_SUSPENDED)) {
         return;
     }
-    cpu_stop_current();
-    g_idle_add(qemu_system_suspend, NULL);
+    qemu_idle_add_quiesced(qemu_system_suspend, NULL);
 }
 
 void qemu_register_suspend_notifier(Notifier *notifier)
@@ -1843,8 +1865,7 @@ void qemu_system_wakeup_request(WakeupReason reason)
     }
     runstate_set(RUN_STATE_RUNNING);
     notifier_list_notify(&wakeup_notifiers, &reason);
-    cpu_stop_current();
-    g_idle_add(qemu_wakeup, NULL);
+    qemu_idle_add_quiesced(qemu_wakeup, NULL);
 }
 
 void qemu_system_wakeup_enable(WakeupReason reason, bool enabled)
@@ -1869,7 +1890,7 @@ void qemu_system_killed(int signal, pid_t pid)
     qemu_system_shutdown_request();
 }
 
-static gboolean qemu_system_shutdown(gpointer data)
+static bool qemu_system_shutdown(void *unused)
 {
     qemu_kill_report();
     monitor_protocol_event(QEVENT_SHUTDOWN, NULL);
@@ -1878,26 +1899,24 @@ static gboolean qemu_system_shutdown(gpointer data)
     } else {
         main_loop_quit();
     }
-    return FALSE;
+    return false;
 }
 
 void qemu_system_shutdown_request(void)
 {
-    cpu_stop_current();
-    g_idle_add(qemu_system_shutdown, NULL);
+    qemu_idle_add_quiesced(qemu_system_shutdown, NULL);
 }
 
-static gboolean qemu_system_powerdown(gpointer unused)
+static bool qemu_system_powerdown(void *unused)
 {
     monitor_protocol_event(QEVENT_POWERDOWN, NULL);
     notifier_list_notify(&powerdown_notifiers, NULL);
-    return FALSE;
+    return false;
 }
 
 void qemu_system_powerdown_request(void)
 {
-    cpu_stop_current();
-    g_idle_add(qemu_system_powerdown, NULL);
+    qemu_idle_add_quiesced(qemu_system_powerdown, NULL);
 }
 
 void qemu_register_powerdown_notifier(Notifier *notifier)
@@ -1905,29 +1924,27 @@ void qemu_register_powerdown_notifier(Notifier *notifier)
     notifier_list_add(&powerdown_notifiers, notifier);
 }
 
-static gboolean qemu_system_debug(gpointer unused)
+static bool qemu_system_debug(void *unused)
 {
     vm_stop(RUN_STATE_DEBUG);
-    return FALSE;
+    return false;
 }
 
 void qemu_system_debug_request(void)
 {
-    cpu_stop_current();
-    g_idle_add(qemu_system_debug, NULL);
+    qemu_idle_add_quiesced(qemu_system_debug, NULL);
 }
 
-static gboolean qemu_system_vmstop(gpointer opaque)
+static bool qemu_system_vmstop(void *opaque)
 {
     RunState r = (RunState)opaque;
     vm_stop(r);
-    return FALSE;
+    return false;
 }
 
 void qemu_system_vmstop_request(RunState state)
 {
-    cpu_stop_current();
-    g_idle_add(qemu_system_vmstop, (gpointer)state);
+    qemu_idle_add_quiesced(qemu_system_vmstop, (void *)state);
 }
 
 static void main_loop(void)

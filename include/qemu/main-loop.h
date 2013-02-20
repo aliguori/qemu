@@ -306,4 +306,21 @@ void qemu_bh_schedule_idle(QEMUBH *bh);
 bool main_loop_should_quit(void);
 void main_loop_quit(void);
 
+/**
+ * QuiescedFunc:
+ *
+ * Returns: #true to resume VCPUS, #false otherwise
+ */
+typedef bool (QuiescedFunc)(void *opaque);
+
+/**
+ * qemu_idle_add_quiesced:
+ *
+ * Registers a callback to be invoked from the I/O thread with
+ * VCPUs in a quiesced state.  The current VCPU will be stopped
+ * (if applicable) before this function returns.  The VCPU state
+ * will also be synchronized before @func is invoked.
+ */
+guint qemu_idle_add_quiesced(QuiescedFunc *func, void *opaque);
+
 #endif
