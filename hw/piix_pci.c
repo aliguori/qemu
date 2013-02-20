@@ -515,13 +515,27 @@ static const VMStateDescription vmstate_piix3 = {
     }
 };
 
+static bool piix_soft_reset(void *unused)
+{
+    cpu_reset_all();
+    return true;
+}
+
+static void piix_soft_reset_request(void)
+{
+    qemu_idle_add_quiesced(piix_soft_reset, NULL);
+}
 
 static void rcr_write(void *opaque, hwaddr addr, uint64_t val, unsigned len)
 {
     PIIX3State *d = opaque;
 
     if (val & 4) {
-        qemu_system_reset_request();
+        if (val & 2) {
+            piix_soft_reset_request();
+        } else {
+            qemu_system_reset_request();
+        }
         return;
     }
     d->rcr = val & 2; /* keep System Reset type only */
