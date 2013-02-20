@@ -1843,6 +1843,7 @@ void qemu_system_wakeup_request(WakeupReason reason)
     }
     runstate_set(RUN_STATE_RUNNING);
     notifier_list_notify(&wakeup_notifiers, &reason);
+    cpu_stop_current();
     g_idle_add(qemu_wakeup, NULL);
 }
 
@@ -1895,6 +1896,7 @@ static gboolean qemu_system_powerdown(gpointer unused)
 
 void qemu_system_powerdown_request(void)
 {
+    cpu_stop_current();
     g_idle_add(qemu_system_powerdown, NULL);
 }
 
@@ -1911,6 +1913,7 @@ static gboolean qemu_system_debug(gpointer unused)
 
 void qemu_system_debug_request(void)
 {
+    cpu_stop_current();
     g_idle_add(qemu_system_debug, NULL);
 }
 
@@ -1923,6 +1926,7 @@ static gboolean qemu_system_vmstop(gpointer opaque)
 
 void qemu_system_vmstop_request(RunState state)
 {
+    cpu_stop_current();
     g_idle_add(qemu_system_vmstop, (gpointer)state);
 }
 
