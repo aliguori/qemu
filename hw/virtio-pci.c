@@ -33,6 +33,7 @@
 #include "hw/virtio-pci.h"
 #include "qemu/range.h"
 #include "hw/virtio-bus.h"
+#include "qapi/visitor.h"
 
 /* from Linux's linux/virtio_pci.h */
 
@@ -1297,29 +1298,24 @@ static const TypeInfo virtio_pci_info = {
 
 /* virtio-blk-pci */
 
-static Property virtio_blk_pci_properties[] = {
-    DEFINE_PROP_HEX32("class", VirtIOPCIProxy, class_code, 0),
-    DEFINE_PROP_BIT("ioeventfd", VirtIOPCIProxy, flags,
-                    VIRTIO_PCI_FLAG_USE_IOEVENTFD_BIT, true),
-    DEFINE_PROP_UINT32("vectors", VirtIOPCIProxy, nvectors, 2),
-#ifdef CONFIG_VIRTIO_BLK_DATA_PLANE
-    DEFINE_PROP_BIT("x-data-plane", VirtIOBlkPCI, blk.data_plane, 0, false),
-#endif
-    DEFINE_VIRTIO_BLK_FEATURES(VirtIOPCIProxy, host_features),
-    DEFINE_VIRTIO_BLK_PROPERTIES(VirtIOBlkPCI, blk),
-    DEFINE_PROP_END_OF_LIST(),
-};
-
 static int virtio_blk_pci_init(VirtIOPCIProxy *vpci_dev)
 {
     VirtIOBlkPCI *dev = VIRTIO_BLK_PCI(vpci_dev);
     DeviceState *vdev = DEVICE(&dev->vdev);
-    virtio_blk_set_conf(vdev, &(dev->blk));
     qdev_set_parent_bus(vdev, BUS(&vpci_dev->bus));
     if (qdev_init(vdev) < 0) {
         return -1;
     }
     return 0;
+}
+
+static void virtio_blk_pci_enum_properties(DeviceClass *dc, DevicePropEnum fn, void *opaque)
+{
+    DeviceClass *parent = DEVICE_CLASS(object_class_get_parent(OBJECT_CLASS(dc)));
+    DeviceClass *vbc = DEVICE_CLASS(object_class_by_name(TYPE_VIRTIO_BLK));
+
+    device_class_enum_properties(parent, fn, opaque);
+    device_class_enum_properties(vbc, fn, opaque);
 }
 
 static void virtio_blk_pci_class_init(ObjectClass *klass, void *data)
@@ -1328,7 +1324,7 @@ static void virtio_blk_pci_class_init(ObjectClass *klass, void *data)
     VirtioPCIClass *k = VIRTIO_PCI_CLASS(klass);
     PCIDeviceClass *pcidev_k = PCI_DEVICE_CLASS(klass);
 
-    dc->props = virtio_blk_pci_properties;
+    dc->enum_properties = virtio_blk_pci_enum_properties;
     k->init = virtio_blk_pci_init;
     pcidev_k->vendor_id = PCI_VENDOR_ID_REDHAT_QUMRANET;
     pcidev_k->device_id = PCI_DEVICE_ID_VIRTIO_BLOCK;
@@ -1336,11 +1332,24 @@ static void virtio_blk_pci_class_init(ObjectClass *klass, void *data)
     pcidev_k->class_id = PCI_CLASS_STORAGE_SCSI;
 }
 
+static void proxy_property_get(Object *obj, Visitor *v, void *opaque, const char *name, struct Error **errp)
+{
+    Object *child = opaque;
+    object_property_get(child, v, name, errp);
+}
+
+static void proxy_property_set(Object *obj, Visitor *v, void *opaque, const char *name, struct Error **errp)
+{
+    Object *child = opaque;
+    object_property_set(child, v, name, errp);
+}
+
 static void virtio_blk_pci_instance_init(Object *obj)
 {
     VirtIOBlkPCI *dev = VIRTIO_BLK_PCI(obj);
     object_initialize(OBJECT(&dev->vdev), TYPE_VIRTIO_BLK);
     object_property_add_child(obj, "virtio-backend", OBJECT(&dev->vdev), NULL);
+    object_property_add(obj, NULL, NULL, proxy_property_get, proxy_property_set, NULL, OBJECT(&dev->vdev), NULL);
 }
 
 static const TypeInfo virtio_blk_pci_info = {
