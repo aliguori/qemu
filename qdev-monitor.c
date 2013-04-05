@@ -134,10 +134,15 @@ static const char *find_typename_by_alias(const char *alias)
     return NULL;
 }
 
+static void print_prop(DeviceClass *dc, const char *name, const char *type, void *opaque)
+{
+    const char *driver = opaque;
+    error_printf("%s.%s=%s\n", driver, name, type);
+}
+
 int qdev_device_help(QemuOpts *opts)
 {
     const char *driver;
-    Property *prop;
     ObjectClass *klass;
 
     driver = qemu_opt_get(opts, "driver");
@@ -160,26 +165,16 @@ int qdev_device_help(QemuOpts *opts)
             klass = object_class_by_name(driver);
         }
     }
-
+    if (klass) {
+        klass = object_class_dynamic_cast(klass, TYPE_DEVICE);
+    }
     if (!klass) {
         return 0;
     }
-    do {
-        for (prop = DEVICE_CLASS(klass)->props; prop && prop->name; prop++) {
-            /*
-             * TODO Properties without a parser are just for dirty hacks.
-             * qdev_prop_ptr is the only such PropertyInfo.  It's marked
-             * for removal.  This conditional should be removed along with
-             * it.
-             */
-            if (!prop->info->set) {
-                continue;           /* no way to set it, don't show */
-            }
-            error_printf("%s.%s=%s\n", driver, prop->name,
-                         prop->info->legacy_name ?: prop->info->name);
-        }
-        klass = object_class_get_parent(klass);
-    } while (klass != object_class_by_name(TYPE_DEVICE));
+
+    device_class_enum_properties(DEVICE_CLASS(klass),
+                                 print_prop, (void *)driver);
+
     return 1;
 }
 

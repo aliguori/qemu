@@ -803,12 +803,51 @@ static void device_unparent(Object *obj)
     }
 }
 
+static void device_class_enum_properties_do(DeviceClass *dc,
+                                            DevicePropEnum fn,
+                                            void *opaque)
+{
+    ObjectClass *klass = OBJECT_CLASS(dc);
+    Property *prop;
+
+    /* Print the properties for this class */
+    for (prop = DEVICE_CLASS(klass)->props; prop && prop->name; prop++) {
+        /*
+         * TODO Properties without a parser are just for dirty hacks.
+         * qdev_prop_ptr is the only such PropertyInfo.  It's marked
+         * for removal.  This conditional should be removed along with
+         * it.
+         */
+        if (!prop->info->set) {
+            continue;           /* no way to set it, don't show */
+        }
+
+        fn(DEVICE_CLASS(klass), prop->name,
+           prop->info->legacy_name ?: prop->info->name,
+           opaque);
+    }
+
+    /* Chain to the next base class */
+    klass = object_class_get_parent(klass);
+
+    if (object_class_dynamic_cast(klass, TYPE_DEVICE)) {
+        device_class_enum_properties(DEVICE_CLASS(klass), fn, opaque);
+    }
+}
+
+void device_class_enum_properties(DeviceClass *dc, DevicePropEnum fn,
+                                  void *opaque)
+{
+    dc->enum_properties(dc, fn, opaque);
+}
+
 static void device_class_init(ObjectClass *class, void *data)
 {
     DeviceClass *dc = DEVICE_CLASS(class);
 
     class->unparent = device_unparent;
     dc->realize = device_realize;
+    dc->enum_properties = device_class_enum_properties_do;
 }
 
 void device_reset(DeviceState *dev)

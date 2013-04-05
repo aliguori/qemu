@@ -17,11 +17,16 @@ enum {
 #define DEVICE_CLASS(klass) OBJECT_CLASS_CHECK(DeviceClass, (klass), TYPE_DEVICE)
 #define DEVICE_GET_CLASS(obj) OBJECT_GET_CLASS(DeviceClass, (obj), TYPE_DEVICE)
 
+typedef struct DeviceClass DeviceClass;
+
 typedef int (*qdev_initfn)(DeviceState *dev);
 typedef int (*qdev_event)(DeviceState *dev);
 typedef void (*qdev_resetfn)(DeviceState *dev);
 typedef void (*DeviceRealize)(DeviceState *dev, Error **errp);
 typedef void (*DeviceUnrealize)(DeviceState *dev, Error **errp);
+
+typedef void (*DevicePropEnum)(DeviceClass *klass, const char *name,
+                               const char *type, void *opaque);
 
 struct VMStateDescription;
 
@@ -75,7 +80,7 @@ struct VMStateDescription;
  *   </para>
  * </note>
  */
-typedef struct DeviceClass {
+struct DeviceClass {
     /*< private >*/
     ObjectClass parent_class;
     /*< public >*/
@@ -84,6 +89,9 @@ typedef struct DeviceClass {
     const char *desc;
     Property *props;
     int no_user;
+
+    void (*enum_properties)(DeviceClass *klass, DevicePropEnum fn,
+                            void *opaque);
 
     /* callbacks */
     void (*reset)(DeviceState *dev);
@@ -98,7 +106,7 @@ typedef struct DeviceClass {
     qdev_event unplug;
     qdev_event exit;
     const char *bus_type;
-} DeviceClass;
+};
 
 /**
  * DeviceState:
@@ -216,6 +224,9 @@ qemu_irq qdev_get_gpio_in(DeviceState *dev, int n);
 void qdev_connect_gpio_out(DeviceState *dev, int n, qemu_irq pin);
 
 BusState *qdev_get_child_bus(DeviceState *dev, const char *name);
+
+void device_class_enum_properties(DeviceClass *klass, DevicePropEnum fn,
+                                  void *opaque);
 
 /*** Device API.  ***/
 
