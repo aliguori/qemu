@@ -323,12 +323,12 @@ void object_initialize(void *data, const char *typename)
 
 static inline bool object_property_is_child(ObjectProperty *prop)
 {
-    return strstart(prop->type, "child<", NULL);
+    return prop->type && strstart(prop->type, "child<", NULL);
 }
 
 static inline bool object_property_is_link(ObjectProperty *prop)
 {
-    return strstart(prop->type, "link<", NULL);
+    return prop->type && strstart(prop->type, "link<", NULL);
 }
 
 static void object_property_del_all(Object *obj)
@@ -632,7 +632,7 @@ void object_property_add(Object *obj, const char *name, const char *type,
     ObjectProperty *prop;
 
     QTAILQ_FOREACH(prop, &obj->properties, node) {
-        if (strcmp(prop->name, name) == 0) {
+        if (name && prop->name && strcmp(prop->name, name) == 0) {
             error_setg(errp, "attempt to add duplicate property '%s'"
                        " to object (type '%s')", name,
                        object_get_typename(obj));
@@ -642,8 +642,13 @@ void object_property_add(Object *obj, const char *name, const char *type,
 
     prop = g_malloc0(sizeof(*prop));
 
-    prop->name = g_strdup(name);
-    prop->type = g_strdup(type);
+    if (name == NULL) {
+        prop->name = NULL;
+        prop->type = NULL;
+    } else {
+        prop->name = g_strdup(name);
+        prop->type = g_strdup(type);
+    }
 
     prop->get = get;
     prop->set = set;
@@ -656,12 +661,19 @@ void object_property_add(Object *obj, const char *name, const char *type,
 ObjectProperty *object_property_find(Object *obj, const char *name,
                                      Error **errp)
 {
+    ObjectProperty *defprop = NULL;
     ObjectProperty *prop;
 
     QTAILQ_FOREACH(prop, &obj->properties, node) {
-        if (strcmp(prop->name, name) == 0) {
+        if (prop->name == NULL) {
+            defprop = prop;
+        } else if (strcmp(prop->name, name) == 0) {
             return prop;
         }
+    }
+
+    if (defprop) {
+        return defprop;
     }
 
     error_set(errp, QERR_PROPERTY_NOT_FOUND, "", name);

@@ -736,7 +736,9 @@ void object_unref(Object *obj);
  * @obj: the object to add a property to
  * @name: the name of the property.  This can contain any character except for
  *  a forward slash.  In general, you should use hyphens '-' instead of
- *  underscores '_' when naming properties.
+ *  underscores '_' when naming properties.  If @name is NULL then it the
+ *  this will be treated as the default accessors for any property that has
+ *  not been explicitly registered.
  * @type: the type name of the property.  This namespace is pretty loosely
  *   defined.  Sub namespaces are constructed by using a prefix and then
  *   to angle brackets.  For instance, the type 'virtio-net-pci' in the
