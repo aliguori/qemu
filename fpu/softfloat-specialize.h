@@ -45,10 +45,10 @@ to substitute a result value.  If traps are not implemented, this routine
 should be simply `float_exception_flags |= flags;'.
 -------------------------------------------------------------------------------
 */
-void float_raise( int8 flags )
+void float_raise( int8 flags STATUS_PARAM )
 {
 
-    float_exception_flags |= flags;
+    STATUS(float_exception_flags) |= flags;
 
 }
 
@@ -102,11 +102,11 @@ Returns the result of converting the single-precision floating-point NaN
 exception is raised.
 -------------------------------------------------------------------------------
 */
-static commonNaNT float32ToCommonNaN( float32 a )
+static commonNaNT float32ToCommonNaN( float32 a STATUS_PARAM )
 {
     commonNaNT z;
 
-    if ( float32_is_signaling_nan( a ) ) float_raise( float_flag_invalid );
+    if ( float32_is_signaling_nan( a ) ) float_raise( float_flag_invalid STATUS_VAR );
     z.sign = a>>31;
     z.low = 0;
     z.high = ( (bits64) a )<<41;
@@ -134,7 +134,7 @@ is a NaN, and returns the appropriate NaN result.  If either `a' or `b' is a
 signaling NaN, the invalid exception is raised.
 -------------------------------------------------------------------------------
 */
-static float32 propagateFloat32NaN( float32 a, float32 b )
+static float32 propagateFloat32NaN( float32 a, float32 b STATUS_PARAM)
 {
     flag aIsNaN, aIsSignalingNaN, bIsNaN, bIsSignalingNaN;
 
@@ -144,7 +144,7 @@ static float32 propagateFloat32NaN( float32 a, float32 b )
     bIsSignalingNaN = float32_is_signaling_nan( b );
     a |= 0x00400000;
     b |= 0x00400000;
-    if ( aIsSignalingNaN | bIsSignalingNaN ) float_raise( float_flag_invalid );
+    if ( aIsSignalingNaN | bIsSignalingNaN ) float_raise( float_flag_invalid STATUS_VAR);
     if ( aIsSignalingNaN ) {
         if ( bIsSignalingNaN ) goto returnLargerSignificand;
         return bIsNaN ? b : a;
@@ -204,11 +204,11 @@ Returns the result of converting the double-precision floating-point NaN
 exception is raised.
 -------------------------------------------------------------------------------
 */
-static commonNaNT float64ToCommonNaN( float64 a )
+static commonNaNT float64ToCommonNaN( float64 a STATUS_PARAM)
 {
     commonNaNT z;
 
-    if ( float64_is_signaling_nan( a ) ) float_raise( float_flag_invalid );
+    if ( float64_is_signaling_nan( a ) ) float_raise( float_flag_invalid STATUS_VAR);
     z.sign = a>>63;
     z.low = 0;
     z.high = a<<12;
@@ -239,7 +239,7 @@ is a NaN, and returns the appropriate NaN result.  If either `a' or `b' is a
 signaling NaN, the invalid exception is raised.
 -------------------------------------------------------------------------------
 */
-static float64 propagateFloat64NaN( float64 a, float64 b )
+static float64 propagateFloat64NaN( float64 a, float64 b STATUS_PARAM)
 {
     flag aIsNaN, aIsSignalingNaN, bIsNaN, bIsSignalingNaN;
 
@@ -249,7 +249,7 @@ static float64 propagateFloat64NaN( float64 a, float64 b )
     bIsSignalingNaN = float64_is_signaling_nan( b );
     a |= LIT64( 0x0008000000000000 );
     b |= LIT64( 0x0008000000000000 );
-    if ( aIsSignalingNaN | bIsSignalingNaN ) float_raise( float_flag_invalid );
+    if ( aIsSignalingNaN | bIsSignalingNaN ) float_raise( float_flag_invalid STATUS_VAR);
     if ( aIsSignalingNaN ) {
         if ( bIsSignalingNaN ) goto returnLargerSignificand;
         return bIsNaN ? b : a;
@@ -317,11 +317,11 @@ point NaN `a' to the canonical NaN format.  If `a' is a signaling NaN, the
 invalid exception is raised.
 -------------------------------------------------------------------------------
 */
-static commonNaNT floatx80ToCommonNaN( floatx80 a )
+static commonNaNT floatx80ToCommonNaN( floatx80 a STATUS_PARAM)
 {
     commonNaNT z;
 
-    if ( floatx80_is_signaling_nan( a ) ) float_raise( float_flag_invalid );
+    if ( floatx80_is_signaling_nan( a ) ) float_raise( float_flag_invalid STATUS_VAR);
     z.sign = a.high>>15;
     z.low = 0;
     z.high = a.low<<1;
@@ -352,7 +352,7 @@ of which is a NaN, and returns the appropriate NaN result.  If either `a' or
 `b' is a signaling NaN, the invalid exception is raised.
 -------------------------------------------------------------------------------
 */
-static floatx80 propagateFloatx80NaN( floatx80 a, floatx80 b )
+static floatx80 propagateFloatx80NaN( floatx80 a, floatx80 b STATUS_PARAM)
 {
     flag aIsNaN, aIsSignalingNaN, bIsNaN, bIsSignalingNaN;
 
@@ -362,7 +362,7 @@ static floatx80 propagateFloatx80NaN( floatx80 a, floatx80 b )
     bIsSignalingNaN = floatx80_is_signaling_nan( b );
     a.low |= LIT64( 0xC000000000000000 );
     b.low |= LIT64( 0xC000000000000000 );
-    if ( aIsSignalingNaN | bIsSignalingNaN ) float_raise( float_flag_invalid );
+    if ( aIsSignalingNaN | bIsSignalingNaN ) float_raise( float_flag_invalid STATUS_VAR);
     if ( aIsSignalingNaN ) {
         if ( bIsSignalingNaN ) goto returnLargerSignificand;
         return bIsNaN ? b : a;
@@ -430,11 +430,11 @@ Returns the result of converting the quadruple-precision floating-point NaN
 exception is raised.
 -------------------------------------------------------------------------------
 */
-static commonNaNT float128ToCommonNaN( float128 a )
+static commonNaNT float128ToCommonNaN( float128 a STATUS_PARAM)
 {
     commonNaNT z;
 
-    if ( float128_is_signaling_nan( a ) ) float_raise( float_flag_invalid );
+    if ( float128_is_signaling_nan( a ) ) float_raise( float_flag_invalid STATUS_VAR);
     z.sign = a.high>>63;
     shortShift128Left( a.high, a.low, 16, &z.high, &z.low );
     return z;
@@ -464,7 +464,7 @@ which is a NaN, and returns the appropriate NaN result.  If either `a' or
 `b' is a signaling NaN, the invalid exception is raised.
 -------------------------------------------------------------------------------
 */
-static float128 propagateFloat128NaN( float128 a, float128 b )
+static float128 propagateFloat128NaN( float128 a, float128 b STATUS_PARAM)
 {
     flag aIsNaN, aIsSignalingNaN, bIsNaN, bIsSignalingNaN;
 
@@ -474,7 +474,7 @@ static float128 propagateFloat128NaN( float128 a, float128 b )
     bIsSignalingNaN = float128_is_signaling_nan( b );
     a.high |= LIT64( 0x0000800000000000 );
     b.high |= LIT64( 0x0000800000000000 );
-    if ( aIsSignalingNaN | bIsSignalingNaN ) float_raise( float_flag_invalid );
+    if ( aIsSignalingNaN | bIsSignalingNaN ) float_raise( float_flag_invalid STATUS_VAR);
     if ( aIsSignalingNaN ) {
         if ( bIsSignalingNaN ) goto returnLargerSignificand;
         return bIsNaN ? b : a;
