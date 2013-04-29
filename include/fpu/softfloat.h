@@ -4,10 +4,11 @@
  * Derived from SoftFloat.
  */
 
-/*============================================================================
+/*
+============================================================================
 
-This C header file is part of the SoftFloat IEC/IEEE Floating-point Arithmetic
-Package, Release 2b.
+This C header file is part of the SoftFloat IEC/IEEE Floating-point
+Arithmetic Package, Release 2a.
 
 Written by John R. Hauser.  This work was made possible in part by the
 International Computer Science Institute, located at Suite 600, 1947 Center
@@ -16,24 +17,22 @@ National Science Foundation under grant MIP-9311980.  The original version
 of this code was written as part of a project to build a fixed-point vector
 processor in collaboration with the University of California at Berkeley,
 overseen by Profs. Nelson Morgan and John Wawrzynek.  More information
-is available through the Web page `http://www.cs.berkeley.edu/~jhauser/
+is available through the Web page `http://HTTP.CS.Berkeley.EDU/~jhauser/
 arithmetic/SoftFloat.html'.
 
-THIS SOFTWARE IS DISTRIBUTED AS IS, FOR FREE.  Although reasonable effort has
-been made to avoid it, THIS SOFTWARE MAY CONTAIN FAULTS THAT WILL AT TIMES
-RESULT IN INCORRECT BEHAVIOR.  USE OF THIS SOFTWARE IS RESTRICTED TO PERSONS
-AND ORGANIZATIONS WHO CAN AND WILL TAKE FULL RESPONSIBILITY FOR ALL LOSSES,
-COSTS, OR OTHER PROBLEMS THEY INCUR DUE TO THE SOFTWARE, AND WHO FURTHERMORE
-EFFECTIVELY INDEMNIFY JOHN HAUSER AND THE INTERNATIONAL COMPUTER SCIENCE
-INSTITUTE (possibly via similar legal warning) AGAINST ALL LOSSES, COSTS, OR
-OTHER PROBLEMS INCURRED BY THEIR CUSTOMERS AND CLIENTS DUE TO THE SOFTWARE.
+THIS SOFTWARE IS DISTRIBUTED AS IS, FOR FREE.  Although reasonable effort
+has been made to avoid it, THIS SOFTWARE MAY CONTAIN FAULTS THAT WILL AT
+TIMES RESULT IN INCORRECT BEHAVIOR.  USE OF THIS SOFTWARE IS RESTRICTED TO
+PERSONS AND ORGANIZATIONS WHO CAN AND WILL TAKE FULL RESPONSIBILITY FOR ANY
+AND ALL LOSSES, COSTS, OR OTHER PROBLEMS ARISING FROM ITS USE.
 
 Derivative works are acceptable, even for commercial purposes, so long as
-(1) the source code for the derivative work includes prominent notice that
-the work is derivative, and (2) the source code includes prominent notice with
-these four paragraphs for those parts of this code that are retained.
+(1) they include prominent notice that the work is derivative, and (2) they
+include prominent notice akin to these four paragraphs for those parts of
+this code that are retained.
 
-=============================================================================*/
+===============================================================================
+*/
 
 #ifndef SOFTFLOAT_H
 #define SOFTFLOAT_H
@@ -46,14 +45,16 @@ these four paragraphs for those parts of this code that are retained.
 #include "config-host.h"
 #include "qemu/osdep.h"
 
-/*----------------------------------------------------------------------------
-| Each of the following `typedef's defines the most convenient type that holds
-| integers of at least as many bits as specified.  For example, `uint8' should
-| be the most convenient type that can hold unsigned integers of as many as
-| 8 bits.  The `flag' type must be able to hold either a 0 or 1.  For most
-| implementations of C, `flag', `uint8', and `int8' should all be `typedef'ed
-| to the same as `int'.
-*----------------------------------------------------------------------------*/
+/*
+-------------------------------------------------------------------------------
+Each of the following `typedef's defines the most convenient type that holds
+integers of at least as many bits as specified.  For example, `uint8' should
+be the most convenient type that can hold unsigned integers of as many as
+8 bits.  The `flag' type must be able to hold either a 0 or 1.  For most
+implementations of C, `flag', `uint8', and `int8' should all be `typedef'ed
+to the same as `int'.
+-------------------------------------------------------------------------------
+*/
 typedef uint8_t flag;
 typedef uint8_t uint8;
 typedef int8_t int8;
@@ -69,9 +70,11 @@ typedef int64_t int64;
 #define STATUS(field) status->field
 #define STATUS_VAR , status
 
-/*----------------------------------------------------------------------------
-| Software IEC/IEEE floating-point ordering relations
-*----------------------------------------------------------------------------*/
+/*
+-------------------------------------------------------------------------------
+Software IEC/IEEE floating-point ordering relations
+-------------------------------------------------------------------------------
+*/
 enum {
     float_relation_less      = -1,
     float_relation_equal     =  0,
@@ -79,9 +82,11 @@ enum {
     float_relation_unordered =  2
 };
 
-/*----------------------------------------------------------------------------
-| Software IEC/IEEE floating-point types.
-*----------------------------------------------------------------------------*/
+/*
+-------------------------------------------------------------------------------
+Software IEC/IEEE floating-point types.
+-------------------------------------------------------------------------------
+*/
 /* Use structures for soft-float types.  This prevents accidentally mixing
    them with native int/float types.  A sufficiently clever compiler and
    sane ABI should be able to see though these structs.  However
@@ -137,17 +142,21 @@ typedef struct {
 #define make_float128(high_, low_) ((float128) { .high = high_, .low = low_ })
 #define make_float128_init(high_, low_) { .high = high_, .low = low_ }
 
-/*----------------------------------------------------------------------------
-| Software IEC/IEEE floating-point underflow tininess-detection mode.
-*----------------------------------------------------------------------------*/
+/*
+-------------------------------------------------------------------------------
+Software IEC/IEEE floating-point underflow tininess-detection mode.
+-------------------------------------------------------------------------------
+*/
 enum {
     float_tininess_after_rounding  = 0,
     float_tininess_before_rounding = 1
 };
 
-/*----------------------------------------------------------------------------
-| Software IEC/IEEE floating-point rounding mode.
-*----------------------------------------------------------------------------*/
+/*
+-------------------------------------------------------------------------------
+Software IEC/IEEE floating-point rounding mode.
+-------------------------------------------------------------------------------
+*/
 enum {
     float_round_nearest_even = 0,
     float_round_down         = 1,
@@ -155,9 +164,11 @@ enum {
     float_round_to_zero      = 3
 };
 
-/*----------------------------------------------------------------------------
-| Software IEC/IEEE floating-point exception flags.
-*----------------------------------------------------------------------------*/
+/*
+-------------------------------------------------------------------------------
+Software IEC/IEEE floating-point exception flags.
+-------------------------------------------------------------------------------
+*/
 enum {
     float_flag_invalid   =  1,
     float_flag_divbyzero =  4,
@@ -167,7 +178,6 @@ enum {
     float_flag_input_denormal = 64,
     float_flag_output_denormal = 128
 };
-
 typedef struct float_status {
     signed char float_detect_tininess;
     signed char float_rounding_mode;
@@ -204,27 +214,33 @@ INLINE int get_float_exception_flags(float_status *status)
 }
 void set_floatx80_rounding_precision(int val STATUS_PARAM);
 
-/*----------------------------------------------------------------------------
-| Routine to raise any or all of the software IEC/IEEE floating-point
-| exception flags.
-*----------------------------------------------------------------------------*/
+/*
+-------------------------------------------------------------------------------
+Routine to raise any or all of the software IEC/IEEE floating-point
+exception flags.
+-------------------------------------------------------------------------------
+*/
 void float_raise( int8 flags STATUS_PARAM);
 
-/*----------------------------------------------------------------------------
-| Options to indicate which negations to perform in float*_muladd()
-| Using these differs from negating an input or output before calling
-| the muladd function in that this means that a NaN doesn't have its
-| sign bit inverted before it is propagated.
-*----------------------------------------------------------------------------*/
+/*
+-------------------------------------------------------------------------------
+Options to indicate which negations to perform in float*_muladd()
+Using these differs from negating an input or output before calling
+the muladd function in that this means that a NaN doesn't have its
+sign bit inverted before it is propagated.
+-------------------------------------------------------------------------------
+*/
 enum {
     float_muladd_negate_c = 1,
     float_muladd_negate_product = 2,
     float_muladd_negate_result = 4,
 };
 
-/*----------------------------------------------------------------------------
-| Software IEC/IEEE integer-to-floating-point conversion routines.
-*----------------------------------------------------------------------------*/
+/*
+-------------------------------------------------------------------------------
+Software IEC/IEEE integer-to-floating-point conversion routines.
+-------------------------------------------------------------------------------
+*/
 float32 int32_to_float32( int32 STATUS_PARAM );
 float64 int32_to_float64( int32 STATUS_PARAM );
 float32 uint32_to_float32( uint32 STATUS_PARAM );
@@ -239,15 +255,19 @@ floatx80 int64_to_floatx80( int64 STATUS_PARAM );
 float128 int64_to_float128( int64 STATUS_PARAM );
 float128 uint64_to_float128( uint64 STATUS_PARAM );
 
-/*----------------------------------------------------------------------------
-| Software half-precision conversion routines.
-*----------------------------------------------------------------------------*/
+/*
+-------------------------------------------------------------------------------
+Software half-precision conversion routines.
+*----------------------------------------------------------------------------
+*/
 float16 float32_to_float16( float32, flag STATUS_PARAM );
 float32 float16_to_float32( float16, flag STATUS_PARAM );
 
-/*----------------------------------------------------------------------------
-| Software half-precision operations.
-*----------------------------------------------------------------------------*/
+/*
+-------------------------------------------------------------------------------
+Software half-precision operations.
+-------------------------------------------------------------------------------
+*/
 int float16_is_quiet_nan( float16 );
 int float16_is_signaling_nan( float16 );
 float16 float16_maybe_silence_nan( float16 );
@@ -257,14 +277,18 @@ INLINE int float16_is_any_nan(float16 a)
     return ((float16_val(a) & ~0x8000) > 0x7c00);
 }
 
-/*----------------------------------------------------------------------------
-| The pattern for a default generated half-precision NaN.
-*----------------------------------------------------------------------------*/
+/*
+-------------------------------------------------------------------------------
+The pattern for a default generated half-precision NaN.
+-------------------------------------------------------------------------------
+*/
 extern const float16 float16_default_nan;
 
-/*----------------------------------------------------------------------------
-| Software IEC/IEEE single-precision conversion routines.
-*----------------------------------------------------------------------------*/
+/*
+-------------------------------------------------------------------------------
+Software IEC/IEEE single-precision conversion routines.
+-------------------------------------------------------------------------------
+*/
 int_fast16_t float32_to_int16_round_to_zero(float32 STATUS_PARAM);
 uint_fast16_t float32_to_uint16_round_to_zero(float32 STATUS_PARAM);
 int32 float32_to_int32( float32 STATUS_PARAM );
@@ -277,9 +301,11 @@ float64 float32_to_float64( float32 STATUS_PARAM );
 floatx80 float32_to_floatx80( float32 STATUS_PARAM );
 float128 float32_to_float128( float32 STATUS_PARAM );
 
-/*----------------------------------------------------------------------------
-| Software IEC/IEEE single-precision operations.
-*----------------------------------------------------------------------------*/
+/*
+-------------------------------------------------------------------------------
+Software IEC/IEEE single-precision operations.
+-------------------------------------------------------------------------------
+*/
 float32 float32_round_to_int( float32 STATUS_PARAM );
 float32 float32_add( float32, float32 STATUS_PARAM );
 float32 float32_sub( float32, float32 STATUS_PARAM );
@@ -361,14 +387,18 @@ INLINE float32 float32_set_sign(float32 a, int sign)
 #define float32_infinity make_float32(0x7f800000)
 
 
-/*----------------------------------------------------------------------------
-| The pattern for a default generated single-precision NaN.
-*----------------------------------------------------------------------------*/
+/*
+-------------------------------------------------------------------------------
+The pattern for a default generated single-precision NaN.
+-------------------------------------------------------------------------------
+*/
 extern const float32 float32_default_nan;
 
-/*----------------------------------------------------------------------------
-| Software IEC/IEEE double-precision conversion routines.
-*----------------------------------------------------------------------------*/
+/*
+-------------------------------------------------------------------------------
+Software IEC/IEEE double-precision conversion routines.
+-------------------------------------------------------------------------------
+*/
 int_fast16_t float64_to_int16_round_to_zero(float64 STATUS_PARAM);
 uint_fast16_t float64_to_uint16_round_to_zero(float64 STATUS_PARAM);
 int32 float64_to_int32( float64 STATUS_PARAM );
@@ -383,9 +413,11 @@ float32 float64_to_float32( float64 STATUS_PARAM );
 floatx80 float64_to_floatx80( float64 STATUS_PARAM );
 float128 float64_to_float128( float64 STATUS_PARAM );
 
-/*----------------------------------------------------------------------------
-| Software IEC/IEEE double-precision operations.
-*----------------------------------------------------------------------------*/
+/*
+-------------------------------------------------------------------------------
+Software IEC/IEEE double-precision operations.
+-------------------------------------------------------------------------------
+*/
 float64 float64_round_to_int( float64 STATUS_PARAM );
 float64 float64_trunc_to_int( float64 STATUS_PARAM );
 float64 float64_add( float64, float64 STATUS_PARAM );
@@ -467,14 +499,18 @@ INLINE float64 float64_set_sign(float64 a, int sign)
 #define float64_half make_float64(0x3fe0000000000000LL)
 #define float64_infinity make_float64(0x7ff0000000000000LL)
 
-/*----------------------------------------------------------------------------
-| The pattern for a default generated double-precision NaN.
-*----------------------------------------------------------------------------*/
+/*
+-------------------------------------------------------------------------------
+The pattern for a default generated double-precision NaN.
+-------------------------------------------------------------------------------
+*/
 extern const float64 float64_default_nan;
 
-/*----------------------------------------------------------------------------
-| Software IEC/IEEE extended double-precision conversion routines.
-*----------------------------------------------------------------------------*/
+/*
+-------------------------------------------------------------------------------
+Software IEC/IEEE extended double-precision conversion routines.
+-------------------------------------------------------------------------------
+*/
 int32 floatx80_to_int32( floatx80 STATUS_PARAM );
 int32 floatx80_to_int32_round_to_zero( floatx80 STATUS_PARAM );
 int64 floatx80_to_int64( floatx80 STATUS_PARAM );
@@ -483,9 +519,11 @@ float32 floatx80_to_float32( floatx80 STATUS_PARAM );
 float64 floatx80_to_float64( floatx80 STATUS_PARAM );
 float128 floatx80_to_float128( floatx80 STATUS_PARAM );
 
-/*----------------------------------------------------------------------------
-| Software IEC/IEEE extended double-precision operations.
-*----------------------------------------------------------------------------*/
+/*
+-------------------------------------------------------------------------------
+Software IEC/IEEE extended double-precision operations.
+-------------------------------------------------------------------------------
+*/
 floatx80 floatx80_round_to_int( floatx80 STATUS_PARAM );
 floatx80 floatx80_add( floatx80, floatx80 STATUS_PARAM );
 floatx80 floatx80_sub( floatx80, floatx80 STATUS_PARAM );
@@ -552,14 +590,18 @@ INLINE int floatx80_is_any_nan(floatx80 a)
 #define floatx80_half make_floatx80(0x3ffe, 0x8000000000000000LL)
 #define floatx80_infinity make_floatx80(0x7fff, 0x8000000000000000LL)
 
-/*----------------------------------------------------------------------------
-| The pattern for a default generated extended double-precision NaN.
-*----------------------------------------------------------------------------*/
+/*
+-------------------------------------------------------------------------------
+The pattern for a default generated extended double-precision NaN.
+-------------------------------------------------------------------------------
+*/
 extern const floatx80 floatx80_default_nan;
 
-/*----------------------------------------------------------------------------
-| Software IEC/IEEE quadruple-precision conversion routines.
-*----------------------------------------------------------------------------*/
+/*
+-------------------------------------------------------------------------------
+Software IEC/IEEE quadruple-precision conversion routines.
+-------------------------------------------------------------------------------
+*/
 int32 float128_to_int32( float128 STATUS_PARAM );
 int32 float128_to_int32_round_to_zero( float128 STATUS_PARAM );
 int64 float128_to_int64( float128 STATUS_PARAM );
@@ -568,9 +610,11 @@ float32 float128_to_float32( float128 STATUS_PARAM );
 float64 float128_to_float64( float128 STATUS_PARAM );
 floatx80 float128_to_floatx80( float128 STATUS_PARAM );
 
-/*----------------------------------------------------------------------------
-| Software IEC/IEEE quadruple-precision operations.
-*----------------------------------------------------------------------------*/
+/*
+-------------------------------------------------------------------------------
+Software IEC/IEEE quadruple-precision operations.
+-------------------------------------------------------------------------------
+*/
 float128 float128_round_to_int( float128 STATUS_PARAM );
 float128 float128_add( float128, float128 STATUS_PARAM );
 float128 float128_sub( float128, float128 STATUS_PARAM );
@@ -633,9 +677,11 @@ INLINE int float128_is_any_nan(float128 a)
 
 #define float128_zero make_float128(0, 0)
 
-/*----------------------------------------------------------------------------
-| The pattern for a default generated quadruple-precision NaN.
-*----------------------------------------------------------------------------*/
+/*
+-------------------------------------------------------------------------------
+The pattern for a default generated quadruple-precision NaN.
+-------------------------------------------------------------------------------
+*/
 extern const float128 float128_default_nan;
 
 #endif /* !SOFTFLOAT_H */
