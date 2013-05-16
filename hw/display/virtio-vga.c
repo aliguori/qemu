@@ -108,10 +108,12 @@ static int virtio_vga_realize(VirtIOPCIProxy *vdev)
     PCIDevice *pcidev = PCI_DEVICE(s);
     VGACommonState *vga = &s->vga;
 
+    vga->vram_size_mb = 16;
     vga_common_init(vga);
-    vga_init(vga, pci_address_space(pcidev),
-             pci_address_space_io(pcidev), true);
+    vga_init(vga, pci_address_space(pcidev), pci_address_space_io(pcidev), true);
     vga->con = graphic_console_init(DEVICE(pcidev), vga->hw_ops, vga);
+
+    pci_register_bar(pcidev, 2, PCI_BASE_ADDRESS_MEM_PREFETCH, &vga->vram);
 
     memory_region_init(&s->mmio, "virtio-vga.mmio", 4096);
     memory_region_init_io(&s->ioport, &virtio_vga_ioport_ops, s,
@@ -122,7 +124,6 @@ static int virtio_vga_realize(VirtIOPCIProxy *vdev)
     memory_region_add_subregion(&s->mmio, PCI_VGA_IOPORT_OFFSET, &s->ioport);
     memory_region_add_subregion(&s->mmio, PCI_VGA_BOCHS_OFFSET, &s->bochs);
 
-    pci_register_bar(pcidev, 2, PCI_BASE_ADDRESS_MEM_PREFETCH, &vga->vram);
     pci_register_bar(pcidev, 3, PCI_BASE_ADDRESS_SPACE_MEMORY, &s->mmio);
 
     return 0;
