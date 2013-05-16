@@ -18,6 +18,9 @@ common-obj-$(CONFIG_FRAMEBUFFER) += framebuffer.o
 common-obj-$(CONFIG_MILKYMIST) += milkymist-vgafb.o
 common-obj-$(CONFIG_ZAURUS) += tc6393xb.o
 
+virtio_vga-obj-$(CONFIG_VGA) += virtio-vga.o
+common-obj-$(CONFIG_VIRTIO_PCI) += $(virtio_vga-obj-y)
+
 ifeq ($(CONFIG_MILKYMIST_TMU2),y)
 common-obj-y += milkymist-tmu2.o
 libs_softmmu += $(GLX_LIBS)
