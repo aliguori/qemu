@@ -2129,6 +2129,8 @@ static void select_vgahw (const char *p)
             fprintf(stderr, "Error: QXL VGA not available\n");
             exit(0);
         }
+    } else if (strstart(p, "virtio", &opts)) {
+        vga_interface_type = VGA_VIRTIO;
     } else if (!strstart(p, "none", &opts)) {
     invalid_vga:
         fprintf(stderr, "Unknown vga type: %s\n", p);
