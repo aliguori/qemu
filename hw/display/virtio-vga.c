@@ -122,8 +122,8 @@ static int virtio_vga_realize(VirtIOPCIProxy *vdev)
     memory_region_add_subregion(&s->mmio, PCI_VGA_IOPORT_OFFSET, &s->ioport);
     memory_region_add_subregion(&s->mmio, PCI_VGA_BOCHS_OFFSET, &s->bochs);
 
-    pci_register_bar(pcidev, 2, PCI_BASE_ADDRESS_SPACE_MEMORY, &s->mmio);
-    pci_register_bar(pcidev, 3, PCI_BASE_ADDRESS_MEM_PREFETCH, &vga->vram);
+    pci_register_bar(pcidev, 2, PCI_BASE_ADDRESS_MEM_PREFETCH, &vga->vram);
+    pci_register_bar(pcidev, 3, PCI_BASE_ADDRESS_SPACE_MEMORY, &s->mmio);
 
     return 0;
 }
