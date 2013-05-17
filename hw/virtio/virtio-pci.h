@@ -78,6 +78,7 @@ typedef struct {
 typedef struct VirtioPCIClass {
     PCIDeviceClass parent_class;
     int (*init)(VirtIOPCIProxy *vpci_dev);
+    void (*map_regions)(VirtIOPCIProxy *vpci_dev);
 } VirtioPCIClass;
 
 struct VirtIOPCIProxy {

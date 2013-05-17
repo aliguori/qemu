@@ -940,10 +940,22 @@ static const TypeInfo virtio_9p_pci_info = {
  * virtio-pci: This is the PCIDevice which has a virtio-pci-bus.
  */
 
+static void virtio_pci_map_regions_default(VirtIOPCIProxy *proxy)
+{
+    pci_register_bar(&proxy->pci_dev, 0, PCI_BASE_ADDRESS_SPACE_IO,
+                     &proxy->bar);
+
+    if (proxy->nvectors &&
+        msix_init_exclusive_bar(&proxy->pci_dev, proxy->nvectors, 1)) {
+        proxy->nvectors = 0;
+    }
+}
+
 /* This is called by virtio-bus just after the device is plugged. */
 static void virtio_pci_device_plugged(DeviceState *d)
 {
     VirtIOPCIProxy *proxy = VIRTIO_PCI(d);
+    VirtioPCIClass *vpc = VIRTIO_PCI_GET_CLASS(proxy);
     VirtioBusState *bus = &proxy->bus;
     uint8_t *config;
     uint32_t size;
@@ -959,11 +971,6 @@ static void virtio_pci_device_plugged(DeviceState *d)
     pci_set_word(config + PCI_SUBSYSTEM_ID, virtio_bus_get_vdev_id(bus));
     config[PCI_INTERRUPT_PIN] = 1;
 
-    if (proxy->nvectors &&
-        msix_init_exclusive_bar(&proxy->pci_dev, proxy->nvectors, 1)) {
-        proxy->nvectors = 0;
-    }
-
     proxy->pci_dev.config_write = virtio_write_config;
 
     size = VIRTIO_PCI_REGION_SIZE(&proxy->pci_dev)
@@ -974,8 +981,6 @@ static void virtio_pci_device_plugged(DeviceState *d)
 
     memory_region_init_io(&proxy->bar, &virtio_pci_config_ops, proxy,
                           "virtio-pci", size);
-    pci_register_bar(&proxy->pci_dev, 0, PCI_BASE_ADDRESS_SPACE_IO,
-                     &proxy->bar);
 
     if (!kvm_has_many_ioeventfds()) {
         proxy->flags &= ~VIRTIO_PCI_FLAG_USE_IOEVENTFD;
@@ -985,6 +990,8 @@ static void virtio_pci_device_plugged(DeviceState *d)
     proxy->host_features |= 0x1 << VIRTIO_F_BAD_FEATURE;
     proxy->host_features = virtio_bus_get_vdev_features(bus,
                                                       proxy->host_features);
+
+    vpc->map_regions(proxy);
 }
 
 static int virtio_pci_init(PCIDevice *pci_dev)
@@ -1020,6 +1027,7 @@ static void virtio_pci_class_init(ObjectClass *klass, void *data)
 {
     DeviceClass *dc = DEVICE_CLASS(klass);
     PCIDeviceClass *k = PCI_DEVICE_CLASS(klass);
+    VirtioPCIClass *vpc = VIRTIO_PCI_CLASS(klass);
 
     k->init = virtio_pci_init;
     k->exit = virtio_pci_exit;
@@ -1027,6 +1035,7 @@ static void virtio_pci_class_init(ObjectClass *klass, void *data)
     k->revision = VIRTIO_PCI_ABI_VERSION;
     k->class_id = PCI_CLASS_OTHERS;
     dc->reset = virtio_pci_reset;
+    vpc->map_regions = virtio_pci_map_regions_default;
 }
 
 static const TypeInfo virtio_pci_info = {
