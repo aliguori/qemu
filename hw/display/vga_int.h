@@ -89,7 +89,8 @@ typedef void (* vga_update_retrace_info_fn)(struct VGACommonState *s);
 typedef struct VGACommonState {
     MemoryRegion *legacy_address_space;
     uint8_t *vram_ptr;
-    MemoryRegion vram;
+    MemoryRegion *vram;
+    MemoryRegion vram_internal;
     MemoryRegion vram_vbe;
     uint32_t vram_size;
     uint32_t vram_size_mb; /* property */

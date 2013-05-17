@@ -1072,9 +1072,9 @@ static void vmsvga_update_display(void *opaque)
      * Is it more efficient to look at vram VGA-dirty bits or wait
      * for the driver to issue SVGA_CMD_UPDATE?
      */
-    if (memory_region_is_logging(&s->vga.vram)) {
+    if (memory_region_is_logging(s->vga.vram)) {
         vga_sync_dirty_bitmap(&s->vga);
-        dirty = memory_region_get_dirty(&s->vga.vram, 0,
+        dirty = memory_region_get_dirty(s->vga.vram, 0,
             surface_stride(surface) * surface_height(surface),
             DIRTY_MEMORY_VGA);
     }
@@ -1084,7 +1084,7 @@ static void vmsvga_update_display(void *opaque)
                    surface_width(surface), surface_height(surface));
     }
     if (dirty) {
-        memory_region_reset_dirty(&s->vga.vram, 0,
+        memory_region_reset_dirty(s->vga.vram, 0,
             surface_stride(surface) * surface_height(surface),
             DIRTY_MEMORY_VGA);
     }
@@ -1262,7 +1262,7 @@ static int pci_vmsvga_initfn(PCIDevice *dev)
                 pci_address_space(dev), pci_address_space_io(dev));
 
     pci_register_bar(&s->card, 1, PCI_BASE_ADDRESS_MEM_PREFETCH,
-                     &s->chip.vga.vram);
+                     s->chip.vga.vram);
     pci_register_bar(&s->card, 2, PCI_BASE_ADDRESS_MEM_PREFETCH,
                      &s->chip.fifo_ram);
 

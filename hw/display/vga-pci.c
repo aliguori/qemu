@@ -153,7 +153,7 @@ static int pci_std_vga_initfn(PCIDevice *dev)
     s->con = graphic_console_init(DEVICE(dev), s->hw_ops, s);
 
     /* XXX: VGA_RAM_SIZE must be a power of two */
-    pci_register_bar(&d->dev, 0, PCI_BASE_ADDRESS_MEM_PREFETCH, &s->vram);
+    pci_register_bar(&d->dev, 0, PCI_BASE_ADDRESS_MEM_PREFETCH, s->vram);
 
     /* mmio bar for vga register access */
     if (d->flags & (1 << PCI_VGA_FLAG_ENABLE_MMIO)) {

@@ -198,7 +198,7 @@ static void vga_update_memory_access(VGACommonState *s)
         }
         base += isa_mem_base;
         region = g_malloc(sizeof(*region));
-        memory_region_init_alias(region, "vga.chain4", &s->vram, offset, size);
+        memory_region_init_alias(region, "vga.chain4", s->vram, offset, size);
         memory_region_add_subregion_overlap(s->legacy_address_space, base,
                                             region, 2);
         s->chain4_alias = region;
@@ -881,7 +881,7 @@ void vga_mem_writeb(VGACommonState *s, hwaddr addr, uint32_t val)
             printf("vga: chain4: [0x" TARGET_FMT_plx "]\n", addr);
 #endif
             s->plane_updated |= mask; /* only used to detect font change */
-            memory_region_set_dirty(&s->vram, addr, 1);
+            memory_region_set_dirty(s->vram, addr, 1);
         }
     } else if (s->gr[VGA_GFX_MODE] & 0x10) {
         /* odd/even mode (aka text mode mapping) */
@@ -894,7 +894,7 @@ void vga_mem_writeb(VGACommonState *s, hwaddr addr, uint32_t val)
             printf("vga: odd/even: [0x" TARGET_FMT_plx "]\n", addr);
 #endif
             s->plane_updated |= mask; /* only used to detect font change */
-            memory_region_set_dirty(&s->vram, addr, 1);
+            memory_region_set_dirty(s->vram, addr, 1);
         }
     } else {
         /* standard VGA latched access */
@@ -969,7 +969,7 @@ void vga_mem_writeb(VGACommonState *s, hwaddr addr, uint32_t val)
         printf("vga: latch: [0x" TARGET_FMT_plx "] mask=0x%08x val=0x%08x\n",
                addr * 4, write_mask, val);
 #endif
-        memory_region_set_dirty(&s->vram, addr << 2, sizeof(uint32_t));
+        memory_region_set_dirty(s->vram, addr << 2, sizeof(uint32_t));
     }
 }
 
@@ -1618,17 +1618,17 @@ void vga_invalidate_scanlines(VGACommonState *s, int y1, int y2)
 
 void vga_sync_dirty_bitmap(VGACommonState *s)
 {
-    memory_region_sync_dirty_bitmap(&s->vram);
+    memory_region_sync_dirty_bitmap(s->vram);
 }
 
 void vga_dirty_log_start(VGACommonState *s)
 {
-    memory_region_set_log(&s->vram, true, DIRTY_MEMORY_VGA);
+    memory_region_set_log(s->vram, true, DIRTY_MEMORY_VGA);
 }
 
 void vga_dirty_log_stop(VGACommonState *s)
 {
-    memory_region_set_log(&s->vram, false, DIRTY_MEMORY_VGA);
+    memory_region_set_log(s->vram, false, DIRTY_MEMORY_VGA);
 }
 
 /*
@@ -1802,7 +1802,7 @@ static void vga_draw_graphic(VGACommonState *s, int full_update)
         update = full_update;
         page0 = addr;
         page1 = addr + bwidth - 1;
-        update |= memory_region_get_dirty(&s->vram, page0, page1 - page0,
+        update |= memory_region_get_dirty(s->vram, page0, page1 - page0,
                                           DIRTY_MEMORY_VGA);
         /* explicit invalidation for the hardware cursor */
         update |= (s->invalidated_y_table[y >> 5] >> (y & 0x1f)) & 1;
@@ -1847,7 +1847,7 @@ static void vga_draw_graphic(VGACommonState *s, int full_update)
     }
     /* reset modified pages */
     if (page_max >= page_min) {
-        memory_region_reset_dirty(&s->vram,
+        memory_region_reset_dirty(s->vram,
                                   page_min,
                                   page_max - page_min,
                                   DIRTY_MEMORY_VGA);
@@ -2292,10 +2292,11 @@ void vga_common_init(VGACommonState *s)
     s->vram_size_mb = s->vram_size >> 20;
 
     s->is_vbe_vmstate = 1;
-    memory_region_init_ram(&s->vram, "vga.vram", s->vram_size);
-    vmstate_register_ram_global(&s->vram);
-    xen_register_framebuffer(&s->vram);
-    s->vram_ptr = memory_region_get_ram_ptr(&s->vram);
+    memory_region_init_ram(&s->vram_internal, "vga.vram", s->vram_size);
+    s->vram = &s->vram_internal;
+    vmstate_register_ram_global(s->vram);
+    xen_register_framebuffer(s->vram);
+    s->vram_ptr = memory_region_get_ram_ptr(s->vram);
     s->get_bpp = vga_get_bpp;
     s->get_offsets = vga_get_offsets;
     s->get_resolution = vga_get_resolution;
@@ -2386,7 +2387,7 @@ void vga_init_vbe(VGACommonState *s, MemoryRegion *system_memory)
      * so use an alias to avoid double-mapping the same region.
      */
     memory_region_init_alias(&s->vram_vbe, "vram.vbe",
-                             &s->vram, 0, memory_region_size(&s->vram));
+                             s->vram, 0, memory_region_size(s->vram));
     /* XXX: use optimized standard vga accesses */
     memory_region_add_subregion(system_memory,
                                 VBE_DISPI_LFB_PHYSICAL_ADDRESS,

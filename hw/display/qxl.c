@@ -416,7 +416,7 @@ static void qxl_ram_set_dirty(PCIQXLDevice *qxl, void *ptr)
     offset = ptr - base;
     offset &= ~(TARGET_PAGE_SIZE-1);
     assert(offset < qxl->vga.vram_size);
-    qxl_set_dirty(&qxl->vga.vram, offset, offset + TARGET_PAGE_SIZE);
+    qxl_set_dirty(qxl->vga.vram, offset, offset + TARGET_PAGE_SIZE);
 }
 
 /* can be called from spice server thread context */
@@ -424,7 +424,7 @@ static void qxl_ring_set_dirty(PCIQXLDevice *qxl)
 {
     ram_addr_t addr = qxl->shadow_rom.ram_header_offset;
     ram_addr_t end  = qxl->vga.vram_size;
-    qxl_set_dirty(&qxl->vga.vram, addr, end);
+    qxl_set_dirty(qxl->vga.vram, addr, end);
 }
 
 /*
@@ -1254,7 +1254,7 @@ static int qxl_add_memslot(PCIQXLDevice *d, uint32_t slot_id, uint64_t delta,
 
     switch (pci_region) {
     case QXL_RAM_RANGE_INDEX:
-        virt_start = (intptr_t)memory_region_get_ram_ptr(&d->vga.vram);
+        virt_start = (intptr_t)memory_region_get_ram_ptr(d->vga.vram);
         break;
     case QXL_VRAM_RANGE_INDEX:
     case 4 /* vram 64bit */:
@@ -1805,7 +1805,7 @@ static void qxl_dirty_surfaces(PCIQXLDevice *qxl)
     }
 
     /* dirty the primary surface */
-    qxl_set_dirty(&qxl->vga.vram, qxl->shadow_rom.draw_area_offset,
+    qxl_set_dirty(qxl->vga.vram, qxl->shadow_rom.draw_area_offset,
                   qxl->shadow_rom.surface0_area_size);
 
     vram_start = (uintptr_t)memory_region_get_ram_ptr(&qxl->vram_bar);
@@ -2006,7 +2006,7 @@ static int qxl_init_common(PCIQXLDevice *qxl)
                      PCI_BASE_ADDRESS_SPACE_MEMORY, &qxl->rom_bar);
 
     pci_register_bar(&qxl->pci, QXL_RAM_RANGE_INDEX,
-                     PCI_BASE_ADDRESS_SPACE_MEMORY, &qxl->vga.vram);
+                     PCI_BASE_ADDRESS_SPACE_MEMORY, qxl->vga.vram);
 
     pci_register_bar(&qxl->pci, QXL_VRAM_RANGE_INDEX,
                      PCI_BASE_ADDRESS_SPACE_MEMORY, &qxl->vram32_bar);
@@ -2092,9 +2092,9 @@ static int qxl_init_secondary(PCIDevice *dev)
 
     qxl->id = device_id++;
     qxl_init_ramsize(qxl);
-    memory_region_init_ram(&qxl->vga.vram, "qxl.vgavram", qxl->vga.vram_size);
-    vmstate_register_ram(&qxl->vga.vram, &qxl->pci.qdev);
-    qxl->vga.vram_ptr = memory_region_get_ram_ptr(&qxl->vga.vram);
+    memory_region_init_ram(qxl->vga.vram, "qxl.vgavram", qxl->vga.vram_size);
+    vmstate_register_ram(qxl->vga.vram, &qxl->pci.qdev);
+    qxl->vga.vram_ptr = memory_region_get_ram_ptr(qxl->vga.vram);
     qxl->vga.con = graphic_console_init(DEVICE(dev), &qxl_ops, qxl);
 
     return qxl_init_common(qxl);

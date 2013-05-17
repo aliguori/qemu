@@ -623,7 +623,7 @@ static void cirrus_invalidate_region(CirrusVGAState * s, int off_begin,
     for (y = 0; y < lines; y++) {
 	off_cur = off_begin;
 	off_cur_end = (off_cur + bytesperline) & s->cirrus_addr_mask;
-        memory_region_set_dirty(&s->vga.vram, off_cur, off_cur_end - off_cur);
+        memory_region_set_dirty(s->vga.vram, off_cur, off_cur_end - off_cur);
 	off_begin += off_pitch;
     }
 }
@@ -1923,7 +1923,7 @@ static void cirrus_mem_writeb_mode4and5_8bpp(CirrusVGAState * s,
 	val <<= 1;
 	dst++;
     }
-    memory_region_set_dirty(&s->vga.vram, offset, 8);
+    memory_region_set_dirty(s->vga.vram, offset, 8);
 }
 
 static void cirrus_mem_writeb_mode4and5_16bpp(CirrusVGAState * s,
@@ -1947,7 +1947,7 @@ static void cirrus_mem_writeb_mode4and5_16bpp(CirrusVGAState * s,
 	val <<= 1;
 	dst += 2;
     }
-    memory_region_set_dirty(&s->vga.vram, offset, 16);
+    memory_region_set_dirty(s->vga.vram, offset, 16);
 }
 
 /***************************************
@@ -2037,7 +2037,7 @@ static void cirrus_vga_mem_write(void *opaque,
 		mode = s->vga.gr[0x05] & 0x7;
 		if (mode < 4 || mode > 5 || ((s->vga.gr[0x0B] & 0x4) == 0)) {
 		    *(s->vga.vram_ptr + bank_offset) = mem_value;
-                    memory_region_set_dirty(&s->vga.vram, bank_offset,
+                    memory_region_set_dirty(s->vga.vram, bank_offset,
                                             sizeof(mem_value));
 		} else {
 		    if ((s->vga.gr[0x0B] & 0x14) != 0x14) {
@@ -2320,7 +2320,7 @@ static void cirrus_linear_write(void *opaque, hwaddr addr,
 	mode = s->vga.gr[0x05] & 0x7;
 	if (mode < 4 || mode > 5 || ((s->vga.gr[0x0B] & 0x4) == 0)) {
 	    *(s->vga.vram_ptr + addr) = (uint8_t) val;
-            memory_region_set_dirty(&s->vga.vram, addr, 1);
+            memory_region_set_dirty(s->vga.vram, addr, 1);
 	} else {
 	    if ((s->vga.gr[0x0B] & 0x14) != 0x14) {
 		cirrus_mem_writeb_mode4and5_8bpp(s, mode, addr, val);
@@ -2393,7 +2393,7 @@ static void map_linear_vram(CirrusVGAState *s)
 {
     if (s->bustype == CIRRUS_BUSTYPE_PCI && !s->linear_vram) {
         s->linear_vram = true;
-        memory_region_add_subregion_overlap(&s->pci_bar, 0, &s->vga.vram, 1);
+        memory_region_add_subregion_overlap(&s->pci_bar, 0, s->vga.vram, 1);
     }
     map_linear_vram_bank(s, 0);
     map_linear_vram_bank(s, 1);
@@ -2403,7 +2403,7 @@ static void unmap_linear_vram(CirrusVGAState *s)
 {
     if (s->bustype == CIRRUS_BUSTYPE_PCI && s->linear_vram) {
         s->linear_vram = false;
-        memory_region_del_subregion(&s->pci_bar, &s->vga.vram);
+        memory_region_del_subregion(&s->pci_bar, s->vga.vram);
     }
     memory_region_set_enabled(&s->cirrus_bank[0], false);
     memory_region_set_enabled(&s->cirrus_bank[1], false);
@@ -2855,7 +2855,7 @@ static void cirrus_init_common(CirrusVGAState * s, int device_id, int is_pci,
     for (i = 0; i < 2; ++i) {
         static const char *names[] = { "vga.bank0", "vga.bank1" };
         MemoryRegion *bank = &s->cirrus_bank[i];
-        memory_region_init_alias(bank, names[i], &s->vga.vram, 0, 0x8000);
+        memory_region_init_alias(bank, names[i], s->vga.vram, 0, 0x8000);
         memory_region_set_enabled(bank, false);
         memory_region_add_subregion_overlap(&s->low_mem_container, i * 0x8000,
                                             bank, 1);
