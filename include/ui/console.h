@@ -270,11 +270,16 @@ static inline void console_write_ch(console_ch_t *dest, uint32_t ch)
     *dest = ch;
 }
 
+typedef void (GraphicHwInvalidate)(void *opaque);
+typedef void (GraphicHwGFXUpdate)(void *opaque);
+typedef void (GraphicHwTextUpdate)(void *opaque, console_ch_t *chardata);
+typedef void (GraphicHwUpdateInterval)(void *opaque, uint64_t interval);
+
 typedef struct GraphicHwOps {
-    void (*invalidate)(void *opaque);
-    void (*gfx_update)(void *opaque);
-    void (*text_update)(void *opaque, console_ch_t *text);
-    void (*update_interval)(void *opaque, uint64_t interval);
+    GraphicHwInvalidate *invalidate;
+    GraphicHwGFXUpdate *gfx_update;
+    GraphicHwTextUpdate *text_update;
+    GraphicHwUpdateInterval *update_interval;
 } GraphicHwOps;
 
 QemuConsole *graphic_console_init(DeviceState *dev,
