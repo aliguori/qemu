@@ -1746,7 +1746,6 @@ static void text_console_do_init(CharDriverState *chr, DisplayState *ds)
         s->t_attrib = s->t_attrib_default;
     }
 
-    qemu_chr_be_generic_open(chr);
     if (chr->init)
         chr->init(chr);
 }
