@@ -63,7 +63,7 @@ static int vty_getchars(VIOsPAPRDevice *sdev, uint8_t *buf, int max)
     return n;
 }
 
-void vty_putchars(VIOsPAPRDevice *sdev, uint8_t *buf, int len)
+static void vty_putchars(VIOsPAPRDevice *sdev, uint8_t *buf, int len)
 {
     VIOsPAPRVTYDevice *dev = VIO_SPAPR_VTY_DEVICE(sdev);
 
@@ -84,6 +84,23 @@ static int spapr_vty_init(VIOsPAPRDevice *sdev)
                           vty_receive, NULL, dev);
 
     return 0;
+}
+
+static VIOsPAPRDevice *vty_lookup(sPAPREnvironment *spapr, target_ulong reg)
+{
+    VIOsPAPRDevice *sdev;
+
+    sdev = spapr_vio_find_by_reg(spapr->vio_bus, reg);
+    if (!sdev && reg == 0) {
+        /* Hack for kernel early debug, which always specifies reg==0.
+         * We search all VIO devices, and grab the vty with the lowest
+         * reg.  This attempts to mimic existing PowerVM behaviour
+         * (early debug does work there, despite having no vty with
+         * reg==0. */
+        return spapr_vty_get_default(spapr->vio_bus);
+    }
+
+    return sdev;
 }
 
 /* Forward declaration */
@@ -209,23 +226,6 @@ VIOsPAPRDevice *spapr_vty_get_default(VIOsPAPRBus *bus)
     }
 
     return selected;
-}
-
-VIOsPAPRDevice *vty_lookup(sPAPREnvironment *spapr, target_ulong reg)
-{
-    VIOsPAPRDevice *sdev;
-
-    sdev = spapr_vio_find_by_reg(spapr->vio_bus, reg);
-    if (!sdev && reg == 0) {
-        /* Hack for kernel early debug, which always specifies reg==0.
-         * We search all VIO devices, and grab the vty with the lowest
-         * reg.  This attempts to mimic existing PowerVM behaviour
-         * (early debug does work there, despite having no vty with
-         * reg==0. */
-        return spapr_vty_get_default(spapr->vio_bus);
-    }
-
-    return sdev;
 }
 
 static void spapr_vty_register_types(void)

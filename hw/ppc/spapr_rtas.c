@@ -44,14 +44,16 @@ static void rtas_display_character(PowerPCCPU *cpu, sPAPREnvironment *spapr,
                                    uint32_t nret, target_ulong rets)
 {
     uint8_t c = rtas_ld(args, 0);
-    VIOsPAPRDevice *sdev = vty_lookup(spapr, 0);
+    target_ulong hargs[4] = {
+        0, /* reg=0 */
+        1, /* len=1 */
+        (uint64_t)c << 56, /* data */
+        0 /* data */
+    };
+    target_ulong ret;
 
-    if (!sdev) {
-        rtas_st(rets, 0, -1);
-    } else {
-        vty_putchars(sdev, &c, sizeof(c));
-        rtas_st(rets, 0, 0);
-    }
+    ret = spapr_hypercall(cpu, H_PUT_TERM_CHAR, hargs);
+    rtas_st(rets, 0, ret);
 }
 
 static void rtas_get_time_of_day(PowerPCCPU *cpu, sPAPREnvironment *spapr,
