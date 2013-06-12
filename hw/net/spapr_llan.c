@@ -285,7 +285,8 @@ static target_ulong h_register_logical_lan(PowerPCCPU *cpu,
     target_ulong buf_list = args[1];
     target_ulong rec_queue = args[2];
     target_ulong filter_list = args[3];
-    VIOsPAPRDevice *sdev = spapr_vio_find_by_reg(spapr->vio_bus, reg);
+    VIOsPAPRDevice *sdev = spapr_vio_find_by_reg(spapr->vio_bus, reg,
+                                                 TYPE_VIO_SPAPR_VLAN_DEVICE);
     VIOsPAPRVLANDevice *dev = VIO_SPAPR_VLAN_DEVICE(sdev);
     vlan_bd_t filter_list_bd;
 
@@ -346,7 +347,8 @@ static target_ulong h_free_logical_lan(PowerPCCPU *cpu, sPAPREnvironment *spapr,
                                        target_ulong opcode, target_ulong *args)
 {
     target_ulong reg = args[0];
-    VIOsPAPRDevice *sdev = spapr_vio_find_by_reg(spapr->vio_bus, reg);
+    VIOsPAPRDevice *sdev = spapr_vio_find_by_reg(spapr->vio_bus, reg,
+                                                 TYPE_VIO_SPAPR_VLAN_DEVICE);
     VIOsPAPRVLANDevice *dev = VIO_SPAPR_VLAN_DEVICE(sdev);
 
     if (!dev) {
@@ -370,7 +372,8 @@ static target_ulong h_add_logical_lan_buffer(PowerPCCPU *cpu,
 {
     target_ulong reg = args[0];
     target_ulong buf = args[1];
-    VIOsPAPRDevice *sdev = spapr_vio_find_by_reg(spapr->vio_bus, reg);
+    VIOsPAPRDevice *sdev = spapr_vio_find_by_reg(spapr->vio_bus, reg,
+                                                 TYPE_VIO_SPAPR_VLAN_DEVICE);
     VIOsPAPRVLANDevice *dev = VIO_SPAPR_VLAN_DEVICE(sdev);
     vlan_bd_t bd;
 
@@ -418,7 +421,8 @@ static target_ulong h_send_logical_lan(PowerPCCPU *cpu, sPAPREnvironment *spapr,
     target_ulong reg = args[0];
     target_ulong *bufs = args + 1;
     target_ulong continue_token = args[7];
-    VIOsPAPRDevice *sdev = spapr_vio_find_by_reg(spapr->vio_bus, reg);
+    VIOsPAPRDevice *sdev = spapr_vio_find_by_reg(spapr->vio_bus, reg,
+                                                 TYPE_VIO_SPAPR_VLAN_DEVICE);
     VIOsPAPRVLANDevice *dev = VIO_SPAPR_VLAN_DEVICE(sdev);
     unsigned total_len;
     uint8_t *lbuf, *p;
@@ -485,7 +489,8 @@ static target_ulong h_multicast_ctrl(PowerPCCPU *cpu, sPAPREnvironment *spapr,
                                      target_ulong opcode, target_ulong *args)
 {
     target_ulong reg = args[0];
-    VIOsPAPRDevice *dev = spapr_vio_find_by_reg(spapr->vio_bus, reg);
+    VIOsPAPRDevice *dev = spapr_vio_find_by_reg(spapr->vio_bus, reg,
+                                                 TYPE_VIO_SPAPR_VLAN_DEVICE);
 
     if (!dev) {
         return H_PARAMETER;
