@@ -127,8 +127,6 @@ void spapr_vty_create(VIOsPAPRBus *bus, CharDriverState *chardev);
 void spapr_vlan_create(VIOsPAPRBus *bus, NICInfo *nd);
 void spapr_vscsi_create(VIOsPAPRBus *bus);
 
-VIOsPAPRDevice *spapr_vty_get_default(VIOsPAPRBus *bus);
-
 void spapr_vio_quiesce(void);
 
 #endif /* _HW_SPAPR_VIO_H */
