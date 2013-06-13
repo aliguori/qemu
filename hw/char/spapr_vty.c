@@ -105,7 +105,7 @@ static target_ulong h_put_term_char(PowerPCCPU *cpu, sPAPREnvironment *spapr,
     }
 
     for (i = 0; i < 16; i++) {
-        uint64_t shift = 7 - (i % 8);
+        uint64_t shift = (7 - (i % 8)) * 8;
         int index = 2 + (i / 8);
 
         buf[i] = args[index] >> shift;
@@ -136,7 +136,7 @@ static target_ulong h_get_term_char(PowerPCCPU *cpu, sPAPREnvironment *spapr,
     args[0] = len;
     args[1] = args[2] = 0;
     for (i = 0; i < len; i++) {
-        uint64_t shift = 7 - (i % 8);
+        uint64_t shift = (7 - (i % 8)) * 8;
         int index = 1 + (i / 8);
 
         args[index] |= (uint64_t)buf[i] << shift;
