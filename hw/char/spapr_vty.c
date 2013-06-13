@@ -65,7 +65,13 @@ static int spapr_vty_getchars(VIOsPAPRVTYDevice *dev, uint8_t *buf, int max)
 static void spapr_vty_putchars(VIOsPAPRVTYDevice *dev,
                                const uint8_t *buf, int len)
 {
-    /* FIXME: should check the qemu_chr_fe_write() return value */
+    /* There is no flow control with this interface so we can't really
+     * do anything if we are unable to write out data.  So we ignore errors
+     * here and silently drop the data.
+     *
+     * Our only option would be buffering but the kernel already has a buffer
+     * so that would only delay the inevitable.
+     */
     qemu_chr_fe_write(dev->chardev, buf, len);
 }
 
