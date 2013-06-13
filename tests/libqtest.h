@@ -286,6 +286,19 @@ int64_t qtest_clock_step(QTestState *s, int64_t step);
 int64_t qtest_clock_set(QTestState *s, int64_t val);
 
 /**
+ * qtest_spapr_hcall9:
+ * @s: QTestState instance to operate on.
+ * @nr: The hypercall index
+ * @aN: The @Nth hypercall argument
+ *
+ * Issue an sPAPR hypercall
+ *
+ * Returns: The result of the hypercall.
+ */
+uint64_t qtest_spapr_hcall9(QTestState *s, uint64_t nr, uint64_t a0,
+                            uint64_t a1, uint64_t a2, uint64_t a3, uint64_t a4,
+                            uint64_t a5, uint64_t a6, uint64_t a7, uint64_t a8);
+/**
  * qtest_get_arch:
  *
  * Returns: The architecture for the QEMU executable under test.
@@ -605,6 +618,39 @@ static inline int64_t clock_step(int64_t step)
 static inline int64_t clock_set(int64_t val)
 {
     return qtest_clock_set(global_qtest, val);
+}
+
+static inline uint64_t spapr_hcall0(uint64_t nr)
+{
+    return qtest_spapr_hcall9(global_qtest, nr, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+static inline uint64_t spapr_hcall1(uint64_t nr, uint64_t a0)
+{
+    return qtest_spapr_hcall9(global_qtest, nr, a0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+static inline uint64_t spapr_hcall2(uint64_t nr, uint64_t a0, uint64_t a1)
+{
+    return qtest_spapr_hcall9(global_qtest, nr, a0, a1, 0, 0, 0, 0, 0, 0, 0);
+}
+
+static inline uint64_t spapr_hcall3(uint64_t nr, uint64_t a0, uint64_t a1,
+                                    uint64_t a2)
+{
+    return qtest_spapr_hcall9(global_qtest, nr, a0, a1, a2, 0, 0, 0, 0, 0, 0);
+}
+
+static inline uint64_t spapr_hcall4(uint64_t nr, uint64_t a0, uint64_t a1,
+                                    uint64_t a2, uint64_t a3)
+{
+    return qtest_spapr_hcall9(global_qtest, nr, a0, a1, a2, a3, 0, 0, 0, 0, 0);
+}
+
+static inline uint64_t spapr_hcall5(uint64_t nr, uint64_t a0, uint64_t a1,
+                                    uint64_t a2, uint64_t a3, uint64_t a4)
+{
+    return qtest_spapr_hcall9(global_qtest, nr, a0, a1, a2, a3, a4, 0, 0, 0, 0);
 }
 
 #endif

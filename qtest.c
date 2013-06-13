@@ -19,6 +19,7 @@
 #include "hw/irq.h"
 #include "sysemu/sysemu.h"
 #include "sysemu/cpus.h"
+#include "hw/ppc/spapr.h"
 
 #define MAX_IRQ 256
 
@@ -141,6 +142,13 @@ static bool qtest_opened;
  * where NUM is an IRQ number.  For the PC, interrupts can be intercepted
  * simply with "irq_intercept_in ioapic" (note that IRQ0 comes out with
  * NUM=0 even though it is remapped to GSI 2).
+ *
+ * Platform specific (sPAPR):
+ *
+ *  > papr_hypercall NR ARG0 ARG1 ... ARG8
+ *  < OK RET
+ *
+ * where NR, ARG[0-8] and RET are all integers.
  */
 
 static int hex2nib(char ch)
@@ -425,6 +433,23 @@ static void qtest_process_command(CharDriverState *chr, gchar **words)
         qtest_clock_warp(ns);
         qtest_send_prefix(chr);
         qtest_send(chr, "OK %"PRIi64"\n", (int64_t)qemu_get_clock_ns(vm_clock));
+    } else if (strcmp(words[0], "papr_hypercall") == 0) {
+        uint64_t nr;
+        uint64_t args[9];
+        uint64_t ret;
+        int i;
+
+        memset(args, 0, sizeof(args));
+        g_assert(words[1]);
+        nr = strtoull(words[1], NULL, 0);
+        for (i = 0; i < 9; i++) {
+            if (words[2 + i] == NULL) {
+                break;
+            }
+            args[i] = strtoull(words[2 + i], NULL, 0);
+        }
+        ret = spapr_hypercall(ppc_env_get_cpu(first_cpu), nr, args);
+        qtest_send(chr, "OK 0x%" PRIx64 "\n", ret);
     } else {
         qtest_send_prefix(chr);
         qtest_send(chr, "FAIL Unknown command `%s'\n", words[0]);
