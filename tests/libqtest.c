@@ -287,10 +287,13 @@ redo:
     return words;
 }
 
-void qtest_qmpv(QTestState *s, const char *fmt, va_list ap)
+char *qtest_qmpv(QTestState *s, const char *fmt, va_list ap)
 {
     bool has_reply = false;
     int nesting = 0;
+    GString *ret;
+
+    ret = g_string_new("");
 
     /* Send QMP request */
     socket_sendf(s->qmp_fd, fmt, ap);
@@ -319,16 +322,23 @@ void qtest_qmpv(QTestState *s, const char *fmt, va_list ap)
             nesting--;
             break;
         }
+
+        g_string_append_c(ret, c);
     }
+
+    return g_string_free(ret, FALSE);
 }
 
-void qtest_qmp(QTestState *s, const char *fmt, ...)
+char *qtest_qmp(QTestState *s, const char *fmt, ...)
 {
     va_list ap;
+    char *ret;
 
     va_start(ap, fmt);
-    qtest_qmpv(s, fmt, ap);
+    ret = qtest_qmpv(s, fmt, ap);
     va_end(ap);
+
+    return ret;
 }
 
 const char *qtest_get_arch(void)

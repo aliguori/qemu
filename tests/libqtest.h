@@ -21,6 +21,7 @@
 #include <stdbool.h>
 #include <stdarg.h>
 #include <sys/types.h>
+#include <glib.h>
 
 typedef struct QTestState QTestState;
 
@@ -48,8 +49,10 @@ void qtest_quit(QTestState *s);
  * @fmt...: QMP message to send to qemu
  *
  * Sends a QMP message to QEMU
+ *
+ * Returns: the result of the QMP command
  */
-void qtest_qmp(QTestState *s, const char *fmt, ...);
+char *qtest_qmp(QTestState *s, const char *fmt, ...);
 
 /**
  * qtest_qmpv:
@@ -58,8 +61,10 @@ void qtest_qmp(QTestState *s, const char *fmt, ...);
  * @ap: QMP message arguments
  *
  * Sends a QMP message to QEMU.
+ *
+ * Returns: the result of the QMP command
  */
-void qtest_qmpv(QTestState *s, const char *fmt, va_list ap);
+char *qtest_qmpv(QTestState *s, const char *fmt, va_list ap);
 
 /**
  * qtest_get_irq:
@@ -340,10 +345,13 @@ static inline QTestState *qtest_start(const char *args)
 static inline void qmp(const char *fmt, ...)
 {
     va_list ap;
+    char *ret;
 
     va_start(ap, fmt);
-    qtest_qmpv(global_qtest, fmt, ap);
+    ret = qtest_qmpv(global_qtest, fmt, ap);
     va_end(ap);
+
+    g_free(ret);
 }
 
 /**
