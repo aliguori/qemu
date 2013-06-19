@@ -1,3 +1,16 @@
+/*
+ * QEMU PowerPC pSeries Logical Partition (aka sPAPR) hardware System Emulator
+ *
+ * PAPR Inter-VM Logical Lan, aka ibmveth
+ *
+ * Copyright IBM, Corp. 2010-2013
+ *
+ * Authors:
+ *   David Gibson <david@gibson.dropbear.id.au>
+ *
+ * This work is licensed under the terms of the GNU GPL, version 2 or later.
+ * See the COPYING file in the top-level directory.
+ */
 #include "hw/qdev.h"
 #include "sysemu/char.h"
 #include "hw/ppc/spapr.h"
