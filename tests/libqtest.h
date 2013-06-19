@@ -67,6 +67,15 @@ char *qtest_qmp(QTestState *s, const char *fmt, ...);
 char *qtest_qmpv(QTestState *s, const char *fmt, va_list ap);
 
 /**
+ * qtest_qmp_wait_event:
+ * @s: #QTestState instance to operate on.
+ * @event: the event to wait for.
+ *
+ * Waits for a specific QMP event to occur.
+ */
+void qtest_qmp_wait_event(QTestState *s, const char *event);
+
+/**
  * qtest_get_irq:
  * @s: #QTestState instance to operate on.
  * @num: Interrupt to observe.
@@ -291,6 +300,19 @@ int64_t qtest_clock_step(QTestState *s, int64_t step);
 int64_t qtest_clock_set(QTestState *s, int64_t val);
 
 /**
+ * qtest_save_restore:
+ * @s: QTest instance to operate on.
+ *
+ * This function will save and restore the state of the running QEMU
+ * instance.  If the savevm code is implemented correctly for a device,
+ * this function should behave like a nop.  If a test case fails because
+ * this function is called, the savevm code for the device is broken.
+ *
+ * Returns: the new QTest instance
+ */
+QTestState *qtest_save_restore(QTestState *s);
+
+/**
  * qtest_spapr_hcall9:
  * @s: QTestState instance to operate on.
  * @nr: The hypercall index
@@ -334,6 +356,17 @@ static inline QTestState *qtest_start(const char *args)
 {
     global_qtest = qtest_init(args);
     return global_qtest;
+}
+
+/**
+ * qmp_wait_event:
+ * @event: the event to wait for.
+ *
+ * Waits for a specific QMP event to occur.
+ */
+static inline void qmp_wait_event(const char *event)
+{
+    qtest_qmp_wait_event(global_qtest, event);
 }
 
 /**
@@ -626,6 +659,19 @@ static inline int64_t clock_step(int64_t step)
 static inline int64_t clock_set(int64_t val)
 {
     return qtest_clock_set(global_qtest, val);
+}
+
+/**
+ * save_restore:
+ *
+ * This function will save and restore the state of the running QEMU
+ * instance.  If the savevm code is implemented correctly for a device,
+ * this function should behave like a nop.  If a test case fails because
+ * this function is called, the savevm code for the device is broken.
+ */
+static inline void save_restore(void)
+{
+    global_qtest = qtest_save_restore(global_qtest);
 }
 
 static inline uint64_t spapr_hcall0(uint64_t nr)
