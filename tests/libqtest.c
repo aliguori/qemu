@@ -44,6 +44,7 @@ struct QTestState
     gchar *pid_file; /* QEMU PID file */
     int child_pid;   /* Child process created to execute QEMU */
     char *socket_path, *qmp_socket_path;
+    char *extra_args;
 };
 
 #define g_assert_no_errno(ret) do { \
@@ -104,6 +105,14 @@ static pid_t qtest_qemu_pid(QTestState *s)
     return pid;
 }
 
+void qtest_qmp_wait_event(QTestState *s, const char *event)
+{
+    char *d;
+    /* This is cheating */
+    d = qtest_qmp(s, "");
+    g_free(d);
+}
+
 QTestState *qtest_init(const char *extra_args)
 {
     QTestState *s;
@@ -118,6 +127,7 @@ QTestState *qtest_init(const char *extra_args)
 
     s = g_malloc(sizeof(*s));
 
+    s->extra_args = g_strdup(extra_args);
     s->socket_path = g_strdup_printf("/tmp/qtest-%d.sock", getpid());
     s->qmp_socket_path = g_strdup_printf("/tmp/qtest-%d.qmp", getpid());
     pid_file = g_strdup_printf("/tmp/qtest-%d.pid", getpid());
@@ -177,6 +187,59 @@ void qtest_quit(QTestState *s)
     g_free(s->pid_file);
     g_free(s->socket_path);
     g_free(s->qmp_socket_path);
+    g_free(s->extra_args);
+}
+
+QTestState *qtest_save_restore(QTestState *s)
+{
+    char *filename;
+    char *d, *p, *extra_args;
+    char *n;
+
+    filename = g_strdup_printf("/tmp/qtest-%d.savevm", getpid());
+
+    /* Start migration to a temporary file */
+    d = qtest_qmp(s,
+                  "{ 'execute': 'migrate', "
+                  "  'arguments': { 'uri': 'exec:dd of=%s 2>/dev/null' } }", filename);
+    g_free(d);
+
+    /* Wait for critical section to be entered */
+    qtest_qmp_wait_event(s, "STOP");
+
+    /* Not strictly needed as we can't possibly respond to this command until
+     * we've completed migration by virtue of the fact that STOP has been sent
+     * but it's good to be rigorious. */
+    do {
+        d = qtest_qmp(s, "{ 'execute': 'query-migrate' }");
+        p = strstr(d, "\"status\": \"completed\",");
+        g_free(d);
+        if (!p) {
+            g_usleep(100);
+        }
+    } while (p == NULL);
+
+    /* Save arguments to this qtest instance */
+    extra_args = s->extra_args;
+    s->extra_args = NULL;
+
+    /* Quit src instance */
+    qtest_quit(s);
+
+    /* Spawn destination */
+    n = g_strdup_printf("%s -incoming exec:\"dd if=%s 2>/dev/null\"", extra_args, filename);
+    s = qtest_init(n);
+
+    /* Wait for incoming migration to complete */
+    qtest_qmp_wait_event(s, "RESUME");
+
+    /* Fixup extra arg so we can call repeatedly */
+    g_free(s->extra_args);
+    s->extra_args = extra_args;
+
+    g_free(filename);
+
+    return s;
 }
 
 static void socket_sendf(int fd, const char *fmt, va_list ap)

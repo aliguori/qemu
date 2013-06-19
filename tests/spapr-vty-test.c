@@ -65,26 +65,25 @@ static void vty_ping(void)
         spapr_hcall3(H_PUT_TERM_CHAR, 0, 1, (uint64_t)greeting[i] << 56);
     }
 
+    global_qtest = qtest_save_restore(global_qtest);
+
     data = qmp_ringbuf_read("ring0", 16);
     g_assert_cmpstr(data, ==, greeting);
 }
 
 int main(int argc, char **argv)
 {
-    QTestState *s = NULL;
     int ret;
 
     g_test_init(&argc, &argv, NULL);
 
-    s = qtest_start("-display none -serial chardev:ring0 "
-                    "-machine pseries -chardev memory,id=ring0");
+    qtest_start("-display none -serial chardev:ring0 "
+                "-machine pseries -chardev memory,id=ring0,save=on");
 
     qtest_add_func("/vty/ping", vty_ping);
     ret = g_test_run();
 
-    if (s) {
-        qtest_quit(s);
-    }
+    qtest_quit(global_qtest);
 
     return ret;
 }

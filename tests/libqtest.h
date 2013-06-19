@@ -628,6 +628,10 @@ static inline int64_t clock_set(int64_t val)
     return qtest_clock_set(global_qtest, val);
 }
 
+void qtest_qmp_wait_event(QTestState *s, const char *event);
+
+QTestState *qtest_save_restore(QTestState *s);
+
 static inline uint64_t spapr_hcall0(uint64_t nr)
 {
     return qtest_spapr_hcall9(global_qtest, nr, 0, 0, 0, 0, 0, 0, 0, 0, 0);
