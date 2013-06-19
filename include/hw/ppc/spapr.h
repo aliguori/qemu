@@ -278,7 +278,7 @@ typedef struct sPAPREnvironment {
 
 extern sPAPREnvironment *spapr;
 
-/*#define DEBUG_SPAPR_HCALLS*/
+#define DEBUG_SPAPR_HCALLS
 
 #ifdef DEBUG_SPAPR_HCALLS
 #define hcall_dprintf(fmt, ...) \

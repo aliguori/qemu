@@ -68,6 +68,7 @@ check-qtest-arm-y = tests/tmp105-test$(EXESUF)
 gcov-files-arm-y += hw/tmp105.c
 
 check-qtest-ppc64-y = tests/spapr-vty-test$(EXESUF)
+check-qtest-ppc64-y += tests/spapr-llan-test$(EXESUF)
 
 GENERATED_HEADERS += tests/test-qapi-types.h tests/test-qapi-visit.h tests/test-qmp-commands.h
 
@@ -136,6 +137,7 @@ tests/tmp105-test$(EXESUF): tests/tmp105-test.o $(libqos-omap-obj-y)
 tests/i440fx-test$(EXESUF): tests/i440fx-test.o $(libqos-pc-obj-y)
 tests/fw_cfg-test$(EXESUF): tests/fw_cfg-test.o $(libqos-pc-obj-y)
 tests/spapr-vty-test$(EXESUF): tests/spapr-vty-test.o
+tests/spapr-llan-test$(EXESUF): tests/spapr-llan-test.o
 
 # QTest rules
 

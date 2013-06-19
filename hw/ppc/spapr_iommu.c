@@ -56,7 +56,7 @@ static sPAPRTCETable *spapr_tce_find_by_liobn(uint32_t liobn)
     sPAPRTCETable *tcet;
 
     if (liobn & 0xFFFFFFFF00000000ULL) {
-        hcall_dprintf("Request for out-of-bounds LIOBN 0x" TARGET_FMT_lx "\n",
+        hcall_dprintf("Request for out-of-bounds LIOBN 0x%x\n",
                       liobn);
         return NULL;
     }
