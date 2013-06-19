@@ -86,23 +86,6 @@ static int spapr_vty_init(VIOsPAPRDevice *sdev)
     return 0;
 }
 
-static VIOsPAPRDevice *vty_lookup(sPAPREnvironment *spapr, target_ulong reg)
-{
-    VIOsPAPRDevice *sdev;
-
-    sdev = spapr_vio_find_by_reg(spapr->vio_bus, reg);
-    if (!sdev && reg == 0) {
-        /* Hack for kernel early debug, which always specifies reg==0.
-         * We search all VIO devices, and grab the vty with the lowest
-         * reg.  This attempts to mimic existing PowerVM behaviour
-         * (early debug does work there, despite having no vty with
-         * reg==0. */
-        return spapr_vty_get_default(spapr->vio_bus);
-    }
-
-    return sdev;
-}
-
 /* Forward declaration */
 static target_ulong h_put_term_char(PowerPCCPU *cpu, sPAPREnvironment *spapr,
                                     target_ulong opcode, target_ulong *args)
@@ -114,7 +97,7 @@ static target_ulong h_put_term_char(PowerPCCPU *cpu, sPAPREnvironment *spapr,
     VIOsPAPRDevice *sdev;
     uint8_t buf[16];
 
-    sdev = vty_lookup(spapr, reg);
+    sdev = spapr_vio_find_by_reg(spapr->vio_bus, reg);
     if (!sdev) {
         return H_PARAMETER;
     }
@@ -141,7 +124,7 @@ static target_ulong h_get_term_char(PowerPCCPU *cpu, sPAPREnvironment *spapr,
     VIOsPAPRDevice *sdev;
     uint8_t buf[16];
 
-    sdev = vty_lookup(spapr, reg);
+    sdev = spapr_vio_find_by_reg(spapr->vio_bus, reg);
     if (!sdev) {
         return H_PARAMETER;
     }
@@ -190,43 +173,6 @@ static const TypeInfo spapr_vty_info = {
     .instance_size = sizeof(VIOsPAPRVTYDevice),
     .class_init    = spapr_vty_class_init,
 };
-
-VIOsPAPRDevice *spapr_vty_get_default(VIOsPAPRBus *bus)
-{
-    VIOsPAPRDevice *sdev, *selected;
-    BusChild *kid;
-
-    /*
-     * To avoid the console bouncing around we want one VTY to be
-     * the "default". We haven't really got anything to go on, so
-     * arbitrarily choose the one with the lowest reg value.
-     */
-
-    selected = NULL;
-    QTAILQ_FOREACH(kid, &bus->bus.children, sibling) {
-        DeviceState *iter = kid->child;
-
-        /* Only look at VTY devices */
-        if (!object_dynamic_cast(OBJECT(iter), "spapr-vty")) {
-            continue;
-        }
-
-        sdev = VIO_SPAPR_DEVICE(iter);
-
-        /* First VTY we've found, so it is selected for now */
-        if (!selected) {
-            selected = sdev;
-            continue;
-        }
-
-        /* Choose VTY with lowest reg value */
-        if (sdev->reg < selected->reg) {
-            selected = sdev;
-        }
-    }
-
-    return selected;
-}
 
 static void spapr_vty_register_types(void)
 {

@@ -77,10 +77,56 @@ static const TypeInfo spapr_vio_bus_info = {
     .instance_size = sizeof(VIOsPAPRBus),
 };
 
+static VIOsPAPRDevice *spapr_vty_get_default(VIOsPAPRBus *bus)
+{
+    VIOsPAPRDevice *sdev, *selected;
+    BusChild *kid;
+
+    /*
+     * To avoid the console bouncing around we want one VTY to be
+     * the "default". We haven't really got anything to go on, so
+     * arbitrarily choose the one with the lowest reg value.
+     */
+
+    selected = NULL;
+    QTAILQ_FOREACH(kid, &bus->bus.children, sibling) {
+        DeviceState *iter = kid->child;
+
+        /* Only look at VTY devices */
+        if (!object_dynamic_cast(OBJECT(iter), "spapr-vty")) {
+            continue;
+        }
+
+        sdev = VIO_SPAPR_DEVICE(iter);
+
+        /* First VTY we've found, so it is selected for now */
+        if (!selected) {
+            selected = sdev;
+            continue;
+        }
+
+        /* Choose VTY with lowest reg value */
+        if (sdev->reg < selected->reg) {
+            selected = sdev;
+        }
+    }
+
+    return selected;
+}
+
 VIOsPAPRDevice *spapr_vio_find_by_reg(VIOsPAPRBus *bus, uint32_t reg)
 {
     BusChild *kid;
     VIOsPAPRDevice *dev = NULL;
+
+    /* Hack for kernel early debug, which always specifies reg==0.
+     * We search all VIO devices, and grab the vty with the lowest
+     * reg.  This attempts to mimic existing PowerVM behaviour
+     * (early debug does work there, despite having no vty with
+     * reg==0. */
+    if (reg == 0) {
+        return spapr_vty_get_default(bus);
+    }
 
     QTAILQ_FOREACH(kid, &bus->bus.children, sibling) {
         dev = (VIOsPAPRDevice *)kid->child;
