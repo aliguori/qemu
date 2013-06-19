@@ -94,12 +94,9 @@ static target_ulong h_put_term_char(PowerPCCPU *cpu, sPAPREnvironment *spapr,
     uint8_t buf[16];
     int i;
 
-    sdev = spapr_vio_find_by_reg(spapr->vio_bus, reg);
+    sdev = spapr_vio_find_by_reg(spapr->vio_bus, reg,
+                                 TYPE_VIO_SPAPR_VTY_DEVICE);
     if (!sdev) {
-        return H_PARAMETER;
-    }
-
-    if (!object_dynamic_cast(OBJECT(sdev), TYPE_VIO_SPAPR_VTY_DEVICE)) {
         return H_PARAMETER;
     }
 
@@ -128,12 +125,9 @@ static target_ulong h_get_term_char(PowerPCCPU *cpu, sPAPREnvironment *spapr,
     uint8_t buf[16];
     int i;
 
-    sdev = spapr_vio_find_by_reg(spapr->vio_bus, reg);
+    sdev = spapr_vio_find_by_reg(spapr->vio_bus, reg,
+                                 TYPE_VIO_SPAPR_VTY_DEVICE);
     if (!sdev) {
-        return H_PARAMETER;
-    }
-
-    if (!object_dynamic_cast(OBJECT(sdev), TYPE_VIO_SPAPR_VTY_DEVICE)) {
         return H_PARAMETER;
     }
 

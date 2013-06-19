@@ -114,7 +114,8 @@ static VIOsPAPRDevice *spapr_vty_get_default(VIOsPAPRBus *bus)
     return selected;
 }
 
-VIOsPAPRDevice *spapr_vio_find_by_reg(VIOsPAPRBus *bus, uint32_t reg)
+VIOsPAPRDevice *spapr_vio_find_by_reg(VIOsPAPRBus *bus, uint32_t reg,
+                                      const char *typename)
 {
     BusChild *kid;
     VIOsPAPRDevice *dev = NULL;
@@ -124,13 +125,13 @@ VIOsPAPRDevice *spapr_vio_find_by_reg(VIOsPAPRBus *bus, uint32_t reg)
      * reg.  This attempts to mimic existing PowerVM behaviour
      * (early debug does work there, despite having no vty with
      * reg==0. */
-    if (reg == 0) {
+    if (reg == 0 && strcmp(typename, "spapr-vty") == 0) {
         return spapr_vty_get_default(bus);
     }
 
     QTAILQ_FOREACH(kid, &bus->bus.children, sibling) {
-        dev = (VIOsPAPRDevice *)kid->child;
-        if (dev->reg == reg) {
+        dev = VIO_SPAPR_DEVICE(kid->child);
+        if (dev->reg == reg && object_dynamic_cast(OBJECT(dev), typename)) {
             return dev;
         }
     }
@@ -212,7 +213,8 @@ static target_ulong h_reg_crq(PowerPCCPU *cpu, sPAPREnvironment *spapr,
     target_ulong reg = args[0];
     target_ulong queue_addr = args[1];
     target_ulong queue_len = args[2];
-    VIOsPAPRDevice *dev = spapr_vio_find_by_reg(spapr->vio_bus, reg);
+    VIOsPAPRDevice *dev = spapr_vio_find_by_reg(spapr->vio_bus, reg,
+                                                TYPE_VIO_SPAPR_DEVICE);
 
     if (!dev) {
         hcall_dprintf("Unit 0x" TARGET_FMT_lx " does not exist\n", reg);
@@ -268,7 +270,8 @@ static target_ulong h_free_crq(PowerPCCPU *cpu, sPAPREnvironment *spapr,
                                target_ulong opcode, target_ulong *args)
 {
     target_ulong reg = args[0];
-    VIOsPAPRDevice *dev = spapr_vio_find_by_reg(spapr->vio_bus, reg);
+    VIOsPAPRDevice *dev = spapr_vio_find_by_reg(spapr->vio_bus, reg,
+                                                TYPE_VIO_SPAPR_DEVICE);
 
     if (!dev) {
         hcall_dprintf("Unit 0x" TARGET_FMT_lx " does not exist\n", reg);
@@ -284,7 +287,8 @@ static target_ulong h_send_crq(PowerPCCPU *cpu, sPAPREnvironment *spapr,
     target_ulong reg = args[0];
     target_ulong msg_hi = args[1];
     target_ulong msg_lo = args[2];
-    VIOsPAPRDevice *dev = spapr_vio_find_by_reg(spapr->vio_bus, reg);
+    VIOsPAPRDevice *dev = spapr_vio_find_by_reg(spapr->vio_bus, reg,
+                                                TYPE_VIO_SPAPR_DEVICE);
     uint64_t crq_mangle[2];
 
     if (!dev) {
@@ -305,7 +309,8 @@ static target_ulong h_enable_crq(PowerPCCPU *cpu, sPAPREnvironment *spapr,
                                  target_ulong opcode, target_ulong *args)
 {
     target_ulong reg = args[0];
-    VIOsPAPRDevice *dev = spapr_vio_find_by_reg(spapr->vio_bus, reg);
+    VIOsPAPRDevice *dev = spapr_vio_find_by_reg(spapr->vio_bus, reg,
+                                                TYPE_VIO_SPAPR_DEVICE);
 
     if (!dev) {
         hcall_dprintf("Unit 0x" TARGET_FMT_lx " does not exist\n", reg);
@@ -382,7 +387,7 @@ static void rtas_set_tce_bypass(PowerPCCPU *cpu, sPAPREnvironment *spapr,
     }
     unit = rtas_ld(args, 0);
     enable = rtas_ld(args, 1);
-    dev = spapr_vio_find_by_reg(bus, unit);
+    dev = spapr_vio_find_by_reg(bus, unit, TYPE_VIO_SPAPR_DEVICE);
     if (!dev) {
         rtas_st(rets, 0, -3);
         return;
@@ -513,7 +518,8 @@ static target_ulong h_vio_signal(PowerPCCPU *cpu, sPAPREnvironment *spapr,
 {
     target_ulong reg = args[0];
     target_ulong mode = args[1];
-    VIOsPAPRDevice *dev = spapr_vio_find_by_reg(spapr->vio_bus, reg);
+    VIOsPAPRDevice *dev = spapr_vio_find_by_reg(spapr->vio_bus, reg,
+                                                TYPE_VIO_SPAPR_DEVICE);
     VIOsPAPRDeviceClass *pc;
 
     if (!dev) {
