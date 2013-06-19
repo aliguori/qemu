@@ -29,14 +29,14 @@ typedef struct VIOsPAPRVTYDevice {
 #define VIO_SPAPR_VTY_DEVICE(obj) \
      OBJECT_CHECK(VIOsPAPRVTYDevice, (obj), TYPE_VIO_SPAPR_VTY_DEVICE)
 
-static int vty_can_receive(void *opaque)
+static int spapr_vty_can_receive(void *opaque)
 {
     VIOsPAPRVTYDevice *dev = VIO_SPAPR_VTY_DEVICE(opaque);
 
     return (dev->in - dev->out) < VTERM_BUFSIZE;
 }
 
-static void vty_receive(void *opaque, const uint8_t *buf, int size)
+static void spapr_vty_receive(void *opaque, const uint8_t *buf, int size)
 {
     VIOsPAPRVTYDevice *dev = VIO_SPAPR_VTY_DEVICE(opaque);
     int i;
@@ -51,9 +51,8 @@ static void vty_receive(void *opaque, const uint8_t *buf, int size)
     }
 }
 
-static int vty_getchars(VIOsPAPRDevice *sdev, uint8_t *buf, int max)
+static int spapr_vty_getchars(VIOsPAPRVTYDevice *dev, uint8_t *buf, int max)
 {
-    VIOsPAPRVTYDevice *dev = VIO_SPAPR_VTY_DEVICE(sdev);
     int n = 0;
 
     while ((n < max) && (dev->out != dev->in)) {
@@ -63,10 +62,9 @@ static int vty_getchars(VIOsPAPRDevice *sdev, uint8_t *buf, int max)
     return n;
 }
 
-static void vty_putchars(VIOsPAPRDevice *sdev, uint8_t *buf, int len)
+static void spapr_vty_putchars(VIOsPAPRVTYDevice *dev,
+                               const uint8_t *buf, int len)
 {
-    VIOsPAPRVTYDevice *dev = VIO_SPAPR_VTY_DEVICE(sdev);
-
     /* FIXME: should check the qemu_chr_fe_write() return value */
     qemu_chr_fe_write(dev->chardev, buf, len);
 }
@@ -80,8 +78,8 @@ static int spapr_vty_init(VIOsPAPRDevice *sdev)
         exit(1);
     }
 
-    qemu_chr_add_handlers(dev->chardev, vty_can_receive,
-                          vty_receive, NULL, dev);
+    qemu_chr_add_handlers(dev->chardev, spapr_vty_can_receive,
+                          spapr_vty_receive, NULL, dev);
 
     return 0;
 }
@@ -92,13 +90,16 @@ static target_ulong h_put_term_char(PowerPCCPU *cpu, sPAPREnvironment *spapr,
 {
     target_ulong reg = args[0];
     target_ulong len = args[1];
-    target_ulong char0_7 = args[2];
-    target_ulong char8_15 = args[3];
     VIOsPAPRDevice *sdev;
     uint8_t buf[16];
+    int i;
 
     sdev = spapr_vio_find_by_reg(spapr->vio_bus, reg);
     if (!sdev) {
+        return H_PARAMETER;
+    }
+
+    if (!object_dynamic_cast(OBJECT(sdev), TYPE_VIO_SPAPR_VTY_DEVICE)) {
         return H_PARAMETER;
     }
 
@@ -106,10 +107,14 @@ static target_ulong h_put_term_char(PowerPCCPU *cpu, sPAPREnvironment *spapr,
         return H_PARAMETER;
     }
 
-    *((uint64_t *)buf) = cpu_to_be64(char0_7);
-    *((uint64_t *)buf + 1) = cpu_to_be64(char8_15);
+    for (i = 0; i < 16; i++) {
+        uint64_t shift = (7 - (i % 8)) * 8;
+        int index = 2 + (i / 8);
 
-    vty_putchars(sdev, buf, len);
+        buf[i] = args[index] >> shift;
+    }
+
+    spapr_vty_putchars(VIO_SPAPR_VTY_DEVICE(sdev), buf, len);
 
     return H_SUCCESS;
 }
@@ -117,25 +122,31 @@ static target_ulong h_put_term_char(PowerPCCPU *cpu, sPAPREnvironment *spapr,
 static target_ulong h_get_term_char(PowerPCCPU *cpu, sPAPREnvironment *spapr,
                                     target_ulong opcode, target_ulong *args)
 {
-    target_ulong reg = args[0];
-    target_ulong *len = args + 0;
-    target_ulong *char0_7 = args + 1;
-    target_ulong *char8_15 = args + 2;
     VIOsPAPRDevice *sdev;
+    target_ulong reg = args[0];
+    target_ulong len;
     uint8_t buf[16];
+    int i;
 
     sdev = spapr_vio_find_by_reg(spapr->vio_bus, reg);
     if (!sdev) {
         return H_PARAMETER;
     }
 
-    *len = vty_getchars(sdev, buf, sizeof(buf));
-    if (*len < 16) {
-        memset(buf + *len, 0, 16 - *len);
+    if (!object_dynamic_cast(OBJECT(sdev), TYPE_VIO_SPAPR_VTY_DEVICE)) {
+        return H_PARAMETER;
     }
 
-    *char0_7 = be64_to_cpu(*((uint64_t *)buf));
-    *char8_15 = be64_to_cpu(*((uint64_t *)buf + 1));
+    len = spapr_vty_getchars(VIO_SPAPR_VTY_DEVICE(sdev), buf, sizeof(buf));
+
+    args[0] = len;
+    args[1] = args[2] = 0;
+    for (i = 0; i < len; i++) {
+        uint64_t shift = (7 - (i % 8)) * 8;
+        int index = 1 + (i / 8);
+
+        args[index] |= (uint64_t)buf[i] << shift;
+    }
 
     return H_SUCCESS;
 }
