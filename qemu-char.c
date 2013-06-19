@@ -2793,7 +2793,32 @@ static void ringbuf_chr_close(struct CharDriverState *chr)
     chr->opaque = NULL;
 }
 
-static CharDriverState *qemu_chr_open_memory(ChardevMemory *opts,
+static void ringbuf_save(QEMUFile *f, void *opaque)
+{
+    CharDriverState *chr = opaque;
+    RingBufCharDriver *d = chr->opaque;
+
+    qemu_put_be32(f, d->prod);
+    qemu_put_be32(f, d->cons);
+    qemu_put_be32(f, d->size);
+    qemu_put_buffer(f, d->cbuf, d->size);
+}
+
+static int ringbuf_load(QEMUFile *f, void *opaque, int version_id)
+{
+    CharDriverState *chr = opaque;
+    RingBufCharDriver *d = chr->opaque;
+
+    d->prod = qemu_get_be32(f);
+    d->cons = qemu_get_be32(f);
+    d->size = qemu_get_be32(f);
+    qemu_get_buffer(f, d->cbuf, d->size);
+
+    return 0;
+}
+
+static CharDriverState *qemu_chr_open_memory(const char *id,
+                                             ChardevMemory *opts,
                                              Error **errp)
 {
     CharDriverState *chr;
@@ -2803,6 +2828,14 @@ static CharDriverState *qemu_chr_open_memory(ChardevMemory *opts,
     d = g_malloc(sizeof(*d));
 
     d->size = opts->has_size ? opts->size : 65536;
+
+    if (opts->has_save && opts->save) {
+        char *idstr;
+
+        g_assert(id != NULL);
+        idstr = g_strdup_printf("memchar-%s", id);
+        register_savevm(NULL, idstr, 0, 1, ringbuf_save, ringbuf_load, chr);
+    }
 
     /* The size must be power of 2 */
     if (d->size & (d->size - 1)) {
@@ -3119,6 +3152,11 @@ static void qemu_chr_parse_memory(QemuOpts *opts, ChardevBackend *backend,
     if (val != 0) {
         backend->memory->has_size = true;
         backend->memory->size = val;
+    }
+
+    if (qemu_opt_get_bool(opts, "save", false)) {
+        backend->memory->has_save = true;
+        backend->memory->save = true;
     }
 }
 
@@ -3489,6 +3527,9 @@ QemuOptsList qemu_chardev_opts = {
         },{
             .name = "size",
             .type = QEMU_OPT_SIZE,
+        }, {
+            .name = "save",
+            .type = QEMU_OPT_BOOL,
         },
         { /* end of list */ }
     },
@@ -3711,7 +3752,7 @@ ChardevReturn *qmp_chardev_add(const char *id, ChardevBackend *backend,
         chr = vc_init(backend->vc);
         break;
     case CHARDEV_BACKEND_KIND_MEMORY:
-        chr = qemu_chr_open_memory(backend->memory, errp);
+        chr = qemu_chr_open_memory(id, backend->memory, errp);
         break;
     default:
         error_setg(errp, "unknown chardev backend (%d)", backend->kind);

@@ -3280,10 +3280,11 @@
 # Configuration info for memory chardevs
 #
 # @size: #optional Ringbuffer size, must be power of two, default is 65536
+# @save: #optional Register a savevm handler, default false
 #
 # Since: 1.5
 ##
-{ 'type': 'ChardevMemory', 'data': { '*size'  : 'int' } }
+{ 'type': 'ChardevMemory', 'data': { '*size'  : 'int', '*save': 'bool' } }
 
 ##
 # @ChardevBackend:
