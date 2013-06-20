@@ -515,6 +515,26 @@ static DMAContext *spapr_pci_dma_context_fn(PCIBus *bus, void *opaque,
     return phb->dma;
 }
 
+static int spapr_device_hotplug(DeviceState *qdev, PCIDevice *dev,
+                                PCIHotplugState state)
+{
+//    sPAPRPHBState *sphb = SPAPR_PCI_HOST_BRIDGE(qdev);
+    int slot = PCI_SLOT(dev->devfn);
+
+    if (state == PCI_COLDPLUG_ENABLED) {
+        /* Called during machine creation */
+        return 0;
+    }
+
+    if (state == PCI_HOTPLUG_ENABLED) {
+        fprintf(stderr, "Hot add of device on slot %d\n", slot);
+    } else {
+        fprintf(stderr, "Hot remove of device on slot %d\n", slot);
+    }
+
+    return -1;
+}
+
 static int spapr_phb_init(SysBusDevice *s)
 {
     sPAPRPHBState *sphb = SPAPR_PCI_HOST_BRIDGE(s);
@@ -667,6 +687,9 @@ static int spapr_phb_init(SysBusDevice *s)
 
         sphb->lsi_table[i].irq = irq;
     }
+
+    /* Setup hotplug */
+    pci_bus_hotplug(bus, spapr_device_hotplug, DEVICE(sphb));
 
     return 0;
 }
