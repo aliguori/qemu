@@ -151,6 +151,11 @@ static bool qtest_opened;
  *  < OK RET
  *
  * where NR, ARG[0-8] and RET are all integers.
+ *
+ *  > rtas_lookup RTASNAME
+ *  < OK TOKEN
+ *
+ * where RTASNAME is the symbolic name of the RTAS call.
  */
 
 static int hex2nib(char ch)
@@ -453,6 +458,12 @@ static void qtest_process_command(CharDriverState *chr, gchar **words)
         }
         ret = spapr_hypercall(ppc_env_get_cpu(first_cpu), nr, args);
         qtest_send(chr, "OK 0x%" PRIx64 "\n", ret);
+    } else if (strcmp(words[0], "rtas_lookup") == 0) {
+        uint32_t token;
+
+        g_assert(words[1]);
+        token = spapr_rtas_lookup(words[1]);
+        qtest_send(chr, "OK 0x%" PRIx32 "\n", token);
 #endif
     } else {
         qtest_send_prefix(chr);

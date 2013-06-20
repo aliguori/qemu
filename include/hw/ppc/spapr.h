@@ -323,6 +323,7 @@ typedef void (*spapr_rtas_fn)(PowerPCCPU *cpu, sPAPREnvironment *spapr,
                               uint32_t token,
                               uint32_t nargs, target_ulong args,
                               uint32_t nret, target_ulong rets);
+uint32_t spapr_rtas_lookup(const char *name);
 int spapr_rtas_register(const char *name, spapr_rtas_fn fn);
 target_ulong spapr_rtas_call(PowerPCCPU *cpu, sPAPREnvironment *spapr,
                              uint32_t token, uint32_t nargs, target_ulong args,

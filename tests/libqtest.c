@@ -637,3 +637,16 @@ uint64_t qtest_spapr_hcall9(QTestState *s, uint64_t nr, uint64_t a0,
 
     return value;
 }
+
+uint32_t qtest_rtas_lookup(QTestState *s, const char *name)
+{
+    gchar **args;
+    uint64_t value;
+
+    qtest_sendf(s, "rtas_lookup %s\n", name);
+    args = qtest_rsp(s, 2);
+    value = strtoull(args[1], NULL, 0);
+    g_strfreev(args);
+
+    return value;
+}

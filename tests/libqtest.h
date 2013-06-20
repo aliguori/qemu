@@ -325,6 +325,18 @@ QTestState *qtest_save_restore(QTestState *s);
 uint64_t qtest_spapr_hcall9(QTestState *s, uint64_t nr, uint64_t a0,
                             uint64_t a1, uint64_t a2, uint64_t a3, uint64_t a4,
                             uint64_t a5, uint64_t a6, uint64_t a7, uint64_t a8);
+
+/**
+ * qtest_rtas_lookup:
+ * @s: QTestState instance to operate on.
+ * @name: The name of the rtas operation
+ *
+ * Lookup the token associated with an RTAS call
+ *
+ * Returns: The token for the RTAS call
+ */
+uint32_t qtest_rtas_lookup(QTestState *s, const char *name);
+
 /**
  * qtest_get_arch:
  *
@@ -672,6 +684,19 @@ static inline int64_t clock_set(int64_t val)
 static inline void save_restore(void)
 {
     global_qtest = qtest_save_restore(global_qtest);
+}
+
+/**
+ * rtas_lookup:
+ * @name: The name of the rtas operation
+ *
+ * Lookup the token associated with an RTAS call
+ *
+ * Returns: The token for the RTAS call
+ */
+static inline uint32_t rtas_lookup(const char *name)
+{
+    return qtest_rtas_lookup(global_qtest, name);
 }
 
 static inline uint64_t spapr_hcall0(uint64_t nr)

@@ -239,6 +239,19 @@ target_ulong spapr_rtas_call(PowerPCCPU *cpu, sPAPREnvironment *spapr,
     return H_PARAMETER;
 }
 
+uint32_t spapr_rtas_lookup(const char *name)
+{
+    int i;
+
+    for (i = 0; i < (rtas_next - rtas_table); i++) {
+        if (strcmp(name, rtas_table[i].name) == 0) {
+            return i + TOKEN_BASE;
+        }
+    }
+
+    return 0;
+}
+
 int spapr_rtas_register(const char *name, spapr_rtas_fn fn)
 {
     int i;
