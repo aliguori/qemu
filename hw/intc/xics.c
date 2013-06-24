@@ -497,6 +497,61 @@ static void xics_reset(DeviceState *d)
     xics_common_reset(XICS(d));
 }
 
+static int ics_post_load(void *opaque, int version_id)
+{
+    int i;
+    struct ics_state *ics = opaque;
+
+    for (i = 0; i < ics->icp->nr_servers; i++) {
+        icp_resend(ics->icp, i);
+    }
+
+    return 0;
+}
+
+const VMStateDescription vmstate_icp_server = {
+    .name = "icp/server",
+    .version_id = 1,
+    .minimum_version_id = 1,
+    .minimum_version_id_old = 1,
+    .fields      = (VMStateField []) {
+        /* Sanity check */
+        VMSTATE_UINT32(xirr, struct icp_server_state),
+        VMSTATE_UINT8(pending_priority, struct icp_server_state),
+        VMSTATE_UINT8(mfrr, struct icp_server_state),
+        VMSTATE_END_OF_LIST()
+    },
+};
+
+static const VMStateDescription vmstate_ics_irq = {
+    .name = "ics/irq",
+    .version_id = 1,
+    .minimum_version_id = 1,
+    .minimum_version_id_old = 1,
+    .fields      = (VMStateField []) {
+        VMSTATE_UINT32(server, struct ics_irq_state),
+        VMSTATE_UINT8(priority, struct ics_irq_state),
+        VMSTATE_UINT8(saved_priority, struct ics_irq_state),
+        VMSTATE_UINT8(status, struct ics_irq_state),
+        VMSTATE_END_OF_LIST()
+    },
+};
+
+const VMStateDescription vmstate_ics = {
+    .name = "ics",
+    .version_id = 1,
+    .minimum_version_id = 1,
+    .minimum_version_id_old = 1,
+    .post_load = ics_post_load,
+    .fields      = (VMStateField []) {
+        /* Sanity check */
+        VMSTATE_UINT32_EQUAL(nr_irqs, struct ics_state),
+
+        VMSTATE_STRUCT_VARRAY_POINTER_UINT32(irqs, struct ics_state, nr_irqs, vmstate_ics_irq, struct ics_irq_state),
+        VMSTATE_END_OF_LIST()
+    },
+};
+
 void xics_common_cpu_setup(struct icp_state *icp, PowerPCCPU *cpu)
 {
     CPUState *cs = CPU(cpu);
@@ -523,7 +578,11 @@ void xics_common_cpu_setup(struct icp_state *icp, PowerPCCPU *cpu)
 
 void xics_cpu_setup(struct icp_state *icp, PowerPCCPU *cpu)
 {
+    CPUState *cs = CPU(cpu);
+    struct icp_server_state *ss = &icp->ss[cs->cpu_index];
+
     xics_common_cpu_setup(icp, cpu);
+    vmstate_register(NULL, cs->cpu_index, &vmstate_icp_server, ss);
 }
 
 void xics_common_init(struct icp_state *icp, qemu_irq_handler handler)
@@ -555,6 +614,10 @@ static void xics_realize(DeviceState *dev, Error **errp)
     spapr_rtas_register("ibm,int-off", rtas_int_off);
     spapr_rtas_register("ibm,int-on", rtas_int_on);
 
+    /* We use each the ICS's offset into the global irq number space
+     * as an instance id.  This means we can extend to multiple ICS
+     * instances without needing to change the savevm format */
+    vmstate_register(NULL, icp->ics->offset, &vmstate_ics, icp->ics);
 }
 
 static Property xics_properties[] = {
