@@ -112,6 +112,25 @@ static IOMMUTLBEntry spapr_tce_translate_iommu(MemoryRegion *iommu, hwaddr addr)
     };
 }
 
+static const VMStateDescription vmstate_spapr_tce_table = {
+    .name = "spapr_iommu",
+    .version_id = 1,
+    .minimum_version_id = 1,
+    .minimum_version_id_old = 1,
+    .fields      = (VMStateField []) {
+        /* Sanity check */
+        VMSTATE_UINT32_EQUAL(liobn, sPAPRTCETable),
+        VMSTATE_UINT32_EQUAL(window_size, sPAPRTCETable),
+
+        /* IOMMU state */
+        VMSTATE_BOOL(bypass, sPAPRTCETable),
+        VMSTATE_VBUFFER_DIVIDE(table, sPAPRTCETable, 0, NULL, 0, window_size,
+                               SPAPR_TCE_PAGE_SIZE / sizeof(sPAPRTCE)),
+
+        VMSTATE_END_OF_LIST()
+    },
+};
+
 static MemoryRegionIOMMUOps spapr_iommu_ops = {
     .translate = spapr_tce_translate_iommu,
 };
@@ -156,11 +175,17 @@ sPAPRTCETable *spapr_tce_new_table(DeviceState *owner, uint32_t liobn, size_t wi
 
     QLIST_INSERT_HEAD(&spapr_tce_tables, tcet, list);
 
+    vmstate_register(NULL, tcet->liobn, &vmstate_spapr_tce_table, tcet);
+
     return tcet;
 }
 
 void spapr_tce_free(sPAPRTCETable *tcet)
 {
+    QLIST_REMOVE(tcet, list);
+
+    vmstate_unregister(NULL, &vmstate_spapr_tce_table, tcet);
+
     QLIST_REMOVE(tcet, list);
 
     if (!kvm_enabled() ||
