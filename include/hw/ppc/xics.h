@@ -27,15 +27,68 @@
 #if !defined(__XICS_H__)
 #define __XICS_H__
 
-#define XICS_IPI        0x2
-#define XICS_IRQ_BASE   0x10
+#include "hw/sysbus.h"
 
-struct icp_state;
+#define TYPE_XICS "xics"
+#define XICS(obj) OBJECT_CHECK(struct icp_state, (obj), TYPE_XICS)
+
+#define XICS_IPI        0x2
+#define XICS_BUID       0x1
+#define XICS_IRQ_BASE   (XICS_BUID << 12)
+
+/*
+ * We currently only support one BUID which is our interrupt base
+ * (the kernel implementation supports more but we don't exploit
+ *  that yet)
+ */
+
+typedef struct icp_state {
+    /*< private >*/
+    SysBusDevice parent_obj;
+    /*< public >*/
+    uint32_t nr_servers;
+    uint32_t nr_irqs;
+    struct icp_server_state *ss;
+    struct ics_state *ics;
+} icp_state;
+
+typedef struct icp_server_state {
+    uint32_t xirr;
+    uint8_t pending_priority;
+    uint8_t mfrr;
+    qemu_irq output;
+} icp_server_state;
+
+typedef struct ics_state {
+    uint32_t nr_irqs;
+    uint32_t offset;
+    qemu_irq *qirqs;
+    bool *islsi;
+    struct ics_irq_state *irqs;
+    struct icp_state *icp;
+} ics_state;
+
+typedef struct ics_irq_state {
+    uint32_t server;
+    uint8_t priority;
+    uint8_t saved_priority;
+#define XICS_STATUS_ASSERTED           0x1
+#define XICS_STATUS_SENT               0x2
+#define XICS_STATUS_REJECTED           0x4
+#define XICS_STATUS_MASKED_PENDING     0x8
+    uint8_t status;
+} ics_irq_state;
 
 qemu_irq xics_get_qirq(struct icp_state *icp, int irq);
 void xics_set_irq_type(struct icp_state *icp, int irq, bool lsi);
 
-struct icp_state *xics_system_init(int nr_servers, int nr_irqs);
+void xics_common_init(struct icp_state *icp, qemu_irq_handler handler);
+void xics_common_cpu_setup(struct icp_state *icp, PowerPCCPU *cpu);
+void xics_common_reset(struct icp_state *icp);
+
 void xics_cpu_setup(struct icp_state *icp, PowerPCCPU *cpu);
+
+extern const VMStateDescription vmstate_icp_server;
+extern const VMStateDescription vmstate_ics;
 
 #endif /* __XICS_H__ */

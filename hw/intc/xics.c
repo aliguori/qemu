@@ -34,13 +34,6 @@
  * ICP: Presentation layer
  */
 
-struct icp_server_state {
-    uint32_t xirr;
-    uint8_t pending_priority;
-    uint8_t mfrr;
-    qemu_irq output;
-};
-
 #define XISR_MASK  0x00ffffff
 #define CPPR_MASK  0xff000000
 
@@ -48,12 +41,6 @@ struct icp_server_state {
 #define CPPR(ss)   (((ss)->xirr) >> 24)
 
 struct ics_state;
-
-struct icp_state {
-    long nr_servers;
-    struct icp_server_state *ss;
-    struct ics_state *ics;
-};
 
 static void ics_reject(struct ics_state *ics, int nr);
 static void ics_resend(struct ics_state *ics);
@@ -171,27 +158,6 @@ static void icp_irq(struct icp_state *icp, int server, int nr, uint8_t priority)
 /*
  * ICS: Source layer
  */
-
-struct ics_irq_state {
-    int server;
-    uint8_t priority;
-    uint8_t saved_priority;
-#define XICS_STATUS_ASSERTED           0x1
-#define XICS_STATUS_SENT               0x2
-#define XICS_STATUS_REJECTED           0x4
-#define XICS_STATUS_MASKED_PENDING     0x8
-    uint8_t status;
-};
-
-struct ics_state {
-    int nr_irqs;
-    int offset;
-    qemu_irq *qirqs;
-    bool *islsi;
-    struct ics_irq_state *irqs;
-    struct icp_state *icp;
-};
-
 static int ics_valid_irq(struct ics_state *ics, uint32_t nr)
 {
     return (nr >= ics->offset)
@@ -506,9 +472,8 @@ static void rtas_int_on(PowerPCCPU *cpu, sPAPREnvironment *spapr,
     rtas_st(rets, 0, 0); /* Success */
 }
 
-static void xics_reset(void *opaque)
+void xics_common_reset(struct icp_state *icp)
 {
-    struct icp_state *icp = (struct icp_state *)opaque;
     struct ics_state *ics = icp->ics;
     int i;
 
@@ -527,7 +492,12 @@ static void xics_reset(void *opaque)
     }
 }
 
-void xics_cpu_setup(struct icp_state *icp, PowerPCCPU *cpu)
+static void xics_reset(DeviceState *d)
+{
+    xics_common_reset(XICS(d));
+}
+
+void xics_common_cpu_setup(struct icp_state *icp, PowerPCCPU *cpu)
 {
     CPUState *cs = CPU(cpu);
     CPUPPCState *env = &cpu->env;
@@ -551,37 +521,72 @@ void xics_cpu_setup(struct icp_state *icp, PowerPCCPU *cpu)
     }
 }
 
-struct icp_state *xics_system_init(int nr_servers, int nr_irqs)
+void xics_cpu_setup(struct icp_state *icp, PowerPCCPU *cpu)
 {
-    struct icp_state *icp;
-    struct ics_state *ics;
+    xics_common_cpu_setup(icp, cpu);
+}
 
-    icp = g_malloc0(sizeof(*icp));
-    icp->nr_servers = nr_servers;
+void xics_common_init(struct icp_state *icp, qemu_irq_handler handler)
+{
+    struct ics_state *ics = icp->ics;
+
     icp->ss = g_malloc0(icp->nr_servers*sizeof(struct icp_server_state));
 
     ics = g_malloc0(sizeof(*ics));
-    ics->nr_irqs = nr_irqs;
+    ics->nr_irqs = icp->nr_irqs;
     ics->offset = XICS_IRQ_BASE;
-    ics->irqs = g_malloc0(nr_irqs * sizeof(struct ics_irq_state));
-    ics->islsi = g_malloc0(nr_irqs * sizeof(bool));
+    ics->irqs = g_malloc0(ics->nr_irqs * sizeof(struct ics_irq_state));
+    ics->islsi = g_malloc0(ics->nr_irqs * sizeof(bool));
 
     icp->ics = ics;
     ics->icp = icp;
 
-    ics->qirqs = qemu_allocate_irqs(ics_set_irq, ics, nr_irqs);
+    ics->qirqs = qemu_allocate_irqs(handler, ics, ics->nr_irqs);
+}
 
-    spapr_register_hypercall(H_CPPR, h_cppr);
-    spapr_register_hypercall(H_IPI, h_ipi);
-    spapr_register_hypercall(H_XIRR, h_xirr);
-    spapr_register_hypercall(H_EOI, h_eoi);
+static void xics_realize(DeviceState *dev, Error **errp)
+{
+    struct icp_state *icp = XICS(dev);
+
+    xics_common_init(icp, ics_set_irq);
 
     spapr_rtas_register("ibm,set-xive", rtas_set_xive);
     spapr_rtas_register("ibm,get-xive", rtas_get_xive);
     spapr_rtas_register("ibm,int-off", rtas_int_off);
     spapr_rtas_register("ibm,int-on", rtas_int_on);
 
-    qemu_register_reset(xics_reset, icp);
-
-    return icp;
 }
+
+static Property xics_properties[] = {
+    DEFINE_PROP_UINT32("nr_servers", struct icp_state, nr_servers, -1),
+    DEFINE_PROP_UINT32("nr_irqs", struct icp_state, nr_irqs, -1),
+    DEFINE_PROP_END_OF_LIST(),
+};
+
+static void xics_class_init(ObjectClass *oc, void *data)
+{
+    DeviceClass *dc = DEVICE_CLASS(oc);
+
+    dc->realize = xics_realize;
+    dc->props = xics_properties;
+    dc->reset = xics_reset;
+}
+
+static const TypeInfo xics_info = {
+    .name          = TYPE_XICS,
+    .parent        = TYPE_SYS_BUS_DEVICE,
+    .instance_size = sizeof(struct icp_state),
+    .class_init    = xics_class_init,
+};
+
+static void xics_register_types(void)
+{
+    spapr_register_hypercall(H_CPPR, h_cppr);
+    spapr_register_hypercall(H_IPI, h_ipi);
+    spapr_register_hypercall(H_XIRR, h_xirr);
+    spapr_register_hypercall(H_EOI, h_eoi);
+
+    type_register_static(&xics_info);
+}
+
+type_init(xics_register_types)
