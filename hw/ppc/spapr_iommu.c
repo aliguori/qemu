@@ -36,17 +36,6 @@ enum sPAPRTCEAccess {
     SPAPR_TCE_RW = 3,
 };
 
-struct sPAPRTCETable {
-    uint32_t liobn;
-    uint32_t window_size;
-    sPAPRTCE *table;
-    bool bypass;
-    int fd;
-    MemoryRegion iommu;
-    QLIST_ENTRY(sPAPRTCETable) list;
-};
-
-
 QLIST_HEAD(spapr_tce_tables, sPAPRTCETable) spapr_tce_tables;
 
 static sPAPRTCETable *spapr_tce_find_by_liobn(uint32_t liobn)
@@ -135,6 +124,35 @@ static MemoryRegionIOMMUOps spapr_iommu_ops = {
     .translate = spapr_tce_translate_iommu,
 };
 
+static int spapr_tce_table_realize(DeviceState *dev)
+{
+    sPAPRTCETable *tcet = SPAPR_TCE_TABLE(dev);
+
+    if (kvm_enabled()) {
+        tcet->table = kvmppc_create_spapr_tce(tcet->liobn,
+                                              tcet->window_size,
+                                              &tcet->fd);
+    }
+
+    if (!tcet->table) {
+        size_t table_size = (tcet->window_size >> SPAPR_TCE_PAGE_SHIFT)
+            * sizeof(sPAPRTCE);
+        tcet->table = g_malloc0(table_size);
+    }
+
+#ifdef DEBUG_TCE
+    fprintf(stderr, "spapr_iommu: New TCE table @ %p, liobn=0x%x, "
+            "table @ %p, fd=%d\n", tcet, liobn, tcet->table, tcet->fd);
+#endif
+
+    memory_region_init_iommu(&tcet->iommu, OBJECT(dev), &spapr_iommu_ops,
+                             "iommu-spapr", UINT64_MAX);
+
+    QLIST_INSERT_HEAD(&spapr_tce_tables, tcet, list);
+
+    return 0;
+}
+
 sPAPRTCETable *spapr_tce_new_table(DeviceState *owner, uint32_t liobn, size_t window_size)
 {
     sPAPRTCETable *tcet;
@@ -149,42 +167,20 @@ sPAPRTCETable *spapr_tce_new_table(DeviceState *owner, uint32_t liobn, size_t wi
         return NULL;
     }
 
-    tcet = g_malloc0(sizeof(*tcet));
+    tcet = SPAPR_TCE_TABLE(object_new(TYPE_SPAPR_TCE_TABLE));
     tcet->liobn = liobn;
     tcet->window_size = window_size;
 
-    if (kvm_enabled()) {
-        tcet->table = kvmppc_create_spapr_tce(liobn,
-                                              window_size,
-                                              &tcet->fd);
-    }
+    object_property_add_child(OBJECT(owner), "tce-table", OBJECT(tcet), NULL);
 
-    if (!tcet->table) {
-        size_t table_size = (window_size >> SPAPR_TCE_PAGE_SHIFT)
-            * sizeof(sPAPRTCE);
-        tcet->table = g_malloc0(table_size);
-    }
-
-#ifdef DEBUG_TCE
-    fprintf(stderr, "spapr_iommu: New TCE table @ %p, liobn=0x%x, "
-            "table @ %p, fd=%d\n", tcet, liobn, tcet->table, tcet->fd);
-#endif
-
-    memory_region_init_iommu(&tcet->iommu, OBJECT(owner), &spapr_iommu_ops,
-                             "iommu-spapr", UINT64_MAX);
-
-    QLIST_INSERT_HEAD(&spapr_tce_tables, tcet, list);
-
-    vmstate_register(NULL, tcet->liobn, &vmstate_spapr_tce_table, tcet);
+    qdev_init_nofail(DEVICE(tcet));
 
     return tcet;
 }
 
-void spapr_tce_free(sPAPRTCETable *tcet)
+static void spapr_tce_table_finalize(Object *obj)
 {
-    QLIST_REMOVE(tcet, list);
-
-    vmstate_unregister(NULL, &vmstate_spapr_tce_table, tcet);
+    sPAPRTCETable *tcet = SPAPR_TCE_TABLE(obj);
 
     QLIST_REMOVE(tcet, list);
 
@@ -193,8 +189,6 @@ void spapr_tce_free(sPAPRTCETable *tcet)
                                  tcet->window_size) != 0)) {
         g_free(tcet->table);
     }
-
-    g_free(tcet);
 }
 
 MemoryRegion *spapr_tce_get_iommu(sPAPRTCETable *tcet)
@@ -207,8 +201,9 @@ void spapr_tce_set_bypass(sPAPRTCETable *tcet, bool bypass)
     tcet->bypass = bypass;
 }
 
-void spapr_tce_reset(sPAPRTCETable *tcet)
+static void spapr_tce_reset(DeviceState *dev)
 {
+    sPAPRTCETable *tcet = SPAPR_TCE_TABLE(dev);
     size_t table_size = (tcet->window_size >> SPAPR_TCE_PAGE_SHIFT)
         * sizeof(sPAPRTCE);
 
@@ -263,14 +258,6 @@ static target_ulong h_put_tce(PowerPCCPU *cpu, sPAPREnvironment *spapr,
     return H_PARAMETER;
 }
 
-void spapr_iommu_init(void)
-{
-    QLIST_INIT(&spapr_tce_tables);
-
-    /* hcall-tce */
-    spapr_register_hypercall(H_PUT_TCE, h_put_tce);
-}
-
 int spapr_dma_dt(void *fdt, int node_off, const char *propname,
                  uint32_t liobn, uint64_t window, uint32_t size)
 {
@@ -311,3 +298,31 @@ int spapr_tcet_dma_dt(void *fdt, int node_off, const char *propname,
     return spapr_dma_dt(fdt, node_off, propname,
                         tcet->liobn, 0, tcet->window_size);
 }
+
+static void spapr_tce_table_class_init(ObjectClass *klass, void *data)
+{
+    DeviceClass *dc = DEVICE_CLASS(klass);
+    dc->vmsd = &vmstate_spapr_tce_table;
+    dc->init = spapr_tce_table_realize;
+    dc->reset = spapr_tce_reset;
+
+    QLIST_INIT(&spapr_tce_tables);
+
+    /* hcall-tce */
+    spapr_register_hypercall(H_PUT_TCE, h_put_tce);
+}
+
+static TypeInfo spapr_tce_table_info = {
+    .name = TYPE_SPAPR_TCE_TABLE,
+    .parent = TYPE_DEVICE,
+    .instance_size = sizeof(sPAPRTCETable),
+    .class_init = spapr_tce_table_class_init,
+    .instance_finalize = spapr_tce_table_finalize,
+};
+
+static void register_types(void)
+{
+    type_register_static(&spapr_tce_table_info);
+}
+
+type_init(register_types);

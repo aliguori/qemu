@@ -352,14 +352,26 @@ typedef struct sPAPRTCE {
 
 typedef struct sPAPRTCETable sPAPRTCETable;
 
-void spapr_iommu_init(void);
+#define TYPE_SPAPR_TCE_TABLE "spapr-tce-table"
+#define SPAPR_TCE_TABLE(obj) \
+    OBJECT_CHECK(sPAPRTCETable, (obj), TYPE_SPAPR_TCE_TABLE)
+
+struct sPAPRTCETable {
+    DeviceState parent;
+    uint32_t liobn;
+    uint32_t window_size;
+    sPAPRTCE *table;
+    bool bypass;
+    int fd;
+    MemoryRegion iommu;
+    QLIST_ENTRY(sPAPRTCETable) list;
+};
+
 void spapr_events_init(sPAPREnvironment *spapr);
 void spapr_events_fdt_skel(void *fdt, uint32_t epow_irq);
 sPAPRTCETable *spapr_tce_new_table(DeviceState *owner, uint32_t liobn,
                                    size_t window_size);
 MemoryRegion *spapr_tce_get_iommu(sPAPRTCETable *tcet);
-void spapr_tce_free(sPAPRTCETable *tcet);
-void spapr_tce_reset(sPAPRTCETable *tcet);
 void spapr_tce_set_bypass(sPAPRTCETable *tcet, bool bypass);
 int spapr_dma_dt(void *fdt, int node_off, const char *propname,
                  uint32_t liobn, uint64_t window, uint32_t size);
