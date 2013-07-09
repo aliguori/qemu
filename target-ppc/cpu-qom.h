@@ -106,4 +106,8 @@ void ppc_cpu_dump_state(CPUState *cpu, FILE *f, fprintf_function cpu_fprintf,
 void ppc_cpu_dump_statistics(CPUState *cpu, FILE *f,
                              fprintf_function cpu_fprintf, int flags);
 
+#ifndef CONFIG_USER_ONLY
+extern const struct VMStateDescription vmstate_ppc_cpu;
+#endif
+
 #endif
