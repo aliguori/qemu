@@ -8290,6 +8290,8 @@ static void ppc_cpu_class_init(ObjectClass *oc, void *data)
     cc->do_interrupt = ppc_cpu_do_interrupt;
     cc->dump_state = ppc_cpu_dump_state;
     cc->dump_statistics = ppc_cpu_dump_statistics;
+
+    cpu_class_set_vmsd(cc, &vmstate_ppc_cpu);
 }
 
 static const TypeInfo ppc_cpu_type_info = {
