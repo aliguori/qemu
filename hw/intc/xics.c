@@ -40,15 +40,13 @@
 #define XISR(ss)   (((ss)->xirr) & XISR_MASK)
 #define CPPR(ss)   (((ss)->xirr) >> 24)
 
-struct ics_state;
+static void ics_reject(ICSState *ics, int nr);
+static void ics_resend(ICSState *ics);
+static void ics_eoi(ICSState *ics, int nr);
 
-static void ics_reject(struct ics_state *ics, int nr);
-static void ics_resend(struct ics_state *ics);
-static void ics_eoi(struct ics_state *ics, int nr);
-
-static void icp_check_ipi(struct icp_state *icp, int server)
+static void icp_check_ipi(XICSState *icp, int server)
 {
-    struct icp_server_state *ss = icp->ss + server;
+    ICPState *ss = icp->ss + server;
 
     if (XISR(ss) && (ss->pending_priority <= ss->mfrr)) {
         return;
@@ -65,9 +63,9 @@ static void icp_check_ipi(struct icp_state *icp, int server)
     qemu_irq_raise(ss->output);
 }
 
-static void icp_resend(struct icp_state *icp, int server)
+static void icp_resend(XICSState *icp, int server)
 {
-    struct icp_server_state *ss = icp->ss + server;
+    ICPState *ss = icp->ss + server;
 
     if (ss->mfrr < CPPR(ss)) {
         icp_check_ipi(icp, server);
@@ -75,9 +73,9 @@ static void icp_resend(struct icp_state *icp, int server)
     ics_resend(icp->ics);
 }
 
-static void icp_set_cppr(struct icp_state *icp, int server, uint8_t cppr)
+static void icp_set_cppr(XICSState *icp, int server, uint8_t cppr)
 {
-    struct icp_server_state *ss = icp->ss + server;
+    ICPState *ss = icp->ss + server;
     uint8_t old_cppr;
     uint32_t old_xisr;
 
@@ -99,9 +97,9 @@ static void icp_set_cppr(struct icp_state *icp, int server, uint8_t cppr)
     }
 }
 
-static void icp_set_mfrr(struct icp_state *icp, int server, uint8_t mfrr)
+static void icp_set_mfrr(XICSState *icp, int server, uint8_t mfrr)
 {
-    struct icp_server_state *ss = icp->ss + server;
+    ICPState *ss = icp->ss + server;
 
     ss->mfrr = mfrr;
     if (mfrr < CPPR(ss)) {
@@ -109,7 +107,7 @@ static void icp_set_mfrr(struct icp_state *icp, int server, uint8_t mfrr)
     }
 }
 
-static uint32_t icp_accept(struct icp_server_state *ss)
+static uint32_t icp_accept(ICPState *ss)
 {
     uint32_t xirr = ss->xirr;
 
@@ -122,9 +120,9 @@ static uint32_t icp_accept(struct icp_server_state *ss)
     return xirr;
 }
 
-static void icp_eoi(struct icp_state *icp, int server, uint32_t xirr)
+static void icp_eoi(XICSState *icp, int server, uint32_t xirr)
 {
-    struct icp_server_state *ss = icp->ss + server;
+    ICPState *ss = icp->ss + server;
 
     /* Send EOI -> ICS */
     ss->xirr = (ss->xirr & ~CPPR_MASK) | (xirr & CPPR_MASK);
@@ -135,9 +133,9 @@ static void icp_eoi(struct icp_state *icp, int server, uint32_t xirr)
     }
 }
 
-static void icp_irq(struct icp_state *icp, int server, int nr, uint8_t priority)
+static void icp_irq(XICSState *icp, int server, int nr, uint8_t priority)
 {
-    struct icp_server_state *ss = icp->ss + server;
+    ICPState *ss = icp->ss + server;
 
     trace_xics_icp_irq(server, nr, priority);
 
@@ -158,15 +156,15 @@ static void icp_irq(struct icp_state *icp, int server, int nr, uint8_t priority)
 /*
  * ICS: Source layer
  */
-static int ics_valid_irq(struct ics_state *ics, uint32_t nr)
+static int ics_valid_irq(ICSState *ics, uint32_t nr)
 {
     return (nr >= ics->offset)
         && (nr < (ics->offset + ics->nr_irqs));
 }
 
-static void resend_msi(struct ics_state *ics, int srcno)
+static void resend_msi(ICSState *ics, int srcno)
 {
-    struct ics_irq_state *irq = ics->irqs + srcno;
+    ICSIRQState *irq = ics->irqs + srcno;
 
     /* FIXME: filter by server#? */
     if (irq->status & XICS_STATUS_REJECTED) {
@@ -178,9 +176,9 @@ static void resend_msi(struct ics_state *ics, int srcno)
     }
 }
 
-static void resend_lsi(struct ics_state *ics, int srcno)
+static void resend_lsi(ICSState *ics, int srcno)
 {
-    struct ics_irq_state *irq = ics->irqs + srcno;
+    ICSIRQState *irq = ics->irqs + srcno;
 
     if ((irq->priority != 0xff)
         && (irq->status & XICS_STATUS_ASSERTED)
@@ -190,9 +188,9 @@ static void resend_lsi(struct ics_state *ics, int srcno)
     }
 }
 
-static void set_irq_msi(struct ics_state *ics, int srcno, int val)
+static void set_irq_msi(ICSState *ics, int srcno, int val)
 {
-    struct ics_irq_state *irq = ics->irqs + srcno;
+    ICSIRQState *irq = ics->irqs + srcno;
 
     trace_xics_set_irq_msi(srcno, srcno + ics->offset);
 
@@ -206,9 +204,9 @@ static void set_irq_msi(struct ics_state *ics, int srcno, int val)
     }
 }
 
-static void set_irq_lsi(struct ics_state *ics, int srcno, int val)
+static void set_irq_lsi(ICSState *ics, int srcno, int val)
 {
-    struct ics_irq_state *irq = ics->irqs + srcno;
+    ICSIRQState *irq = ics->irqs + srcno;
 
     trace_xics_set_irq_lsi(srcno, srcno + ics->offset);
     if (val) {
@@ -221,7 +219,7 @@ static void set_irq_lsi(struct ics_state *ics, int srcno, int val)
 
 static void ics_set_irq(void *opaque, int srcno, int val)
 {
-    struct ics_state *ics = (struct ics_state *)opaque;
+    ICSState *ics = (ICSState *)opaque;
 
     if (ics->islsi[srcno]) {
         set_irq_lsi(ics, srcno, val);
@@ -230,9 +228,9 @@ static void ics_set_irq(void *opaque, int srcno, int val)
     }
 }
 
-static void write_xive_msi(struct ics_state *ics, int srcno)
+static void write_xive_msi(ICSState *ics, int srcno)
 {
-    struct ics_irq_state *irq = ics->irqs + srcno;
+    ICSIRQState *irq = ics->irqs + srcno;
 
     if (!(irq->status & XICS_STATUS_MASKED_PENDING)
         || (irq->priority == 0xff)) {
@@ -243,16 +241,16 @@ static void write_xive_msi(struct ics_state *ics, int srcno)
     icp_irq(ics->icp, irq->server, srcno + ics->offset, irq->priority);
 }
 
-static void write_xive_lsi(struct ics_state *ics, int srcno)
+static void write_xive_lsi(ICSState *ics, int srcno)
 {
     resend_lsi(ics, srcno);
 }
 
-static void ics_write_xive(struct ics_state *ics, int nr, int server,
+static void ics_write_xive(ICSState *ics, int nr, int server,
                            uint8_t priority, uint8_t saved_priority)
 {
     int srcno = nr - ics->offset;
-    struct ics_irq_state *irq = ics->irqs + srcno;
+    ICSIRQState *irq = ics->irqs + srcno;
 
     irq->server = server;
     irq->priority = priority;
@@ -267,16 +265,16 @@ static void ics_write_xive(struct ics_state *ics, int nr, int server,
     }
 }
 
-static void ics_reject(struct ics_state *ics, int nr)
+static void ics_reject(ICSState *ics, int nr)
 {
-    struct ics_irq_state *irq = ics->irqs + nr - ics->offset;
+    ICSIRQState *irq = ics->irqs + nr - ics->offset;
 
     trace_xics_ics_reject(nr, nr - ics->offset);
     irq->status |= XICS_STATUS_REJECTED; /* Irrelevant but harmless for LSI */
     irq->status &= ~XICS_STATUS_SENT; /* Irrelevant but harmless for MSI */
 }
 
-static void ics_resend(struct ics_state *ics)
+static void ics_resend(ICSState *ics)
 {
     int i;
 
@@ -290,10 +288,10 @@ static void ics_resend(struct ics_state *ics)
     }
 }
 
-static void ics_eoi(struct ics_state *ics, int nr)
+static void ics_eoi(ICSState *ics, int nr)
 {
     int srcno = nr - ics->offset;
-    struct ics_irq_state *irq = ics->irqs + srcno;
+    ICSIRQState *irq = ics->irqs + srcno;
 
     trace_xics_ics_eoi(nr);
 
@@ -306,7 +304,7 @@ static void ics_eoi(struct ics_state *ics, int nr)
  * Exported functions
  */
 
-qemu_irq xics_get_qirq(struct icp_state *icp, int irq)
+qemu_irq xics_get_qirq(XICSState *icp, int irq)
 {
     if (!ics_valid_irq(icp->ics, irq)) {
         return NULL;
@@ -315,7 +313,7 @@ qemu_irq xics_get_qirq(struct icp_state *icp, int irq)
     return icp->ics->qirqs[irq - icp->ics->offset];
 }
 
-void xics_set_irq_type(struct icp_state *icp, int irq, bool lsi)
+void xics_set_irq_type(XICSState *icp, int irq, bool lsi)
 {
     assert(ics_valid_irq(icp->ics, irq));
 
@@ -371,7 +369,7 @@ static void rtas_set_xive(PowerPCCPU *cpu, sPAPREnvironment *spapr,
                           uint32_t nargs, target_ulong args,
                           uint32_t nret, target_ulong rets)
 {
-    struct ics_state *ics = spapr->icp->ics;
+    ICSState *ics = spapr->icp->ics;
     uint32_t nr, server, priority;
 
     if ((nargs != 3) || (nret != 1)) {
@@ -399,7 +397,7 @@ static void rtas_get_xive(PowerPCCPU *cpu, sPAPREnvironment *spapr,
                           uint32_t nargs, target_ulong args,
                           uint32_t nret, target_ulong rets)
 {
-    struct ics_state *ics = spapr->icp->ics;
+    ICSState *ics = spapr->icp->ics;
     uint32_t nr;
 
     if ((nargs != 1) || (nret != 3)) {
@@ -424,7 +422,7 @@ static void rtas_int_off(PowerPCCPU *cpu, sPAPREnvironment *spapr,
                          uint32_t nargs, target_ulong args,
                          uint32_t nret, target_ulong rets)
 {
-    struct ics_state *ics = spapr->icp->ics;
+    ICSState *ics = spapr->icp->ics;
     uint32_t nr;
 
     if ((nargs != 1) || (nret != 1)) {
@@ -450,7 +448,7 @@ static void rtas_int_on(PowerPCCPU *cpu, sPAPREnvironment *spapr,
                         uint32_t nargs, target_ulong args,
                         uint32_t nret, target_ulong rets)
 {
-    struct ics_state *ics = spapr->icp->ics;
+    ICSState *ics = spapr->icp->ics;
     uint32_t nr;
 
     if ((nargs != 1) || (nret != 1)) {
@@ -472,9 +470,9 @@ static void rtas_int_on(PowerPCCPU *cpu, sPAPREnvironment *spapr,
     rtas_st(rets, 0, 0); /* Success */
 }
 
-void xics_common_reset(struct icp_state *icp)
+void xics_common_reset(XICSState *icp)
 {
-    struct ics_state *ics = icp->ics;
+    ICSState *ics = icp->ics;
     int i;
 
     for (i = 0; i < icp->nr_servers; i++) {
@@ -485,7 +483,7 @@ void xics_common_reset(struct icp_state *icp)
         qemu_set_irq(icp->ss[i].output, 0);
     }
 
-    memset(ics->irqs, 0, sizeof(struct ics_irq_state) * ics->nr_irqs);
+    memset(ics->irqs, 0, sizeof(ICSIRQState) * ics->nr_irqs);
     for (i = 0; i < ics->nr_irqs; i++) {
         ics->irqs[i].priority = 0xff;
         ics->irqs[i].saved_priority = 0xff;
@@ -500,7 +498,7 @@ static void xics_reset(DeviceState *d)
 static int ics_post_load(void *opaque, int version_id)
 {
     int i;
-    struct ics_state *ics = opaque;
+    ICSState *ics = opaque;
 
     for (i = 0; i < ics->icp->nr_servers; i++) {
         icp_resend(ics->icp, i);
@@ -516,9 +514,9 @@ const VMStateDescription vmstate_icp_server = {
     .minimum_version_id_old = 1,
     .fields      = (VMStateField []) {
         /* Sanity check */
-        VMSTATE_UINT32(xirr, struct icp_server_state),
-        VMSTATE_UINT8(pending_priority, struct icp_server_state),
-        VMSTATE_UINT8(mfrr, struct icp_server_state),
+        VMSTATE_UINT32(xirr, ICPState),
+        VMSTATE_UINT8(pending_priority, ICPState),
+        VMSTATE_UINT8(mfrr, ICPState),
         VMSTATE_END_OF_LIST()
     },
 };
@@ -529,10 +527,10 @@ static const VMStateDescription vmstate_ics_irq = {
     .minimum_version_id = 1,
     .minimum_version_id_old = 1,
     .fields      = (VMStateField []) {
-        VMSTATE_UINT32(server, struct ics_irq_state),
-        VMSTATE_UINT8(priority, struct ics_irq_state),
-        VMSTATE_UINT8(saved_priority, struct ics_irq_state),
-        VMSTATE_UINT8(status, struct ics_irq_state),
+        VMSTATE_UINT32(server, ICSIRQState),
+        VMSTATE_UINT8(priority, ICSIRQState),
+        VMSTATE_UINT8(saved_priority, ICSIRQState),
+        VMSTATE_UINT8(status, ICSIRQState),
         VMSTATE_END_OF_LIST()
     },
 };
@@ -545,18 +543,18 @@ const VMStateDescription vmstate_ics = {
     .post_load = ics_post_load,
     .fields      = (VMStateField []) {
         /* Sanity check */
-        VMSTATE_UINT32_EQUAL(nr_irqs, struct ics_state),
+        VMSTATE_UINT32_EQUAL(nr_irqs, ICSState),
 
-        VMSTATE_STRUCT_VARRAY_POINTER_UINT32(irqs, struct ics_state, nr_irqs, vmstate_ics_irq, struct ics_irq_state),
+        VMSTATE_STRUCT_VARRAY_POINTER_UINT32(irqs, ICSState, nr_irqs, vmstate_ics_irq, ICSIRQState),
         VMSTATE_END_OF_LIST()
     },
 };
 
-void xics_common_cpu_setup(struct icp_state *icp, PowerPCCPU *cpu)
+void xics_common_cpu_setup(XICSState *icp, PowerPCCPU *cpu)
 {
     CPUState *cs = CPU(cpu);
     CPUPPCState *env = &cpu->env;
-    struct icp_server_state *ss = &icp->ss[cs->cpu_index];
+    ICPState *ss = &icp->ss[cs->cpu_index];
 
     assert(cs->cpu_index < icp->nr_servers);
 
@@ -576,25 +574,25 @@ void xics_common_cpu_setup(struct icp_state *icp, PowerPCCPU *cpu)
     }
 }
 
-void xics_cpu_setup(struct icp_state *icp, PowerPCCPU *cpu)
+void xics_cpu_setup(XICSState *icp, PowerPCCPU *cpu)
 {
     CPUState *cs = CPU(cpu);
-    struct icp_server_state *ss = &icp->ss[cs->cpu_index];
+    ICPState *ss = &icp->ss[cs->cpu_index];
 
     xics_common_cpu_setup(icp, cpu);
     vmstate_register(NULL, cs->cpu_index, &vmstate_icp_server, ss);
 }
 
-void xics_common_init(struct icp_state *icp, qemu_irq_handler handler)
+void xics_common_init(XICSState *icp, qemu_irq_handler handler)
 {
-    struct ics_state *ics = icp->ics;
+    ICSState *ics = icp->ics;
 
-    icp->ss = g_malloc0(icp->nr_servers*sizeof(struct icp_server_state));
+    icp->ss = g_malloc0(icp->nr_servers*sizeof(ICPState));
 
     ics = g_malloc0(sizeof(*ics));
     ics->nr_irqs = icp->nr_irqs;
     ics->offset = XICS_IRQ_BASE;
-    ics->irqs = g_malloc0(ics->nr_irqs * sizeof(struct ics_irq_state));
+    ics->irqs = g_malloc0(ics->nr_irqs * sizeof(ICSIRQState));
     ics->islsi = g_malloc0(ics->nr_irqs * sizeof(bool));
 
     icp->ics = ics;
@@ -605,7 +603,7 @@ void xics_common_init(struct icp_state *icp, qemu_irq_handler handler)
 
 static void xics_realize(DeviceState *dev, Error **errp)
 {
-    struct icp_state *icp = XICS(dev);
+    XICSState *icp = XICS(dev);
 
     xics_common_init(icp, ics_set_irq);
 
@@ -621,8 +619,8 @@ static void xics_realize(DeviceState *dev, Error **errp)
 }
 
 static Property xics_properties[] = {
-    DEFINE_PROP_UINT32("nr_servers", struct icp_state, nr_servers, -1),
-    DEFINE_PROP_UINT32("nr_irqs", struct icp_state, nr_irqs, -1),
+    DEFINE_PROP_UINT32("nr_servers", XICSState, nr_servers, -1),
+    DEFINE_PROP_UINT32("nr_irqs", XICSState, nr_irqs, -1),
     DEFINE_PROP_END_OF_LIST(),
 };
 
@@ -638,7 +636,7 @@ static void xics_class_init(ObjectClass *oc, void *data)
 static const TypeInfo xics_info = {
     .name          = TYPE_XICS,
     .parent        = TYPE_SYS_BUS_DEVICE,
-    .instance_size = sizeof(struct icp_state),
+    .instance_size = sizeof(XICSState),
     .class_init    = xics_class_init,
 };
 

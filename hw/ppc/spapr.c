@@ -129,8 +129,8 @@ int spapr_allocate_irq_block(int num, bool lsi)
     return first;
 }
 
-static struct icp_state *try_create_xics(const char *type, int nr_servers,
-                                         int nr_irqs)
+static XICSState *try_create_xics(const char *type, int nr_servers,
+                                  int nr_irqs)
 {
     DeviceState *dev;
 
@@ -144,9 +144,9 @@ static struct icp_state *try_create_xics(const char *type, int nr_servers,
     return XICS(dev);
 }
 
-static struct icp_state *xics_system_init(int nr_servers, int nr_irqs)
+static XICSState *xics_system_init(int nr_servers, int nr_irqs)
 {
-    struct icp_state *icp = NULL;
+    XICSState *icp = NULL;
 
     icp = try_create_xics(TYPE_XICS, nr_servers, nr_irqs);
     if (!icp) {
