@@ -56,14 +56,26 @@ struct XICSState {
     ICSState *ics;
 };
 
+#define TYPE_ICP "icp"
+#define ICP(obj) OBJECT_CHECK(ICPState, (obj), TYPE_ICP)
+
 struct ICPState {
+    /*< private >*/
+    DeviceState parent_obj;
+    /*< public >*/
     uint32_t xirr;
     uint8_t pending_priority;
     uint8_t mfrr;
     qemu_irq output;
 };
 
+#define TYPE_ICS "ics"
+#define ICS(obj) OBJECT_CHECK(ICSState, (obj), TYPE_ICS)
+
 struct ICSState {
+    /*< private >*/
+    DeviceState parent_obj;
+    /*< public >*/
     uint32_t nr_irqs;
     uint32_t offset;
     qemu_irq *qirqs;
@@ -86,13 +98,6 @@ struct ICSIRQState {
 qemu_irq xics_get_qirq(XICSState *icp, int irq);
 void xics_set_irq_type(XICSState *icp, int irq, bool lsi);
 
-void xics_common_init(XICSState *icp, qemu_irq_handler handler);
-void xics_common_cpu_setup(XICSState *icp, PowerPCCPU *cpu);
-void xics_common_reset(XICSState *icp);
-
 void xics_cpu_setup(XICSState *icp, PowerPCCPU *cpu);
-
-extern const VMStateDescription vmstate_icp_server;
-extern const VMStateDescription vmstate_ics;
 
 #endif /* __XICS_H__ */
